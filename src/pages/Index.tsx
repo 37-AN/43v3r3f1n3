@@ -5,7 +5,7 @@ import { initializeAIModels, refineData, type TimeSeriesDataPoint } from "@/util
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, LogOut } from "lucide-react";
 import { TokenizeDeviceDialog } from "@/components/TokenizeDeviceDialog";
 
 const devices = [
@@ -56,8 +56,17 @@ export default function Index() {
   const [isProcessing, setIsProcessing] = useState(true);
   const [tokenizedAssets, setTokenizedAssets] = useState([]);
   const [isTokenizeDialogOpen, setIsTokenizeDialogOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    // Get current user's email
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        console.log("Current user email:", user.email);
+        setUserEmail(user.email);
+      }
+    });
+
     fetchTokenizedAssets();
     const processData = async () => {
       try {
@@ -104,6 +113,17 @@ export default function Index() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      console.log("User logged out successfully");
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-system-gray-50 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -114,14 +134,27 @@ export default function Index() {
             {isProcessing && (
               <p className="text-sm text-system-gray-400 mt-1">Processing data with AI models...</p>
             )}
+            {userEmail && (
+              <p className="text-sm text-system-gray-400 mt-1">Logged in as: {userEmail}</p>
+            )}
           </div>
-          <Button
-            onClick={() => setIsTokenizeDialogOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Tokenize Asset
-          </Button>
+          <div className="flex gap-4">
+            <Button
+              onClick={() => setIsTokenizeDialogOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Tokenize Asset
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
