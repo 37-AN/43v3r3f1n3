@@ -16,12 +16,14 @@ interface SimulationParameters {
 }
 
 // Type guard to check if the payload has the required properties
-function isValidSimulationPayload(payload: any): payload is DeviceSimulation {
+function isValidSimulationPayload(payload: unknown): payload is DeviceSimulation {
+  if (!payload || typeof payload !== 'object') return false;
+  
+  const p = payload as Partial<DeviceSimulation>;
   return (
-    payload &&
-    typeof payload.device_id === 'string' &&
-    typeof payload.is_running === 'boolean' &&
-    'parameters' in payload
+    typeof p.device_id === 'string' &&
+    typeof p.is_running === 'boolean' &&
+    p.parameters !== undefined
   );
 }
 
@@ -43,14 +45,15 @@ export const useDeviceUpdates = () => {
           console.log('Received device update:', payload);
           
           if (payload.new && isValidSimulationPayload(payload.new)) {
+            const newPayload = payload.new;
             setDevices(currentDevices => 
               currentDevices.map(device => {
-                if (device.id === payload.new.device_id) {
+                if (device.id === newPayload.device_id) {
                   // Generate simulated metrics based on simulation parameters
                   const updatedMetrics = device.metrics.map(metric => ({
                     ...metric,
                     value: typeof metric.value === 'number' 
-                      ? generateMetricValue(metric.value, payload.new.parameters as SimulationParameters)
+                      ? generateMetricValue(metric.value, newPayload.parameters as SimulationParameters)
                       : metric.value
                   }));
 
@@ -58,7 +61,7 @@ export const useDeviceUpdates = () => {
 
                   return {
                     ...device,
-                    status: payload.new.is_running ? 'active' : 'warning',
+                    status: newPayload.is_running ? 'active' : 'warning',
                     metrics: updatedMetrics
                   };
                 }
