@@ -44,6 +44,39 @@ export type Database = {
           },
         ]
       }
+      device_configurations: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_devices: number | null
+          max_registers_per_device: number | null
+          name: string
+          owner_id: string | null
+          register_types: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_devices?: number | null
+          max_registers_per_device?: number | null
+          name: string
+          owner_id?: string | null
+          register_types?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_devices?: number | null
+          max_registers_per_device?: number | null
+          name?: string
+          owner_id?: string | null
+          register_types?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       device_simulations: {
         Row: {
           created_at: string | null
