@@ -10,10 +10,10 @@ import { ConfigurationDialog } from "./ConfigurationDialog";
 export const DeviceConfigManager = () => {
   const [showConfig, setShowConfig] = useState(false);
   
-  const { data: config, isLoading } = useQuery({
+  const { data: configs, isLoading } = useQuery({
     queryKey: ["device-config"],
     queryFn: async () => {
-      console.log("Fetching device configuration...");
+      console.log("Fetching device configurations...");
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -24,20 +24,26 @@ export const DeviceConfigManager = () => {
       const { data, error } = await supabase
         .from("device_configurations")
         .select("*")
-        .eq("owner_id", user.id)
-        .single();
+        .eq("owner_id", user.id);
 
       if (error) {
-        console.error("Error fetching device configuration:", error);
+        console.error("Error fetching device configurations:", error);
         throw error;
       }
 
-      console.log("Fetched device configuration:", data);
+      console.log("Fetched device configurations:", data);
       return data;
     },
   });
 
   if (isLoading) return null;
+
+  // Use the first configuration or provide defaults
+  const activeConfig = configs?.[0] || {
+    max_devices: 10,
+    max_registers_per_device: 50,
+    register_types: ["coil", "holding", "input", "discrete_input"]
+  };
 
   return (
     <Card className="mb-6">
@@ -54,20 +60,22 @@ export const DeviceConfigManager = () => {
       <CardContent>
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">
-            Max Devices: {config?.max_devices || 10}
+            Max Devices: {activeConfig.max_devices}
           </Badge>
           <Badge variant="outline">
-            Max Registers: {config?.max_registers_per_device || 50}
+            Max Registers: {activeConfig.max_registers_per_device}
           </Badge>
           <Badge variant="outline">
-            Register Types: {config?.register_types?.length || 4}
+            Register Types: {Array.isArray(activeConfig.register_types) 
+              ? activeConfig.register_types.length 
+              : 4}
           </Badge>
         </div>
       </CardContent>
       <ConfigurationDialog
         open={showConfig}
         onOpenChange={setShowConfig}
-        currentConfig={config}
+        currentConfig={activeConfig}
       />
     </Card>
   );
