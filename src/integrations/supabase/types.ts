@@ -9,7 +9,121 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      data_access_rights: {
+        Row: {
+          access_level: string
+          asset_id: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          access_level: string
+          asset_id?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          access_level?: string
+          asset_id?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_access_rights_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "tokenized_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_transactions: {
+        Row: {
+          amount: number
+          asset_id: string | null
+          created_at: string | null
+          from_address: string
+          id: string
+          status: string
+          to_address: string
+          transaction_hash: string | null
+        }
+        Insert: {
+          amount: number
+          asset_id?: string | null
+          created_at?: string | null
+          from_address: string
+          id?: string
+          status?: string
+          to_address: string
+          transaction_hash?: string | null
+        }
+        Update: {
+          amount?: number
+          asset_id?: string | null
+          created_at?: string | null
+          from_address?: string
+          id?: string
+          status?: string
+          to_address?: string
+          transaction_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_transactions_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "tokenized_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tokenized_assets: {
+        Row: {
+          asset_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          owner_id: string
+          price_per_token: number
+          token_symbol: string
+          total_supply: number
+        }
+        Insert: {
+          asset_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          owner_id: string
+          price_per_token?: number
+          token_symbol: string
+          total_supply?: number
+        }
+        Update: {
+          asset_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          owner_id?: string
+          price_per_token?: number
+          token_symbol?: string
+          total_supply?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -3,6 +3,10 @@ import { MetricsChart } from "@/components/MetricsChart";
 import { useEffect, useState } from "react";
 import { initializeAIModels, refineData, type TimeSeriesDataPoint } from "@/utils/dataRefinement";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { TokenizeDeviceDialog } from "@/components/TokenizeDeviceDialog";
 
 const devices = [
   {
@@ -12,6 +16,7 @@ const devices = [
       { label: "CPU Load", value: 45, unit: "%" },
       { label: "Memory Usage", value: 2.8, unit: "GB" },
       { label: "Network I/O", value: "1.2", unit: "MB/s" },
+      { label: "Token Value", value: "1.5", unit: "ETH" },
     ],
   },
   {
@@ -49,8 +54,11 @@ export default function Index() {
   const [refinedPerformance, setRefinedPerformance] = useState(performanceData);
   const [refinedResources, setRefinedResources] = useState(resourceData);
   const [isProcessing, setIsProcessing] = useState(true);
+  const [tokenizedAssets, setTokenizedAssets] = useState([]);
+  const [isTokenizeDialogOpen, setIsTokenizeDialogOpen] = useState(false);
 
   useEffect(() => {
+    fetchTokenizedAssets();
     const processData = async () => {
       try {
         console.log("Initializing AI models and processing data");
@@ -80,15 +88,40 @@ export default function Index() {
     processData();
   }, []);
 
+  const fetchTokenizedAssets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tokenized_assets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTokenizedAssets(data);
+      console.log('Fetched tokenized assets:', data);
+    } catch (error) {
+      console.error('Error fetching tokenized assets:', error);
+      toast.error('Failed to load tokenized assets');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-system-gray-50 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <header className="animate-fade-up">
-          <h1 className="text-3xl font-semibold text-system-gray-900">Industrial Data Refinement</h1>
-          <p className="text-system-gray-500 mt-2">Real-time monitoring and data collection system</p>
-          {isProcessing && (
-            <p className="text-sm text-system-gray-400 mt-1">Processing data with AI models...</p>
-          )}
+        <header className="animate-fade-up flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-semibold text-system-gray-900">Industrial Data Refinement</h1>
+            <p className="text-system-gray-500 mt-2">Real-time monitoring and tokenized data management</p>
+            {isProcessing && (
+              <p className="text-sm text-system-gray-400 mt-1">Processing data with AI models...</p>
+            )}
+          </div>
+          <Button
+            onClick={() => setIsTokenizeDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Tokenize Asset
+          </Button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -115,6 +148,12 @@ export default function Index() {
             className="transition-transform hover:scale-[1.01]"
           />
         </div>
+
+        <TokenizeDeviceDialog 
+          open={isTokenizeDialogOpen} 
+          onOpenChange={setIsTokenizeDialogOpen}
+          onSuccess={fetchTokenizedAssets}
+        />
       </div>
     </div>
   );
