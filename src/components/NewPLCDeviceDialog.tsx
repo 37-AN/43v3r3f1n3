@@ -25,7 +25,17 @@ export const NewPLCDeviceDialog = ({ open, onOpenChange }: NewPLCDeviceDialogPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Get the current user's ID
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error("You must be logged in to add a device");
+      return;
+    }
+
     try {
+      console.log("Creating PLC device with owner_id:", user.id);
       const { error } = await supabase.from("plc_devices").insert([
         {
           name: formData.name,
@@ -33,6 +43,7 @@ export const NewPLCDeviceDialog = ({ open, onOpenChange }: NewPLCDeviceDialogPro
           ip_address: formData.ip_address,
           port: parseInt(formData.port),
           slave_id: parseInt(formData.slave_id),
+          owner_id: user.id, // Add the owner_id
         },
       ]);
 

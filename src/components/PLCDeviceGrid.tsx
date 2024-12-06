@@ -12,9 +12,18 @@ export const PLCDeviceGrid = () => {
   const { data: devices, isLoading } = useQuery({
     queryKey: ["plc-devices"],
     queryFn: async () => {
+      console.log("Fetching PLC devices...");
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log("No user found");
+        return [];
+      }
+
       const { data, error } = await supabase
         .from("plc_devices")
         .select("*")
+        .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -22,6 +31,7 @@ export const PLCDeviceGrid = () => {
         throw error;
       }
 
+      console.log("Fetched PLC devices:", data);
       return data;
     },
   });
