@@ -2,50 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Device, initialDevices } from "@/types/device";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import { Database } from "@/integrations/supabase/types";
-
-type DeviceSimulation = Database['public']['Tables']['device_simulations']['Row'];
-
-interface SimulationParameters {
-  port: number;
-  slave_id: number;
-  registers: Array<{
-    address: number;
-    value: number;
-  }>;
-}
-
-// Type guard to check if the payload has the required properties
-function isValidSimulationPayload(payload: unknown): payload is DeviceSimulation {
-  if (!payload || typeof payload !== 'object') return false;
-  
-  const p = payload as Partial<DeviceSimulation>;
-  return (
-    typeof p.device_id === 'string' &&
-    typeof p.is_running === 'boolean' &&
-    p.parameters !== undefined
-  );
-}
-
-// Type guard for simulation parameters
-function isValidSimulationParameters(params: unknown): params is SimulationParameters {
-  if (!params || typeof params !== 'object') return false;
-  
-  const p = params as Partial<SimulationParameters>;
-  return (
-    typeof p.port === 'number' &&
-    typeof p.slave_id === 'number' &&
-    Array.isArray(p.registers) &&
-    p.registers.every(reg => 
-      typeof reg === 'object' &&
-      reg !== null &&
-      'address' in reg &&
-      'value' in reg &&
-      typeof reg.address === 'number' &&
-      typeof reg.value === 'number'
-    )
-  );
-}
+import { DeviceSimulation, isValidSimulationPayload } from "@/types/simulation";
+import { updateDeviceMetrics } from "@/utils/metricCalculations";
 
 export const useDeviceUpdates = () => {
   const [devices, setDevices] = useState<Device[]>(initialDevices);
@@ -71,14 +29,7 @@ export const useDeviceUpdates = () => {
             setDevices(currentDevices => 
               currentDevices.map(device => {
                 if (device.id === newPayload.device_id) {
-                  // Generate simulated metrics based on simulation parameters
-                  const updatedMetrics = device.metrics.map(metric => ({
-                    ...metric,
-                    value: typeof metric.value === 'number' 
-                      ? generateMetricValue(metric.value, isValidSimulationParameters(parameters) ? parameters : null)
-                      : metric.value
-                  }));
-
+                  const updatedMetrics = updateDeviceMetrics(device.metrics, parameters);
                   console.log('Updated metrics for device:', device.id, updatedMetrics);
 
                   return {
@@ -104,12 +55,7 @@ export const useDeviceUpdates = () => {
           if (device.status === 'active') {
             return {
               ...device,
-              metrics: device.metrics.map(metric => ({
-                ...metric,
-                value: typeof metric.value === 'number'
-                  ? metric.value + (Math.random() - 0.5) * 5 // Add some random variation
-                  : metric.value
-              }))
+              metrics: updateDeviceMetrics(device.metrics, null)
             };
           }
           return device;
@@ -122,19 +68,6 @@ export const useDeviceUpdates = () => {
       clearInterval(updateInterval);
     };
   }, []);
-
-  // Helper function to generate metric values based on simulation parameters
-  const generateMetricValue = (currentValue: number, parameters: SimulationParameters | null) => {
-    if (!parameters) {
-      // Fallback behavior when parameters are invalid
-      return currentValue + (Math.random() - 0.5) * 5;
-    }
-    
-    // Use simulation parameters to influence the generated values
-    const baseVariation = (Math.random() - 0.5) * 10;
-    const parameterInfluence = parameters.registers.length || 1;
-    return currentValue + (baseVariation * parameterInfluence);
-  };
 
   return devices;
 };
