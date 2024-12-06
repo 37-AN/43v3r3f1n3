@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const initialDevices = [
   {
-    id: "a1",
+    id: "123e4567-e89b-12d3-a456-426614174000",
     name: "PLC Controller A1",
     status: "active" as const,
     metrics: [
@@ -15,7 +15,7 @@ const initialDevices = [
     ],
   },
   {
-    id: "b2",
+    id: "223e4567-e89b-12d3-a456-426614174001",
     name: "OPC UA Server B2",
     status: "warning" as const,
     metrics: [
@@ -25,7 +25,7 @@ const initialDevices = [
     ],
   },
   {
-    id: "c3",
+    id: "323e4567-e89b-12d3-a456-426614174002",
     name: "MQTT Broker C3",
     status: "active" as const,
     metrics: [
