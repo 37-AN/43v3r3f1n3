@@ -6,6 +6,7 @@ import { TokenizeDeviceDialog } from "@/components/TokenizeDeviceDialog";
 import { Header } from "@/components/Header";
 import { DeviceGrid } from "@/components/DeviceGrid";
 import { MetricsSection } from "@/components/MetricsSection";
+import { ModbusRegisterData } from "@/types/modbus";
 
 // Generate sample data with some anomalies and noise
 const generateSampleData = (length: number, baseValue: number, variance: number): TimeSeriesDataPoint[] => {
@@ -19,8 +20,8 @@ const performanceData = generateSampleData(24, 75, 15);
 const resourceData = generateSampleData(24, 50, 20);
 
 export default function Index() {
-  const [refinedPerformance, setRefinedPerformance] = useState(performanceData);
-  const [refinedResources, setRefinedResources] = useState(resourceData);
+  const [refinedPerformance, setRefinedPerformance] = useState<ModbusRegisterData[]>([]);
+  const [refinedResources, setRefinedResources] = useState<ModbusRegisterData[]>([]);
   const [isProcessing, setIsProcessing] = useState(true);
   const [tokenizedAssets, setTokenizedAssets] = useState([]);
   const [isTokenizeDialogOpen, setIsTokenizeDialogOpen] = useState(false);
@@ -65,8 +66,18 @@ export default function Index() {
         refineData(resourceData),
       ]);
 
-      setRefinedPerformance(performanceResults.refinedData);
-      setRefinedResources(resourceResults.refinedData);
+      // Map the refined data to include ModbusRegister properties
+      setRefinedPerformance(performanceResults.refinedData.map(data => ({
+        ...data,
+        registerType: 'holding',
+        address: 1
+      })));
+      
+      setRefinedResources(resourceResults.refinedData.map(data => ({
+        ...data,
+        registerType: 'input',
+        address: 2
+      })));
 
       if (performanceResults.anomalies.length > 0 || resourceResults.anomalies.length > 0) {
         toast.warning(`Detected ${performanceResults.anomalies.length + resourceResults.anomalies.length} anomalies`);
