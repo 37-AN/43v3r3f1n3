@@ -6,6 +6,15 @@ import { Database } from "@/integrations/supabase/types";
 
 type DeviceSimulation = Database['public']['Tables']['device_simulations']['Row'];
 
+interface SimulationParameters {
+  port: number;
+  slave_id: number;
+  registers: Array<{
+    address: number;
+    value: number;
+  }>;
+}
+
 export const useDeviceUpdates = () => {
   const [devices, setDevices] = useState<Device[]>(initialDevices);
 
@@ -23,7 +32,7 @@ export const useDeviceUpdates = () => {
         (payload: RealtimePostgresChangesPayload<DeviceSimulation>) => {
           console.log('Received device update:', payload);
           
-          if (payload.new) {
+          if (payload.new && 'device_id' in payload.new) {
             setDevices(currentDevices => 
               currentDevices.map(device => {
                 if (device.id === payload.new.device_id) {
@@ -31,7 +40,7 @@ export const useDeviceUpdates = () => {
                   const updatedMetrics = device.metrics.map(metric => ({
                     ...metric,
                     value: typeof metric.value === 'number' 
-                      ? generateMetricValue(metric.value, payload.new.parameters)
+                      ? generateMetricValue(metric.value, payload.new.parameters as SimulationParameters)
                       : metric.value
                   }));
 
@@ -80,7 +89,7 @@ export const useDeviceUpdates = () => {
   }, []);
 
   // Helper function to generate metric values based on simulation parameters
-  const generateMetricValue = (currentValue: number, parameters: DeviceSimulation['parameters']) => {
+  const generateMetricValue = (currentValue: number, parameters: SimulationParameters) => {
     // Use simulation parameters to influence the generated values
     const baseVariation = (Math.random() - 0.5) * 10;
     const parameterInfluence = parameters?.registers?.length || 1;
