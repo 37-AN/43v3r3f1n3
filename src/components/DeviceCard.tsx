@@ -5,6 +5,8 @@ import { PlayCircle, StopCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { updateDeviceMetrics } from "@/utils/metricCalculations";
+import { DeviceSimulation } from "@/types/simulation";
 
 interface DeviceCardProps {
   name: string;
@@ -36,7 +38,7 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
 
       if (!error && data) {
         console.log('Initial simulation status for device:', deviceId, data);
-        setIsSimulating(data.is_running);
+        setIsSimulating(data.is_running || false);
       }
     };
 
@@ -53,10 +55,10 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
           table: 'device_simulations',
           filter: `device_id=eq.${deviceId}`
         },
-        (payload) => {
+        (payload: { new: DeviceSimulation }) => {
           console.log('Simulation update received:', payload);
           if (payload.new) {
-            setIsSimulating(payload.new.is_running);
+            setIsSimulating(payload.new.is_running || false);
             // Update metrics based on new parameters
             setLocalMetrics(prev => 
               updateDeviceMetrics(prev, payload.new.parameters)
