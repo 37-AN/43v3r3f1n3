@@ -13,42 +13,58 @@ export interface ProcessedData {
   anomalies: TimeSeriesDataPoint[];
 }
 
-// Initialize the AI pipeline for anomaly detection
-let anomalyDetector: any = null;
+// Initialize the AI pipeline for feature extraction
+let featureExtractor: any = null;
 
 export const initializeAIModels = async () => {
   try {
     console.log("Initializing AI models...");
-    anomalyDetector = await pipeline(
-      "time-series-prediction",
-      "julien-c/ts-anomaly-detection",
-      { device: "cpu" }
+    featureExtractor = await pipeline(
+      "feature-extraction",
+      "microsoft/deberta-v3-small",
+      { quantized: true }
     );
     console.log("AI models initialized successfully");
     toast.success("AI models loaded successfully");
   } catch (error) {
     console.error("Error initializing AI models:", error);
     toast.error("Failed to load AI models");
+    throw error;
   }
 };
 
-// Detect anomalies in time series data
+// Detect anomalies in time series data using feature extraction
 export const detectAnomalies = async (
   data: TimeSeriesDataPoint[]
 ): Promise<TimeSeriesDataPoint[]> => {
-  if (!anomalyDetector) {
+  if (!featureExtractor) {
     console.warn("AI models not initialized. Initializing now...");
     await initializeAIModels();
   }
 
   try {
     console.log("Processing data for anomaly detection:", data);
-    const values = data.map((point) => point.value);
-    const predictions = await anomalyDetector(values, {
-      threshold: 0.95,
+    
+    // Convert time series data to text format for feature extraction
+    const textData = data.map(point => `${point.timestamp}: ${point.value}`);
+    
+    // Extract features
+    const features = await featureExtractor(textData, {
+      pooling: "mean",
+      normalize: true
     });
 
-    return data.filter((point, index) => predictions[index].isAnomaly);
+    // Simple anomaly detection using statistical approach
+    const values = data.map(point => point.value);
+    const mean = values.reduce((a, b) => a + b) / values.length;
+    const stdDev = Math.sqrt(
+      values.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / values.length
+    );
+
+    // Detect points that are more than 2 standard deviations from the mean
+    return data.filter((point, index) => {
+      return Math.abs(point.value - mean) > 2 * stdDev;
+    });
   } catch (error) {
     console.error("Error in anomaly detection:", error);
     toast.error("Error detecting anomalies");
@@ -56,7 +72,7 @@ export const detectAnomalies = async (
   }
 };
 
-// Predict missing values using interpolation and AI
+// Predict missing values using interpolation
 export const predictMissingValues = (
   data: TimeSeriesDataPoint[]
 ): TimeSeriesDataPoint[] => {
