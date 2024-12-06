@@ -27,8 +27,14 @@ export function TokenizeDeviceDialog({ open, onOpenChange, onSuccess }: Tokenize
     setIsSubmitting(true);
     
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session?.session?.user) {
+        toast.error('Please sign in to tokenize assets');
+        return;
+      }
+
+      console.log('Creating asset with user ID:', session.session.user.id);
 
       const { data, error } = await supabase
         .from('tokenized_assets')
@@ -39,12 +45,15 @@ export function TokenizeDeviceDialog({ open, onOpenChange, onSuccess }: Tokenize
           token_symbol: formData.tokenSymbol,
           total_supply: Number(formData.totalSupply),
           price_per_token: Number(formData.pricePerToken),
-          owner_id: userData.user.id
+          owner_id: session.session.user.id
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating asset:', error);
+        throw error;
+      }
 
       console.log('Asset tokenized successfully:', data);
       toast.success('Asset tokenized successfully');
