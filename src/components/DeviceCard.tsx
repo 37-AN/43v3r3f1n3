@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { updateDeviceMetrics } from "@/utils/metricCalculations";
-import { DeviceSimulation } from "@/types/simulation";
+import { DeviceSimulation, isValidSimulationPayload } from "@/types/simulation";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 interface DeviceCardProps {
@@ -58,8 +58,8 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
         },
         (payload: RealtimePostgresChangesPayload<DeviceSimulation>) => {
           console.log('Simulation update received:', payload);
-          if (payload.new) {
-            setIsSimulating(payload.new.is_running || false);
+          if (payload.new && isValidSimulationPayload(payload.new)) {
+            setIsSimulating(payload.new.is_running);
             // Update metrics based on new parameters
             setLocalMetrics(prev => 
               updateDeviceMetrics(prev, payload.new.parameters)
