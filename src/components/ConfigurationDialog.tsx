@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,10 +20,21 @@ export const ConfigurationDialog = ({
 }: ConfigurationDialogProps) => {
   const queryClient = useQueryClient();
   const [config, setConfig] = useState({
-    name: currentConfig?.name || "Default Configuration",
-    max_devices: currentConfig?.max_devices || 10,
-    max_registers_per_device: currentConfig?.max_registers_per_device || 50,
+    name: "",
+    max_devices: 10,
+    max_registers_per_device: 50,
   });
+
+  // Update local state when currentConfig changes
+  useEffect(() => {
+    if (currentConfig) {
+      setConfig({
+        name: currentConfig.name || "Default Configuration",
+        max_devices: currentConfig.max_devices || 10,
+        max_registers_per_device: currentConfig.max_registers_per_device || 50,
+      });
+    }
+  }, [currentConfig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +51,11 @@ export const ConfigurationDialog = ({
       const { error } = await supabase
         .from("device_configurations")
         .upsert({
+          id: currentConfig.id, // Include the ID for update
           owner_id: user.id,
           ...config,
+          register_types: ["coil", "holding", "input", "discrete_input"], // Keep default register types
+          updated_at: new Date().toISOString(),
         });
 
       if (error) throw error;
