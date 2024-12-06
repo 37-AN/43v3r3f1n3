@@ -21,13 +21,14 @@ interface DeviceCardProps {
 export function DeviceCard({ name, status, metrics, className, deviceId }: DeviceCardProps) {
   const [isSimulating, setIsSimulating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [localMetrics, setLocalMetrics] = useState(metrics);
 
-  // Check initial simulation status
+  // Check initial simulation status and subscribe to changes
   useEffect(() => {
     const checkSimulationStatus = async () => {
       const { data, error } = await supabase
         .from('device_simulations')
-        .select('is_running')
+        .select('is_running, parameters')
         .eq('device_id', deviceId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -40,13 +41,59 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
     };
 
     checkSimulationStatus();
+
+    // Subscribe to simulation changes
+    const simulationChanges = supabase
+      .channel(`device_simulations_${deviceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'device_simulations',
+          filter: `device_id=eq.${deviceId}`
+        },
+        (payload) => {
+          console.log('Simulation update received:', payload);
+          if (payload.new) {
+            setIsSimulating(payload.new.is_running);
+            // Update metrics based on new parameters
+            setLocalMetrics(prev => 
+              updateDeviceMetrics(prev, payload.new.parameters)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      simulationChanges.unsubscribe();
+    };
   }, [deviceId]);
+
+  // Update metrics periodically when simulation is running
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (isSimulating) {
+      interval = setInterval(() => {
+        setLocalMetrics(prev => updateDeviceMetrics(prev, null));
+      }, 2000); // Update every 2 seconds
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isSimulating]);
 
   const toggleSimulation = async () => {
     setIsLoading(true);
     try {
       if (!isSimulating) {
-        // Start simulation
+        // Start simulation with initial parameters
         const { data, error } = await supabase
           .from('device_simulations')
           .insert([
@@ -57,8 +104,8 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
                 port: 502,
                 slave_id: 1,
                 registers: [
-                  { address: 0, value: 0 },
-                  { address: 1, value: 0 }
+                  { address: 0, value: Math.floor(Math.random() * 1000) },
+                  { address: 1, value: Math.floor(Math.random() * 1000) }
                 ]
               },
               is_running: true
@@ -70,7 +117,6 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
         if (error) throw error;
         console.log('Started simulation:', data);
         toast.success('Simulation started');
-        setIsSimulating(true);
       } else {
         // Stop simulation
         const { error } = await supabase
@@ -81,7 +127,6 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
         if (error) throw error;
         console.log('Stopped simulation for device:', deviceId);
         toast.success('Simulation stopped');
-        setIsSimulating(false);
       }
     } catch (error) {
       console.error('Error toggling simulation:', error);
@@ -122,7 +167,7 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
         </div>
       </div>
       <div className="space-y-3">
-        {metrics.map((metric, index) => (
+        {localMetrics.map((metric, index) => (
           <div key={index} className="flex justify-between items-center">
             <span className="text-sm text-system-gray-500">{metric.label}</span>
             <span className="font-medium">
