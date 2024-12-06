@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const initialDevices = [
   {
+    id: "a1",
     name: "PLC Controller A1",
     status: "active" as const,
     metrics: [
@@ -14,6 +15,7 @@ const initialDevices = [
     ],
   },
   {
+    id: "b2",
     name: "OPC UA Server B2",
     status: "warning" as const,
     metrics: [
@@ -23,6 +25,7 @@ const initialDevices = [
     ],
   },
   {
+    id: "c3",
     name: "MQTT Broker C3",
     status: "active" as const,
     metrics: [
@@ -45,12 +48,33 @@ export const DeviceGrid = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'tokenized_assets',
+          table: 'device_simulations',
         },
         (payload) => {
           console.log('Received device update:', payload);
-          // Update devices state based on the payload
-          // This is a placeholder - implement actual update logic based on your needs
+          // Update device metrics based on simulation data
+          if (payload.new && payload.eventType === 'INSERT') {
+            setDevices(currentDevices => 
+              currentDevices.map(device => {
+                if (device.id === payload.new.device_id) {
+                  // Update device metrics based on simulation parameters
+                  const simulationParams = payload.new.parameters;
+                  console.log('Updating device with simulation params:', simulationParams);
+                  return {
+                    ...device,
+                    status: 'active',
+                    metrics: device.metrics.map(metric => ({
+                      ...metric,
+                      value: typeof metric.value === 'number' 
+                        ? metric.value + (Math.random() - 0.5) * 10 
+                        : metric.value
+                    }))
+                  };
+                }
+                return device;
+              })
+            );
+          }
         }
       )
       .subscribe();
@@ -62,9 +86,10 @@ export const DeviceGrid = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {devices.map((device, index) => (
+      {devices.map((device) => (
         <DeviceCard
-          key={index}
+          key={device.id}
+          deviceId={device.id}
           name={device.name}
           status={device.status}
           metrics={device.metrics}

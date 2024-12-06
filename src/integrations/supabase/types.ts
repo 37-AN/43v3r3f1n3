@@ -44,6 +44,36 @@ export type Database = {
           },
         ]
       }
+      device_simulations: {
+        Row: {
+          created_at: string | null
+          device_id: string
+          id: string
+          is_running: boolean | null
+          parameters: Json | null
+          simulation_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: string
+          id?: string
+          is_running?: boolean | null
+          parameters?: Json | null
+          simulation_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string
+          id?: string
+          is_running?: boolean | null
+          parameters?: Json | null
+          simulation_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
