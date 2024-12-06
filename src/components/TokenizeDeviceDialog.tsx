@@ -32,17 +32,15 @@ export function TokenizeDeviceDialog({ open, onOpenChange, onSuccess }: Tokenize
 
       const { data, error } = await supabase
         .from('tokenized_assets')
-        .insert([
-          {
-            asset_type: 'device',
-            name: formData.name,
-            description: formData.description,
-            token_symbol: formData.tokenSymbol,
-            total_supply: formData.totalSupply,
-            price_per_token: formData.pricePerToken,
-            owner_id: userData.user.id
-          }
-        ])
+        .insert({
+          asset_type: 'device',
+          name: formData.name,
+          description: formData.description,
+          token_symbol: formData.tokenSymbol,
+          total_supply: Number(formData.totalSupply),
+          price_per_token: Number(formData.pricePerToken),
+          owner_id: userData.user.id
+        })
         .select()
         .single();
 
