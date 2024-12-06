@@ -74,6 +74,92 @@ export type Database = {
         }
         Relationships: []
       }
+      plc_devices: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          ip_address: string | null
+          is_active: boolean | null
+          name: string
+          owner_id: string | null
+          port: number | null
+          slave_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          name: string
+          owner_id?: string | null
+          port?: number | null
+          slave_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          name?: string
+          owner_id?: string | null
+          port?: number | null
+          slave_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      plc_registers: {
+        Row: {
+          address: number
+          created_at: string | null
+          description: string | null
+          id: string
+          initial_value: number | null
+          max_value: number | null
+          min_value: number | null
+          plc_id: string | null
+          register_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          address: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          initial_value?: number | null
+          max_value?: number | null
+          min_value?: number | null
+          plc_id?: string | null
+          register_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          initial_value?: number | null
+          max_value?: number | null
+          min_value?: number | null
+          plc_id?: string | null
+          register_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plc_registers_plc_id_fkey"
+            columns: ["plc_id"]
+            isOneToOne: false
+            referencedRelation: "plc_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -6,6 +6,7 @@ import { useDataProcessing } from "@/hooks/useDataProcessing";
 import { useTokenizedAssets } from "@/hooks/useTokenizedAssets";
 import { useUserEmail } from "@/hooks/useUserEmail";
 import { SimulationControl } from "@/components/SimulationControl";
+import { PLCDeviceGrid } from "@/components/PLCDeviceGrid";
 
 export default function Index() {
   const { refinedPerformance, refinedResources, isProcessing } = useDataProcessing();
@@ -29,6 +30,8 @@ export default function Index() {
             <SimulationControl />
           </div>
         </div>
+        
+        <PLCDeviceGrid />
         
         <MetricsSection 
           refinedPerformance={refinedPerformance}
