@@ -1,16 +1,15 @@
 import { MetricsChart } from "@/components/MetricsChart";
 import { Card } from "@/components/ui/card";
-import { TimeSeriesDataPoint } from "@/utils/dataRefinement";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import { ModbusRegisterData } from "@/types/modbus";
 
 interface MetricsSectionProps {
-  refinedPerformance: TimeSeriesDataPoint[];
-  refinedResources: TimeSeriesDataPoint[];
+  refinedPerformance: ModbusRegisterData[];
+  refinedResources: ModbusRegisterData[];
 }
 
 export const MetricsSection = ({ refinedPerformance, refinedResources }: MetricsSectionProps) => {
-  // Calculate percentage changes
-  const calculateChange = (data: TimeSeriesDataPoint[]) => {
+  const calculateChange = (data: ModbusRegisterData[]) => {
     if (data.length < 2) return 0;
     const latest = data[data.length - 1].value;
     const previous = data[data.length - 2].value;
@@ -80,11 +79,13 @@ export const MetricsSection = ({ refinedPerformance, refinedResources }: Metrics
         <MetricsChart
           title="System Performance"
           data={refinedPerformance}
+          registerType="holding"
           className="transition-transform hover:scale-[1.01]"
         />
         <MetricsChart
           title="Resource Utilization"
           data={refinedResources}
+          registerType="input"
           className="transition-transform hover:scale-[1.01]"
         />
       </div>

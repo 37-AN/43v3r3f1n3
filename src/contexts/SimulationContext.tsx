@@ -1,12 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface ModbusRegister {
-  address: number;
-  value: number;
-  type: 'coil' | 'discrete' | 'input' | 'holding';
-}
+import { ModbusRegister, ModbusSimulationConfig } from '@/types/modbus';
 
 interface SimulationState {
   isRunning: boolean;
@@ -58,12 +53,13 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       if (error) throw error;
 
       if (data) {
-        console.log('Loaded simulation state:', data);
+        const params = data.parameters as ModbusSimulationConfig;
+        console.log('Loaded simulation state:', params);
         setSimulationState({
           isRunning: data.is_running,
-          port: data.parameters.port || 5020,
-          slaveId: data.parameters.slave_id || 1,
-          registers: data.parameters.registers || []
+          port: params.port || 5020,
+          slaveId: params.slave_id || 1,
+          registers: params.registers || []
         });
       }
     } catch (error) {
@@ -81,7 +77,14 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
     try {
       const { error } = await supabase
         .from('device_simulations')
-        .update({ is_running: true })
+        .update({ 
+          is_running: true,
+          parameters: {
+            port: simulationState.port,
+            slave_id: simulationState.slaveId,
+            registers: simulationState.registers
+          }
+        })
         .eq('id', 1);
 
       if (error) throw error;
@@ -123,7 +126,8 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
         .from('device_simulations')
         .update({
           parameters: {
-            ...simulationState,
+            port: simulationState.port,
+            slave_id: simulationState.slaveId,
             registers: updatedRegisters
           }
         })
