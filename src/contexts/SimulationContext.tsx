@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ModbusRegister, ModbusSimulationConfig, isModbusSimulationConfig, ModbusSimulationParameters } from '@/types/modbus';
+import { Json } from "@/integrations/supabase/types";
 
 interface SimulationState {
   isRunning: boolean;
@@ -87,7 +88,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
         .from('device_simulations')
         .update({ 
           is_running: true,
-          parameters: simulationConfig as Json
+          parameters: simulationConfig as unknown as Json
         })
         .eq('id', 1);
 
@@ -137,7 +138,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       const { error } = await supabase
         .from('device_simulations')
         .update({
-          parameters: simulationConfig as Json
+          parameters: simulationConfig as unknown as Json
         })
         .eq('id', 1);
 

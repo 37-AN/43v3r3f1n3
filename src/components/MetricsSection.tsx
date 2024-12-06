@@ -78,13 +78,21 @@ export const MetricsSection = ({ refinedPerformance, refinedResources }: Metrics
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <MetricsChart
           title="System Performance"
-          data={refinedPerformance}
+          data={refinedPerformance.map(data => ({
+            ...data,
+            registerType: 'holding',
+            address: 1
+          }))}
           registerType="holding"
           className="transition-transform hover:scale-[1.01]"
         />
         <MetricsChart
           title="Resource Utilization"
-          data={refinedResources}
+          data={refinedResources.map(data => ({
+            ...data,
+            registerType: 'input',
+            address: 2
+          }))}
           registerType="input"
           className="transition-transform hover:scale-[1.01]"
         />

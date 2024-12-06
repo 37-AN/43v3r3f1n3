@@ -12,8 +12,8 @@ export interface ModbusRegister {
 export interface ModbusRegisterData {
   timestamp: string;
   value: number;
-  registerType?: ModbusRegisterType;
-  address?: number;
+  registerType: ModbusRegisterType;
+  address: number;
 }
 
 export interface ModbusSimulationConfig {
@@ -34,7 +34,7 @@ export type ModbusSimulationParameters = {
 }
 
 // Type guard to check if a JSON value is a valid simulation config
-export function isModbusSimulationConfig(value: Json): value is Json {
+export function isModbusSimulationConfig(value: Json): value is ModbusSimulationParameters {
   if (!value || typeof value !== 'object') return false;
   
   const config = value as Partial<ModbusSimulationParameters>;
