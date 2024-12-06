@@ -10,15 +10,31 @@ export function RegisterMonitorGrid({ deviceId }: RegisterMonitorGridProps) {
   const { data: registers, isLoading } = useQuery({
     queryKey: ["plc-registers", deviceId],
     queryFn: async () => {
+      if (!deviceId) {
+        console.log("No device ID provided");
+        return [];
+      }
+
+      console.log("Fetching registers for device:", deviceId);
       const { data, error } = await supabase
         .from("plc_registers")
         .select("*")
         .eq("plc_id", deviceId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching registers:", error);
+        throw error;
+      }
+
+      console.log("Fetched registers:", data);
       return data;
     },
+    enabled: !!deviceId, // Only run query if deviceId exists
   });
+
+  if (!deviceId) {
+    return <div>No device selected</div>;
+  }
 
   if (isLoading) {
     return <div>Loading registers...</div>;
