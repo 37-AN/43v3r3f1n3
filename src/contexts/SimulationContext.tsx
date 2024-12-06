@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ModbusRegister, ModbusSimulationConfig } from '@/types/modbus';
+import { ModbusRegister, ModbusSimulationConfig, isModbusSimulationConfig } from '@/types/modbus';
 
 interface SimulationState {
   isRunning: boolean;
@@ -52,14 +52,13 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
 
       if (error) throw error;
 
-      if (data) {
-        const params = data.parameters as ModbusSimulationConfig;
-        console.log('Loaded simulation state:', params);
+      if (data && isModbusSimulationConfig(data.parameters)) {
+        console.log('Loaded simulation state:', data.parameters);
         setSimulationState({
           isRunning: data.is_running,
-          port: params.port || 5020,
-          slaveId: params.slave_id || 1,
-          registers: params.registers || []
+          port: data.parameters.port,
+          slaveId: data.parameters.slave_id,
+          registers: data.parameters.registers
         });
       }
     } catch (error) {
@@ -75,15 +74,19 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
 
   const startSimulation = async () => {
     try {
+      const simulationConfig = {
+        port: simulationState.port,
+        slave_id: simulationState.slaveId,
+        registers: simulationState.registers.map(({ address, value, type }) => ({
+          address, value, type
+        }))
+      };
+
       const { error } = await supabase
         .from('device_simulations')
         .update({ 
           is_running: true,
-          parameters: {
-            port: simulationState.port,
-            slave_id: simulationState.slaveId,
-            registers: simulationState.registers
-          }
+          parameters: simulationConfig
         })
         .eq('id', 1);
 
@@ -122,14 +125,18 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
           : reg
       );
 
+      const simulationConfig = {
+        port: simulationState.port,
+        slave_id: simulationState.slaveId,
+        registers: updatedRegisters.map(({ address, value, type }) => ({
+          address, value, type
+        }))
+      };
+
       const { error } = await supabase
         .from('device_simulations')
         .update({
-          parameters: {
-            port: simulationState.port,
-            slave_id: simulationState.slaveId,
-            registers: updatedRegisters
-          }
+          parameters: simulationConfig
         })
         .eq('id', 1);
 
