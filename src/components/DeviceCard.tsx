@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PlayCircle, StopCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -22,6 +22,23 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
   const [isSimulating, setIsSimulating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Check initial simulation status
+  useEffect(() => {
+    const checkSimulationStatus = async () => {
+      const { data, error } = await supabase
+        .from('device_simulations')
+        .select('is_running')
+        .eq('device_id', deviceId)
+        .single();
+
+      if (!error && data) {
+        setIsSimulating(data.is_running);
+      }
+    };
+
+    checkSimulationStatus();
+  }, [deviceId]);
+
   const toggleSimulation = async () => {
     setIsLoading(true);
     try {
@@ -40,7 +57,8 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
                   { address: 0, value: 0 },
                   { address: 1, value: 0 }
                 ]
-              }
+              },
+              is_running: true
             }
           ])
           .select()
@@ -75,7 +93,12 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-system-gray-900">{name}</h3>
         <div className="flex items-center gap-2">
-          <div className={cn("status-indicator", status)} />
+          <div className={cn(
+            "w-3 h-3 rounded-full",
+            status === "active" ? "bg-green-500" : 
+            status === "warning" ? "bg-yellow-500" : 
+            "bg-red-500"
+          )} />
           <Button
             variant="outline"
             size="sm"
@@ -100,7 +123,7 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
           <div key={index} className="flex justify-between items-center">
             <span className="text-sm text-system-gray-500">{metric.label}</span>
             <span className="font-medium">
-              {metric.value}
+              {typeof metric.value === 'number' ? metric.value.toFixed(2) : metric.value}
               {metric.unit && <span className="text-system-gray-400 ml-1">{metric.unit}</span>}
             </span>
           </div>

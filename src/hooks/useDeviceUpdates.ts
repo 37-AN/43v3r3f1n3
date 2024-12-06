@@ -6,6 +6,7 @@ export const useDeviceUpdates = () => {
   const [devices, setDevices] = useState<Device[]>(initialDevices);
 
   useEffect(() => {
+    // Subscribe to device simulation updates
     const deviceUpdates = supabase
       .channel('device-updates')
       .on(
@@ -17,20 +18,25 @@ export const useDeviceUpdates = () => {
         },
         (payload) => {
           console.log('Received device update:', payload);
-          if (payload.new && payload.eventType === 'INSERT') {
+          
+          if (payload.new) {
             setDevices(currentDevices => 
               currentDevices.map(device => {
                 if (device.id === payload.new.device_id) {
-                  console.log('Updating device with simulation params:', payload.new.parameters);
+                  // Generate simulated metrics based on simulation parameters
+                  const updatedMetrics = device.metrics.map(metric => ({
+                    ...metric,
+                    value: typeof metric.value === 'number' 
+                      ? generateMetricValue(metric.value, payload.new.parameters)
+                      : metric.value
+                  }));
+
+                  console.log('Updated metrics for device:', device.id, updatedMetrics);
+
                   return {
                     ...device,
-                    status: 'active',
-                    metrics: device.metrics.map(metric => ({
-                      ...metric,
-                      value: typeof metric.value === 'number' 
-                        ? metric.value + (Math.random() - 0.5) * 10 
-                        : metric.value
-                    }))
+                    status: payload.new.is_running ? 'active' : 'warning',
+                    metrics: updatedMetrics
                   };
                 }
                 return device;
@@ -39,12 +45,43 @@ export const useDeviceUpdates = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
+
+    // Start periodic updates for active simulations
+    const updateInterval = setInterval(() => {
+      setDevices(currentDevices => 
+        currentDevices.map(device => {
+          if (device.status === 'active') {
+            return {
+              ...device,
+              metrics: device.metrics.map(metric => ({
+                ...metric,
+                value: typeof metric.value === 'number'
+                  ? metric.value + (Math.random() - 0.5) * 5 // Add some random variation
+                  : metric.value
+              }))
+            };
+          }
+          return device;
+        })
+      );
+    }, 2000); // Update every 2 seconds
 
     return () => {
       deviceUpdates.unsubscribe();
+      clearInterval(updateInterval);
     };
   }, []);
+
+  // Helper function to generate metric values based on simulation parameters
+  const generateMetricValue = (currentValue: number, parameters: any) => {
+    // Use simulation parameters to influence the generated values
+    const baseVariation = (Math.random() - 0.5) * 10;
+    const parameterInfluence = parameters?.registers?.length || 1;
+    return currentValue + (baseVariation * parameterInfluence);
+  };
 
   return devices;
 };
