@@ -5,6 +5,7 @@ import { MetricsSection } from "@/components/MetricsSection";
 import { useDataProcessing } from "@/hooks/useDataProcessing";
 import { useTokenizedAssets } from "@/hooks/useTokenizedAssets";
 import { useUserEmail } from "@/hooks/useUserEmail";
+import { SimulationControl } from "@/components/SimulationControl";
 
 export default function Index() {
   const { refinedPerformance, refinedResources, isProcessing } = useDataProcessing();
@@ -20,7 +21,14 @@ export default function Index() {
           onTokenizeClick={() => setIsTokenizeDialogOpen(true)}
         />
         
-        <DeviceGrid />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <DeviceGrid />
+          </div>
+          <div>
+            <SimulationControl />
+          </div>
+        </div>
         
         <MetricsSection 
           refinedPerformance={refinedPerformance}
