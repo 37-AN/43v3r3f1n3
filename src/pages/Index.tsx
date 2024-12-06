@@ -5,8 +5,9 @@ import { initializeAIModels, refineData, type TimeSeriesDataPoint } from "@/util
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, LogOut } from "lucide-react";
+import { PlusCircle, LogOut, List } from "lucide-react";
 import { TokenizeDeviceDialog } from "@/components/TokenizeDeviceDialog";
+import { useNavigate } from "react-router-dom";
 
 const devices = [
   {
@@ -57,6 +58,7 @@ export default function Index() {
   const [tokenizedAssets, setTokenizedAssets] = useState([]);
   const [isTokenizeDialogOpen, setIsTokenizeDialogOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Get current user's email
@@ -139,6 +141,14 @@ export default function Index() {
             )}
           </div>
           <div className="flex gap-4">
+            <Button
+              onClick={() => navigate('/tokenized-assets')}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <List className="w-4 h-4" />
+              View Assets
+            </Button>
             <Button
               onClick={() => setIsTokenizeDialogOpen(true)}
               className="flex items-center gap-2"
