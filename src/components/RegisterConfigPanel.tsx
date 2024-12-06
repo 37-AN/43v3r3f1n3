@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { logRegisterOperation } from "@/utils/registerLogger";
 
 interface RegisterConfigPanelProps {
   deviceId: string;
@@ -82,7 +83,7 @@ export const RegisterConfigPanel = ({
         ...newRegister,
       });
 
-      const { error } = await supabase.from("plc_registers").insert([
+      const { data, error } = await supabase.from("plc_registers").insert([
         {
           plc_id: deviceId,
           address: parseInt(newRegister.address),
@@ -95,6 +96,16 @@ export const RegisterConfigPanel = ({
       ]);
 
       if (error) throw error;
+
+      // Log the operation
+      logRegisterOperation({
+        operation: 'add',
+        address: parseInt(newRegister.address),
+        value: parseInt(newRegister.initial_value),
+        register_type: newRegister.register_type,
+        timestamp: new Date().toISOString(),
+        deviceId
+      });
 
       toast.success("Register added successfully");
       queryClient.invalidateQueries({ queryKey: ["plc-registers", deviceId] });
@@ -114,6 +125,9 @@ export const RegisterConfigPanel = ({
 
   const handleDeleteRegister = async (registerId: string) => {
     try {
+      const registerToDelete = registers?.find(r => r.id === registerId);
+      if (!registerToDelete) return;
+
       console.log("Deleting register:", registerId);
       const { error } = await supabase
         .from("plc_registers")
@@ -121,6 +135,15 @@ export const RegisterConfigPanel = ({
         .eq("id", registerId);
 
       if (error) throw error;
+
+      // Log the operation
+      logRegisterOperation({
+        operation: 'delete',
+        address: registerToDelete.address,
+        register_type: registerToDelete.register_type,
+        timestamp: new Date().toISOString(),
+        deviceId
+      });
 
       toast.success("Register deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["plc-registers", deviceId] });

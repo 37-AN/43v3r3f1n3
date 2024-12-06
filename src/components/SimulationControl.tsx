@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RegisterForm } from "./simulation/RegisterForm";
 import { WriteHistory } from "./simulation/WriteHistory";
+import { logRegisterOperation } from "@/utils/registerLogger";
 
 interface WriteHistoryEntry {
   timestamp: string;
@@ -31,9 +32,19 @@ export function SimulationControl() {
 
       if (error) throw error;
       
+      const timestamp = new Date().toISOString();
+      
+      // Log the operation
+      logRegisterOperation({
+        operation: 'write',
+        address: parseInt(address),
+        value: parseInt(value),
+        timestamp
+      });
+      
       // Add to history
       setWriteHistory(prev => [{
-        timestamp: new Date().toISOString(),
+        timestamp,
         address: parseInt(address),
         value: parseInt(value)
       }, ...prev].slice(0, 50)); // Keep last 50 entries
