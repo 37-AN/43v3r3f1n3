@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { updateDeviceMetrics } from "@/utils/metricCalculations";
 import { DeviceSimulation } from "@/types/simulation";
+import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 interface DeviceCardProps {
   name: string;
@@ -48,14 +49,14 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
     const simulationChanges = supabase
       .channel(`device_simulations_${deviceId}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as const,
         {
           event: '*',
           schema: 'public',
           table: 'device_simulations',
           filter: `device_id=eq.${deviceId}`
         },
-        (payload: { new: DeviceSimulation }) => {
+        (payload: RealtimePostgresChangesPayload<DeviceSimulation>) => {
           console.log('Simulation update received:', payload);
           if (payload.new) {
             setIsSimulating(payload.new.is_running || false);
