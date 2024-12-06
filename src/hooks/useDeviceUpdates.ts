@@ -27,6 +27,26 @@ function isValidSimulationPayload(payload: unknown): payload is DeviceSimulation
   );
 }
 
+// Type guard for simulation parameters
+function isValidSimulationParameters(params: unknown): params is SimulationParameters {
+  if (!params || typeof params !== 'object') return false;
+  
+  const p = params as Partial<SimulationParameters>;
+  return (
+    typeof p.port === 'number' &&
+    typeof p.slave_id === 'number' &&
+    Array.isArray(p.registers) &&
+    p.registers.every(reg => 
+      typeof reg === 'object' &&
+      reg !== null &&
+      'address' in reg &&
+      'value' in reg &&
+      typeof reg.address === 'number' &&
+      typeof reg.value === 'number'
+    )
+  );
+}
+
 export const useDeviceUpdates = () => {
   const [devices, setDevices] = useState<Device[]>(initialDevices);
 
@@ -46,6 +66,8 @@ export const useDeviceUpdates = () => {
           
           if (payload.new && isValidSimulationPayload(payload.new)) {
             const newPayload = payload.new;
+            const parameters = newPayload.parameters;
+
             setDevices(currentDevices => 
               currentDevices.map(device => {
                 if (device.id === newPayload.device_id) {
@@ -53,7 +75,7 @@ export const useDeviceUpdates = () => {
                   const updatedMetrics = device.metrics.map(metric => ({
                     ...metric,
                     value: typeof metric.value === 'number' 
-                      ? generateMetricValue(metric.value, newPayload.parameters as SimulationParameters)
+                      ? generateMetricValue(metric.value, isValidSimulationParameters(parameters) ? parameters : null)
                       : metric.value
                   }));
 
@@ -102,10 +124,15 @@ export const useDeviceUpdates = () => {
   }, []);
 
   // Helper function to generate metric values based on simulation parameters
-  const generateMetricValue = (currentValue: number, parameters: SimulationParameters) => {
+  const generateMetricValue = (currentValue: number, parameters: SimulationParameters | null) => {
+    if (!parameters) {
+      // Fallback behavior when parameters are invalid
+      return currentValue + (Math.random() - 0.5) * 5;
+    }
+    
     // Use simulation parameters to influence the generated values
     const baseVariation = (Math.random() - 0.5) * 10;
-    const parameterInfluence = parameters?.registers?.length || 1;
+    const parameterInfluence = parameters.registers.length || 1;
     return currentValue + (baseVariation * parameterInfluence);
   };
 
