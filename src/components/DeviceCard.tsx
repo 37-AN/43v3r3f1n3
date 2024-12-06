@@ -59,10 +59,11 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
         (payload: RealtimePostgresChangesPayload<DeviceSimulation>) => {
           console.log('Simulation update received:', payload);
           if (payload.new && isValidSimulationPayload(payload.new)) {
-            setIsSimulating(payload.new.is_running);
+            const simulationData = payload.new;
+            setIsSimulating(simulationData.is_running);
             // Update metrics based on new parameters
             setLocalMetrics(prev => 
-              updateDeviceMetrics(prev, payload.new.parameters)
+              updateDeviceMetrics(prev, simulationData.parameters)
             );
           }
         }
