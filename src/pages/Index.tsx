@@ -4,37 +4,42 @@ import { MetricsChart } from "@/components/MetricsChart";
 // Sample data - in a real app, this would come from your backend
 const devices = [
   {
-    name: "Temperature Sensor A1",
+    name: "PLC Controller A1",
     status: "active" as const,
     metrics: [
-      { label: "Temperature", value: 23.5, unit: "°C" },
-      { label: "Humidity", value: 45, unit: "%" },
-      { label: "Uptime", value: "24h" },
+      { label: "CPU Load", value: 45, unit: "%" },
+      { label: "Memory Usage", value: 2.8, unit: "GB" },
+      { label: "Network I/O", value: "1.2", unit: "MB/s" },
     ],
   },
   {
-    name: "Pressure Sensor B2",
+    name: "OPC UA Server B2",
     status: "warning" as const,
     metrics: [
-      { label: "Pressure", value: 1013, unit: "hPa" },
-      { label: "Battery", value: 15, unit: "%" },
-      { label: "Uptime", value: "12h" },
+      { label: "Active Tags", value: 1250 },
+      { label: "Update Rate", value: 100, unit: "ms" },
+      { label: "Queue Size", value: 85, unit: "%" },
     ],
   },
   {
-    name: "Flow Meter C3",
-    status: "error" as const,
+    name: "MQTT Broker C3",
+    status: "active" as const,
     metrics: [
-      { label: "Flow Rate", value: 0, unit: "L/min" },
-      { label: "Total Flow", value: 1250, unit: "L" },
-      { label: "Status", value: "Offline" },
+      { label: "Connected Clients", value: 48 },
+      { label: "Message Rate", value: 2.4, unit: "k/s" },
+      { label: "Bandwidth", value: 5.6, unit: "MB/s" },
     ],
   },
 ];
 
-const chartData = Array.from({ length: 24 }, (_, i) => ({
+const performanceData = Array.from({ length: 24 }, (_, i) => ({
   timestamp: `${i}:00`,
-  value: Math.random() * 100 + 50,
+  value: Math.floor(Math.random() * 30) + 60, // Random values between 60-90
+}));
+
+const resourceData = Array.from({ length: 24 }, (_, i) => ({
+  timestamp: `${i}:00`,
+  value: Math.floor(Math.random() * 40) + 30, // Random values between 30-70
 }));
 
 export default function Index() {
@@ -43,7 +48,7 @@ export default function Index() {
       <div className="max-w-7xl mx-auto space-y-8">
         <header className="animate-fade-up">
           <h1 className="text-3xl font-semibold text-system-gray-900">Industrial Data Refinement</h1>
-          <p className="text-system-gray-500 mt-2">Real-time monitoring and control</p>
+          <p className="text-system-gray-500 mt-2">Real-time monitoring and data collection system</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -61,12 +66,12 @@ export default function Index() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <MetricsChart
             title="System Performance"
-            data={chartData}
+            data={performanceData}
             className="transition-transform hover:scale-[1.01]"
           />
           <MetricsChart
-            title="Resource Usage"
-            data={chartData.map(d => ({ ...d, value: Math.random() * 80 + 20 }))}
+            title="Resource Utilization"
+            data={resourceData}
             className="transition-transform hover:scale-[1.01]"
           />
         </div>
