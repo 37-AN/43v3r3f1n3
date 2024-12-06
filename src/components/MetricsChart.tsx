@@ -14,7 +14,12 @@ interface MetricsChartProps {
 export function MetricsChart({ title, data, className }: MetricsChartProps) {
   return (
     <Card className={cn("p-6 animate-fade-up glass-panel h-[400px]", className)}>
-      <h3 className="text-lg font-semibold text-system-gray-900 mb-4">{title}</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-system-gray-900">{title}</h3>
+        <div className="text-sm text-muted-foreground">
+          Last updated: {data.length > 0 ? data[data.length - 1].timestamp : 'N/A'}
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
@@ -24,7 +29,13 @@ export function MetricsChart({ title, data, className }: MetricsChartProps) {
             fontSize={12}
             tickLine={false}
           />
-          <YAxis stroke="#8E8E93" fontSize={12} tickLine={false} />
+          <YAxis 
+            stroke="#8E8E93" 
+            fontSize={12} 
+            tickLine={false}
+            domain={[0, 100]}
+            tickFormatter={(value) => `${value}%`}
+          />
           <Tooltip
             contentStyle={{
               backgroundColor: "rgba(255, 255, 255, 0.95)",
@@ -32,6 +43,7 @@ export function MetricsChart({ title, data, className }: MetricsChartProps) {
               borderRadius: "8px",
               boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
             }}
+            formatter={(value: number) => [`${value.toFixed(2)}%`, title]}
           />
           <Line
             type="monotone"
@@ -40,6 +52,8 @@ export function MetricsChart({ title, data, className }: MetricsChartProps) {
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
+            isAnimationActive={true}
+            animationDuration={500}
           />
         </LineChart>
       </ResponsiveContainer>
