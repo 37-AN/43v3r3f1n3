@@ -15,6 +15,16 @@ interface SimulationParameters {
   }>;
 }
 
+// Type guard to check if the payload has the required properties
+function isValidSimulationPayload(payload: any): payload is DeviceSimulation {
+  return (
+    payload &&
+    typeof payload.device_id === 'string' &&
+    typeof payload.is_running === 'boolean' &&
+    'parameters' in payload
+  );
+}
+
 export const useDeviceUpdates = () => {
   const [devices, setDevices] = useState<Device[]>(initialDevices);
 
@@ -32,7 +42,7 @@ export const useDeviceUpdates = () => {
         (payload: RealtimePostgresChangesPayload<DeviceSimulation>) => {
           console.log('Received device update:', payload);
           
-          if (payload.new && 'device_id' in payload.new) {
+          if (payload.new && isValidSimulationPayload(payload.new)) {
             setDevices(currentDevices => 
               currentDevices.map(device => {
                 if (device.id === payload.new.device_id) {
