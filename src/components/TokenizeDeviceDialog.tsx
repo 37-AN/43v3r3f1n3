@@ -1,10 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useTokenizeForm } from "@/hooks/useTokenizeForm";
+import { TokenizeForm } from "./TokenizeForm";
 
 interface TokenizeDeviceDialogProps {
   open: boolean;
@@ -13,59 +9,7 @@ interface TokenizeDeviceDialogProps {
 }
 
 export function TokenizeDeviceDialog({ open, onOpenChange, onSuccess }: TokenizeDeviceDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    tokenSymbol: '',
-    totalSupply: '1000000',
-    pricePerToken: '0.001'
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session?.session?.user) {
-        toast.error('Please sign in to tokenize assets');
-        return;
-      }
-
-      console.log('Creating asset with user ID:', session.session.user.id);
-
-      const { data, error } = await supabase
-        .from('tokenized_assets')
-        .insert({
-          asset_type: 'device',
-          name: formData.name,
-          description: formData.description,
-          token_symbol: formData.tokenSymbol,
-          total_supply: Number(formData.totalSupply),
-          price_per_token: Number(formData.pricePerToken),
-          owner_id: session.session.user.id
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating asset:', error);
-        throw error;
-      }
-
-      console.log('Asset tokenized successfully:', data);
-      toast.success('Asset tokenized successfully');
-      onSuccess();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error tokenizing asset:', error);
-      toast.error('Failed to tokenize asset');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const { formData, setFormData, isSubmitting, handleSubmit } = useTokenizeForm(onSuccess);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -76,70 +20,13 @@ export function TokenizeDeviceDialog({ open, onOpenChange, onSuccess }: Tokenize
             Create a new tokenized asset to enable secure data sharing and monetization.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Asset Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Enter asset name"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Enter asset description"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tokenSymbol">Token Symbol</Label>
-            <Input
-              id="tokenSymbol"
-              value={formData.tokenSymbol}
-              onChange={(e) => setFormData(prev => ({ ...prev, tokenSymbol: e.target.value }))}
-              placeholder="e.g., PLCA1"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="totalSupply">Total Supply</Label>
-              <Input
-                id="totalSupply"
-                type="number"
-                value={formData.totalSupply}
-                onChange={(e) => setFormData(prev => ({ ...prev, totalSupply: e.target.value }))}
-                min="1"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pricePerToken">Price per Token</Label>
-              <Input
-                id="pricePerToken"
-                type="number"
-                value={formData.pricePerToken}
-                onChange={(e) => setFormData(prev => ({ ...prev, pricePerToken: e.target.value }))}
-                min="0.000001"
-                step="0.000001"
-                required
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Token'}
-            </Button>
-          </div>
-        </form>
+        <TokenizeForm
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          onCancel={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   );
