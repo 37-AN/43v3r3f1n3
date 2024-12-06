@@ -1,4 +1,5 @@
-import { SimulationParameters } from "@/types/simulation";
+import { SimulationParameters, isValidSimulationParameters } from "@/types/simulation";
+import { DeviceMetric } from "@/types/device";
 
 export function generateMetricValue(currentValue: number, parameters: SimulationParameters | null): number {
   if (!parameters) {
@@ -13,13 +14,15 @@ export function generateMetricValue(currentValue: number, parameters: Simulation
 }
 
 export function updateDeviceMetrics(
-  metrics: Array<{ label: string; value: string | number; unit?: string }>,
+  metrics: DeviceMetric[],
   parameters: unknown
-) {
+): DeviceMetric[] {
+  const validParameters = parameters && isValidSimulationParameters(parameters) ? parameters : null;
+  
   return metrics.map(metric => ({
     ...metric,
     value: typeof metric.value === 'number' 
-      ? generateMetricValue(metric.value, isValidSimulationParameters(parameters) ? parameters : null)
+      ? generateMetricValue(metric.value, validParameters)
       : metric.value
   }));
 }
