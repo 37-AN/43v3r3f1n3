@@ -12,6 +12,8 @@ export interface ModbusRegister {
 export interface ModbusRegisterData {
   timestamp: string;
   value: number;
+  registerType?: ModbusRegisterType;
+  address?: number;
 }
 
 export interface ModbusSimulationConfig {
@@ -21,7 +23,7 @@ export interface ModbusSimulationConfig {
 }
 
 // This type ensures compatibility with Supabase's Json type
-export interface ModbusSimulationParameters {
+export type ModbusSimulationParameters = {
   port: number;
   slave_id: number;
   registers: Array<{
@@ -32,7 +34,7 @@ export interface ModbusSimulationParameters {
 }
 
 // Type guard to check if a JSON value is a valid simulation config
-export function isModbusSimulationConfig(value: Json): value is ModbusSimulationParameters {
+export function isModbusSimulationConfig(value: Json): value is Json {
   if (!value || typeof value !== 'object') return false;
   
   const config = value as Partial<ModbusSimulationParameters>;
