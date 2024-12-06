@@ -21,8 +21,8 @@ export const initializeAIModels = async () => {
     console.log("Initializing AI models...");
     featureExtractor = await pipeline(
       "feature-extraction",
-      "microsoft/deberta-v3-small",
-      { quantized: true }
+      "Xenova/all-MiniLM-L6-v2",
+      { revision: "main" }
     );
     console.log("AI models initialized successfully");
     toast.success("AI models loaded successfully");
@@ -62,7 +62,7 @@ export const detectAnomalies = async (
     );
 
     // Detect points that are more than 2 standard deviations from the mean
-    return data.filter((point, index) => {
+    return data.filter((point) => {
       return Math.abs(point.value - mean) > 2 * stdDev;
     });
   } catch (error) {
