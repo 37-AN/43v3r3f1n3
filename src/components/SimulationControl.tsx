@@ -12,23 +12,16 @@ export function SimulationControl() {
   const writeRegister = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/modbus-server`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-          },
-          body: JSON.stringify({
-            functionCode: 6, // Write Single Register
-            address: parseInt(address),
-            values: [parseInt(value)]
-          })
+      const { data, error } = await supabase.functions.invoke('modbus-server', {
+        method: 'POST',
+        body: {
+          functionCode: 6, // Write Single Register
+          address: parseInt(address),
+          values: [parseInt(value)]
         }
-      );
+      });
 
-      if (!response.ok) throw new Error('Failed to write register');
+      if (error) throw error;
       
       toast.success('Register updated successfully');
     } catch (error) {
