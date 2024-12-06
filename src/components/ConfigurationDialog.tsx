@@ -20,7 +20,6 @@ export const ConfigurationDialog = ({
 }: ConfigurationDialogProps) => {
   const queryClient = useQueryClient();
   const [config, setConfig] = useState({
-    name: "",
     max_devices: 10,
     max_registers_per_device: 50,
   });
@@ -29,7 +28,6 @@ export const ConfigurationDialog = ({
   useEffect(() => {
     if (currentConfig) {
       setConfig({
-        name: currentConfig.name || "Default Configuration",
         max_devices: currentConfig.max_devices || 10,
         max_registers_per_device: currentConfig.max_registers_per_device || 50,
       });
@@ -51,10 +49,11 @@ export const ConfigurationDialog = ({
       const { error } = await supabase
         .from("device_configurations")
         .upsert({
-          id: currentConfig.id, // Include the ID for update
+          id: currentConfig.id,
           owner_id: user.id,
+          name: currentConfig.name, // Keep existing name
           ...config,
-          register_types: ["coil", "holding", "input", "discrete_input"], // Keep default register types
+          register_types: ["coil", "holding", "input", "discrete_input"],
           updated_at: new Date().toISOString(),
         });
 
@@ -76,17 +75,6 @@ export const ConfigurationDialog = ({
           <DialogTitle>Device Configuration</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Configuration Name</Label>
-            <Input
-              id="name"
-              value={config.name}
-              onChange={(e) =>
-                setConfig({ ...config, name: e.target.value })
-              }
-              required
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="max_devices">Maximum Devices</Label>
             <Input
