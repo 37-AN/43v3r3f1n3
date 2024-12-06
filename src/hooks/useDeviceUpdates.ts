@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Device, initialDevices } from "@/types/device";
+import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { Database } from "@/integrations/supabase/types";
+
+type DeviceSimulation = Database['public']['Tables']['device_simulations']['Row'];
 
 export const useDeviceUpdates = () => {
   const [devices, setDevices] = useState<Device[]>(initialDevices);
@@ -16,7 +20,7 @@ export const useDeviceUpdates = () => {
           schema: 'public',
           table: 'device_simulations',
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<DeviceSimulation>) => {
           console.log('Received device update:', payload);
           
           if (payload.new) {
@@ -76,7 +80,7 @@ export const useDeviceUpdates = () => {
   }, []);
 
   // Helper function to generate metric values based on simulation parameters
-  const generateMetricValue = (currentValue: number, parameters: any) => {
+  const generateMetricValue = (currentValue: number, parameters: DeviceSimulation['parameters']) => {
     // Use simulation parameters to influence the generated values
     const baseVariation = (Math.random() - 0.5) * 10;
     const parameterInfluence = parameters?.registers?.length || 1;

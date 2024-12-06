@@ -29,9 +29,12 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
         .from('device_simulations')
         .select('is_running')
         .eq('device_id', deviceId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
       if (!error && data) {
+        console.log('Initial simulation status for device:', deviceId, data);
         setIsSimulating(data.is_running);
       }
     };
