@@ -39,6 +39,7 @@ export const RegisterConfigPanel = ({
   const { data: registers, isLoading } = useQuery({
     queryKey: ["plc-registers", deviceId],
     queryFn: async () => {
+      console.log("Fetching registers for device:", deviceId);
       const { data, error } = await supabase
         .from("plc_registers")
         .select("*")
@@ -50,12 +51,37 @@ export const RegisterConfigPanel = ({
         throw error;
       }
 
+      console.log("Fetched registers:", data);
       return data;
     },
   });
 
+  const validateRegisterData = () => {
+    if (!newRegister.address || newRegister.address.trim() === "") {
+      toast.error("Address is required");
+      return false;
+    }
+
+    const addressNum = parseInt(newRegister.address);
+    if (isNaN(addressNum) || addressNum < 0) {
+      toast.error("Address must be a valid positive number");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleAddRegister = async () => {
     try {
+      if (!validateRegisterData()) {
+        return;
+      }
+
+      console.log("Adding register with data:", {
+        plc_id: deviceId,
+        ...newRegister,
+      });
+
       const { error } = await supabase.from("plc_registers").insert([
         {
           plc_id: deviceId,
@@ -88,6 +114,7 @@ export const RegisterConfigPanel = ({
 
   const handleDeleteRegister = async (registerId: string) => {
     try {
+      console.log("Deleting register:", registerId);
       const { error } = await supabase
         .from("plc_registers")
         .delete()
@@ -123,6 +150,7 @@ export const RegisterConfigPanel = ({
                     setNewRegister({ ...newRegister, address: e.target.value })
                   }
                   min="0"
+                  required
                 />
               </div>
               <div className="space-y-2">
