@@ -5,6 +5,17 @@ import { MetricsChart } from "@/components/MetricsChart";
 import { useDataProcessing } from "@/hooks/useDataProcessing";
 import { ModbusRegisterData } from "@/types/modbus";
 
+interface ArduinoPLCData {
+  id: string;
+  device_id: string;
+  data_type: string;
+  value: number;
+  timestamp: string;
+  plc_devices: {
+    name: string;
+  } | null;
+}
+
 export function ArduinoPLCDataGrid() {
   const { data: arduinoData, isLoading } = useQuery({
     queryKey: ["arduino-plc-data"],
@@ -28,7 +39,7 @@ export function ArduinoPLCDataGrid() {
       }
 
       console.log("Fetched Arduino PLC data:", data);
-      return data;
+      return data as ArduinoPLCData[];
     },
     refetchInterval: 5000 // Refresh every 5 seconds
   });
@@ -41,7 +52,8 @@ export function ArduinoPLCDataGrid() {
     acc[key].push({
       timestamp: new Date(item.timestamp).toLocaleTimeString(),
       value: item.value,
-      registerType: 'input'
+      registerType: 'input' as const,
+      address: parseInt(item.data_type.split('_').pop() || '0', 10) // Use data_type as basis for address
     });
     return acc;
   }, {} as Record<string, ModbusRegisterData[]>) ?? {};
@@ -63,7 +75,8 @@ export function ArduinoPLCDataGrid() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {Object.entries(groupedData).map(([key, data]) => {
           const [deviceId, dataType] = key.split('-');
-          const deviceName = data[0]?.plc_devices?.name || 'Unknown Device';
+          const deviceData = arduinoData?.find(item => item.device_id === deviceId);
+          const deviceName = deviceData?.plc_devices?.name || 'Unknown Device';
           
           return (
             <MetricsChart
