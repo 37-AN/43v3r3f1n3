@@ -1,13 +1,11 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { DeviceBasicInfo } from "./plc/DeviceBasicInfo";
+import { DeviceProtocolSettings } from "./plc/DeviceProtocolSettings";
 
 interface NewPLCDeviceDialogProps {
   open: boolean;
@@ -71,114 +69,26 @@ export const NewPLCDeviceDialog = ({ open, onOpenChange }: NewPLCDeviceDialogPro
           <DialogTitle>Add New PLC Device</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="protocol">Protocol</Label>
-            <Select
-              value={formData.protocol}
-              onValueChange={(value) =>
-                setFormData({ ...formData, protocol: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select protocol" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="modbus">Modbus TCP</SelectItem>
-                <SelectItem value="s7">S7 (TIA Portal)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ip_address">IP Address</Label>
-            <Input
-              id="ip_address"
-              value={formData.ip_address}
-              onChange={(e) =>
-                setFormData({ ...formData, ip_address: e.target.value })
-              }
-              placeholder="192.168.1.100"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="port">Port</Label>
-              <Input
-                id="port"
-                type="number"
-                value={formData.port}
-                onChange={(e) =>
-                  setFormData({ ...formData, port: e.target.value })
-                }
-                min="1"
-                max="65535"
-              />
-            </div>
-            {formData.protocol === "modbus" ? (
-              <div className="space-y-2">
-                <Label htmlFor="slave_id">Slave ID</Label>
-                <Input
-                  id="slave_id"
-                  type="number"
-                  value={formData.slave_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, slave_id: e.target.value })
-                  }
-                  min="1"
-                  max="247"
-                />
-              </div>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="rack">Rack</Label>
-                  <Input
-                    id="rack"
-                    type="number"
-                    value={formData.rack}
-                    onChange={(e) =>
-                      setFormData({ ...formData, rack: e.target.value })
-                    }
-                    min="0"
-                    max="7"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slot">Slot</Label>
-                  <Input
-                    id="slot"
-                    type="number"
-                    value={formData.slot}
-                    onChange={(e) =>
-                      setFormData({ ...formData, slot: e.target.value })
-                    }
-                    min="0"
-                    max="31"
-                  />
-                </div>
-              </>
-            )}
-          </div>
+          <DeviceBasicInfo
+            name={formData.name}
+            description={formData.description}
+            onNameChange={(value) => setFormData({ ...formData, name: value })}
+            onDescriptionChange={(value) => setFormData({ ...formData, description: value })}
+          />
+          <DeviceProtocolSettings
+            protocol={formData.protocol}
+            ipAddress={formData.ip_address}
+            port={formData.port}
+            slaveId={formData.slave_id}
+            rack={formData.rack}
+            slot={formData.slot}
+            onProtocolChange={(value) => setFormData({ ...formData, protocol: value })}
+            onIpAddressChange={(value) => setFormData({ ...formData, ip_address: value })}
+            onPortChange={(value) => setFormData({ ...formData, port: value })}
+            onSlaveIdChange={(value) => setFormData({ ...formData, slave_id: value })}
+            onRackChange={(value) => setFormData({ ...formData, rack: value })}
+            onSlotChange={(value) => setFormData({ ...formData, slot: value })}
+          />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
