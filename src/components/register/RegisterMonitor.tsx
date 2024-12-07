@@ -1,20 +1,8 @@
-import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { Card } from "@/components/ui/card";
+import { Minus, Plus } from "lucide-react";
+import { useRegisterUpdates } from "@/hooks/useDeviceUpdates";
 
 interface RegisterMonitorProps {
   deviceId: string;
@@ -32,109 +20,47 @@ export function RegisterMonitor({
   currentValue,
 }: RegisterMonitorProps) {
   const [value, setValue] = useState(currentValue);
-  const [historicalData, setHistoricalData] = useState<Array<{ timestamp: string; value: number }>>([]);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const { updateRegisterValue } = useRegisterUpdates(deviceId);
 
-  useEffect(() => {
-    // Subscribe to register value changes
-    const channel = supabase
-      .channel(`register_${registerId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'plc_registers',
-          filter: `id=eq.${registerId}`
-        },
-        (payload) => {
-          console.log('Register value updated:', payload);
-          if (payload.new) {
-            const newValue = (payload.new as any).initial_value;
-            setValue(newValue);
-            setHistoricalData(prev => [
-              ...prev,
-              { timestamp: new Date().toISOString(), value: newValue }
-            ].slice(-20)); // Keep last 20 data points
-          }
-        }
-      )
-      .subscribe();
+  const handleIncrement = () => {
+    const newValue = value + 1;
+    setValue(newValue);
+    updateRegisterValue(registerId, newValue);
+  };
 
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [registerId]);
-
-  const handleValueChange = async () => {
-    setIsUpdating(true);
-    try {
-      const { error } = await supabase
-        .from('plc_registers')
-        .update({ initial_value: value })
-        .eq('id', registerId);
-
-      if (error) throw error;
-      toast.success(`Register ${address} updated to ${value}`);
-    } catch (error) {
-      console.error('Error updating register:', error);
-      toast.error('Failed to update register value');
-    } finally {
-      setIsUpdating(false);
-    }
+  const handleDecrement = () => {
+    const newValue = value - 1;
+    setValue(newValue);
+    updateRegisterValue(registerId, newValue);
   };
 
   return (
-    <Card className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <Label>Register {address} ({registerType})</Label>
+    <Card className="p-4 space-y-3">
+      <div className="flex flex-col space-y-1">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">
+            Register {address} ({registerType})
+          </h4>
+          <span className="text-sm font-medium">{value}</span>
+        </div>
         <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => setValue(Number(e.target.value))}
-            className="w-24"
-          />
-          <Button 
-            onClick={handleValueChange}
-            disabled={isUpdating}
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleDecrement}
           >
-            {isUpdating ? 'Updating...' : 'Update'}
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleIncrement}
+          >
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Value Range Control</Label>
-        <Slider
-          value={[value]}
-          onValueChange={(values) => setValue(values[0])}
-          max={65535}
-          step={1}
-        />
-      </div>
-
-      <div className="h-[200px] mt-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={historicalData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="timestamp"
-              tickFormatter={(value) => new Date(value).toLocaleTimeString()}
-            />
-            <YAxis />
-            <Tooltip
-              labelFormatter={(value) => new Date(value).toLocaleString()}
-            />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="#8884d8"
-              dot={false}
-              isAnimationActive={true}
-            />
-          </LineChart>
-        </ResponsiveContainer>
       </div>
     </Card>
   );
