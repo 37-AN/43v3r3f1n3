@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,12 +22,14 @@ export const NewPLCDeviceDialog = ({ open, onOpenChange }: NewPLCDeviceDialogPro
     ip_address: "",
     port: "502",
     slave_id: "1",
+    protocol: "modbus",
+    rack: "0",
+    slot: "1",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Get the current user's ID
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -43,7 +46,10 @@ export const NewPLCDeviceDialog = ({ open, onOpenChange }: NewPLCDeviceDialogPro
           ip_address: formData.ip_address,
           port: parseInt(formData.port),
           slave_id: parseInt(formData.slave_id),
-          owner_id: user.id, // Add the owner_id
+          protocol: formData.protocol,
+          rack: parseInt(formData.rack),
+          slot: parseInt(formData.slot),
+          owner_id: user.id,
         },
       ]);
 
@@ -87,6 +93,23 @@ export const NewPLCDeviceDialog = ({ open, onOpenChange }: NewPLCDeviceDialogPro
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="protocol">Protocol</Label>
+            <Select
+              value={formData.protocol}
+              onValueChange={(value) =>
+                setFormData({ ...formData, protocol: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select protocol" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="modbus">Modbus TCP</SelectItem>
+                <SelectItem value="s7">S7 (TIA Portal)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="ip_address">IP Address</Label>
             <Input
               id="ip_address"
@@ -111,19 +134,50 @@ export const NewPLCDeviceDialog = ({ open, onOpenChange }: NewPLCDeviceDialogPro
                 max="65535"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="slave_id">Slave ID</Label>
-              <Input
-                id="slave_id"
-                type="number"
-                value={formData.slave_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, slave_id: e.target.value })
-                }
-                min="1"
-                max="247"
-              />
-            </div>
+            {formData.protocol === "modbus" ? (
+              <div className="space-y-2">
+                <Label htmlFor="slave_id">Slave ID</Label>
+                <Input
+                  id="slave_id"
+                  type="number"
+                  value={formData.slave_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, slave_id: e.target.value })
+                  }
+                  min="1"
+                  max="247"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="rack">Rack</Label>
+                  <Input
+                    id="rack"
+                    type="number"
+                    value={formData.rack}
+                    onChange={(e) =>
+                      setFormData({ ...formData, rack: e.target.value })
+                    }
+                    min="0"
+                    max="7"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="slot">Slot</Label>
+                  <Input
+                    id="slot"
+                    type="number"
+                    value={formData.slot}
+                    onChange={(e) =>
+                      setFormData({ ...formData, slot: e.target.value })
+                    }
+                    min="0"
+                    max="31"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

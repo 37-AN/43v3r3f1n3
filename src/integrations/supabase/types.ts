@@ -117,7 +117,10 @@ export type Database = {
           name: string
           owner_id: string | null
           port: number | null
+          protocol: string | null
+          rack: number | null
           slave_id: number | null
+          slot: number | null
           updated_at: string | null
         }
         Insert: {
@@ -129,7 +132,10 @@ export type Database = {
           name: string
           owner_id?: string | null
           port?: number | null
+          protocol?: string | null
+          rack?: number | null
           slave_id?: number | null
+          slot?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -141,7 +147,10 @@ export type Database = {
           name?: string
           owner_id?: string | null
           port?: number | null
+          protocol?: string | null
+          rack?: number | null
           slave_id?: number | null
+          slot?: number | null
           updated_at?: string | null
         }
         Relationships: []
