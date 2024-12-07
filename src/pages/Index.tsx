@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header";
 import { PLCDeviceGrid } from "@/components/PLCDeviceGrid";
 import { DeviceConfigManager } from "@/components/DeviceConfigManager";
+import { ArduinoPLCDataGrid } from "@/components/ArduinoPLCDataGrid";
 import { useUserEmail } from "@/hooks/useUserEmail";
 import { useState } from "react";
 
@@ -22,6 +23,7 @@ const Index = () => {
       />
       <DeviceConfigManager />
       <PLCDeviceGrid />
+      <ArduinoPLCDataGrid />
     </div>
   );
 };
