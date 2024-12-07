@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      arduino_plc_data: {
+        Row: {
+          data_type: string
+          device_id: string | null
+          id: string
+          metadata: Json | null
+          timestamp: string | null
+          value: number
+        }
+        Insert: {
+          data_type: string
+          device_id?: string | null
+          id?: string
+          metadata?: Json | null
+          timestamp?: string | null
+          value: number
+        }
+        Update: {
+          data_type?: string
+          device_id?: string | null
+          id?: string
+          metadata?: Json | null
+          timestamp?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arduino_plc_data_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "plc_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_access_rights: {
         Row: {
           access_level: string
