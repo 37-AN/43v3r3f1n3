@@ -4,13 +4,13 @@ import { CustomOPCUAClient } from '@/utils/communication/opcuaClient';
 import { toast } from 'sonner';
 import { ConnectionStatus } from '@/components/dashboard/ConnectionStatus';
 import { RealTimeData } from '@/components/dashboard/RealTimeData';
+import { OPCUAMetrics } from '@/components/opcua/OPCUAMetrics';
 
 interface IndexProps {
   plcData: PLCData | null;
   connectionStatus: { [key: string]: boolean };
 }
 
-// Simulated OPC UA server endpoints
 const DEMO_ENDPOINTS = {
   temperature: "opc.tcp://localhost:4840/temperature",
   pressure: "opc.tcp://localhost:4840/pressure",
@@ -22,7 +22,6 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
   const [opcuaClients, setOpcuaClients] = useState<Record<string, CustomOPCUAClient>>({});
 
   useEffect(() => {
-    // Initialize OPC UA clients
     const clients: Record<string, CustomOPCUAClient> = {};
     
     Object.entries(DEMO_ENDPOINTS).forEach(([name, endpoint]) => {
@@ -31,25 +30,24 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     
     setOpcuaClients(clients);
 
-    // Connect to each endpoint
     Object.entries(clients).forEach(async ([name, client]) => {
       try {
         await client.connect();
         
-        // Subscribe to value changes
         await client.subscribe(name, (dataValue) => {
           setSimulatedData(prev => ({
             ...prev,
             [name]: dataValue.value.value as number
           }));
         });
+
+        toast.success(`Connected to ${name} endpoint`);
       } catch (error) {
         console.error(`Failed to connect to ${name} endpoint:`, error);
         toast.error(`Failed to connect to ${name} endpoint`);
       }
     });
 
-    // Cleanup
     return () => {
       Object.values(clients).forEach(client => {
         client.disconnect().catch(console.error);
@@ -58,13 +56,18 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold mb-6">Manufacturing Dashboard</h1>
+    <div className="container mx-auto p-6 space-y-8 animate-fade-up">
+      <h1 className="text-3xl font-bold mb-6">Manufacturing Dashboard</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ConnectionStatus connectionStatus={connectionStatus} />
-        <RealTimeData simulatedData={simulatedData} plcData={plcData} />
+        <RealTimeData 
+          simulatedData={simulatedData} 
+          plcData={plcData} 
+        />
       </div>
+
+      <OPCUAMetrics simulatedData={simulatedData} />
     </div>
   );
 };
