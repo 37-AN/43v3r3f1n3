@@ -17,8 +17,22 @@ export interface TokenizedAsset {
   assetType: string;
   metadata?: {
     contract_address: string;
+    transaction_hash: string;
     blockchain: string;
     network: string;
   };
   created_at: string;
+}
+
+export interface ComplianceStatus {
+  symbol: string;
+  status: boolean;
+  lastChecked: Date;
+}
+
+export interface ResourceAllocation {
+  symbol: string;
+  userAddress: string;
+  amount: number;
+  timestamp: Date;
 }
