@@ -3,6 +3,8 @@ import { OPCUAMetrics } from '@/components/opcua/OPCUAMetrics';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { useOPCUAClients } from '@/hooks/useOPCUAClients';
 import { DataIngestionManager } from '@/components/industrial/DataIngestionManager';
+import { SimulationConfig } from '@/components/simulation/SimulationConfig';
+import { SimulationDashboard } from '@/components/simulation/SimulationDashboard';
 
 const Index = () => {
   const { simulatedData, deviceStatus } = useOPCUAClients();
@@ -13,6 +15,8 @@ const Index = () => {
         <DashboardHeader title="Industrial Data Dashboard" />
         
         <div className="grid grid-cols-1 gap-8">
+          <SimulationConfig />
+          <SimulationDashboard />
           <DataIngestionManager />
           
           <div className="glass-panel p-6 rounded-xl animate-fade-up">
