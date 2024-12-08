@@ -8,6 +8,15 @@ export interface ModbusRegister {
   type: ModbusRegisterType;
 }
 
+export interface ModbusTCPClient {
+  connect: () => Promise<void>;
+  disconnect: () => void;
+  isConnected: () => boolean;
+  readCoils: (address: number, quantity: number) => Promise<any>;
+  readInputRegisters: (address: number, quantity: number) => Promise<any>;
+  readHoldingRegisters: (address: number, quantity: number) => Promise<any>;
+}
+
 // This is what we use for time series data display
 export interface ModbusRegisterData {
   timestamp: string;

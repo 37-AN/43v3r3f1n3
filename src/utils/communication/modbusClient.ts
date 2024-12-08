@@ -1,6 +1,6 @@
-import { ModbusTCPClient } from '@/types/modbus';
+import type { ModbusTCPClient } from '@/types/modbus';
 
-export class ModbusClient {
+export class ModbusClient implements ModbusTCPClient {
   private socket: WebSocket | null = null;
   private connected: boolean = false;
 
