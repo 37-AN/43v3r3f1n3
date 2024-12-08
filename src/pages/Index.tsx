@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { PLCData } from '@/utils/plcData';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomOPCUAClient } from '@/utils/communication/opcuaClient';
 import { toast } from 'sonner';
+import { ConnectionStatus } from '@/components/dashboard/ConnectionStatus';
+import { RealTimeData } from '@/components/dashboard/RealTimeData';
 
 interface IndexProps {
   plcData: PLCData | null;
@@ -63,43 +62,8 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
       <h1 className="text-2xl font-bold mb-6">Manufacturing Dashboard</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Connection Status</h2>
-          <div className="space-y-3">
-            {Object.entries(connectionStatus).map(([deviceId, status]) => (
-              <div key={deviceId} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium">Device ({deviceId})</span>
-                <Badge variant={status ? "success" : "destructive"} className="capitalize">
-                  {status ? 'Connected' : 'Disconnected'}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Real-time Data</h2>
-          <ScrollArea className="h-[300px] pr-4">
-            <div className="space-y-3">
-              {Object.entries(simulatedData).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium capitalize">{key}</span>
-                  <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                    {value.toFixed(2)}
-                  </span>
-                </div>
-              ))}
-              {plcData && Object.entries(plcData).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium">{key}</span>
-                  <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                    {value !== undefined && value !== null ? String(value) : 'N/A'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </Card>
+        <ConnectionStatus connectionStatus={connectionStatus} />
+        <RealTimeData simulatedData={simulatedData} plcData={plcData} />
       </div>
     </div>
   );
