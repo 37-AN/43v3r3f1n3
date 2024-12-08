@@ -7,6 +7,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardGrid } from '@/components/dashboard/DashboardGrid';
 import { useOPCUAClients } from '@/hooks/useOPCUAClients';
 import { useDeviceSelection } from '@/hooks/useDeviceSelection';
+import { ModelTraining } from '@/components/ai/ModelTraining';
 import { ModelTrainingExport } from '@/components/analysis/ModelTrainingExport';
 
 interface IndexProps {
@@ -31,11 +32,14 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
       {selectedDeviceId && (
         <>
           <AIInsights deviceId={selectedDeviceId} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ModelTraining />
+            <ModelTrainingExport />
+          </div>
           <DataAnalyzer 
             selectedDeviceId={selectedDeviceId}
             simulatedData={simulatedData}
           />
-          <ModelTrainingExport />
         </>
       )}
 
