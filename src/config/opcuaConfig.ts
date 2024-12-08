@@ -1,6 +1,5 @@
 export const OPC_UA_ENDPOINTS = {
-  prosys: "opc.tcp://uademo.prosysopc.com:53530/OPCUA/SimulationServer",
-  local: "opc.tcp://DESKTOP-3RVJI44.mshome.net:53530/OPCUA/SimulationServer"
+  simulation: "opc.tcp://DESKTOP-3RVJI44:53530/OPCUA/SimulationServer"
 };
 
 export const NODE_IDS = {

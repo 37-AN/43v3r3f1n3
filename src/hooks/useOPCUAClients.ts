@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CustomOPCUAClient, OPCUAClientOptions } from '@/utils/communication/opcuaClient';
 import { OPC_UA_ENDPOINTS, NODE_IDS } from '@/config/opcuaConfig';
+import { toast } from 'sonner';
 
 export const useOPCUAClients = () => {
   const [simulatedData, setSimulatedData] = useState<Record<string, number>>({});
@@ -60,6 +61,7 @@ export const useOPCUAClients = () => {
           ...prev,
           [name]: false
         }));
+        toast.error(`Failed to connect to ${name} OPC UA server`);
       }
     });
 
