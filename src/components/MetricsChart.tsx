@@ -29,7 +29,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
 
   return (
     <Card className={cn(
-      "relative p-6 h-full w-full animate-fade-up",
+      "absolute inset-0 p-6 animate-fade-up",
       "bg-white/80 dark:bg-system-gray-800/80 backdrop-blur-lg",
       "border border-white/20 dark:border-system-gray-700/20",
       "shadow-lg",
