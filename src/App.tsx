@@ -4,6 +4,7 @@ import TokenizedAssets from './pages/TokenizedAssets';
 import AssetManagement from './pages/AssetManagement';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ConsoleProvider } from '@/contexts/ConsoleContext';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -18,17 +19,19 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/tokenized-assets" element={<TokenizedAssets />} />
-          <Route path="/asset-management" element={<AssetManagement />} />
-          <Route path="/tasks" element={<div>Tasks Coming Soon</div>} />
-          <Route path="/quality-review" element={<div>Quality Review Coming Soon</div>} />
-          <Route path="/progress" element={<div>Progress Coming Soon</div>} />
-        </Routes>
-        <Toaster />
-      </Router>
+      <ConsoleProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/tokenized-assets" element={<TokenizedAssets />} />
+            <Route path="/asset-management" element={<AssetManagement />} />
+            <Route path="/tasks" element={<div>Tasks Coming Soon</div>} />
+            <Route path="/quality-review" element={<div>Quality Review Coming Soon</div>} />
+            <Route path="/progress" element={<div>Progress Coming Soon</div>} />
+          </Routes>
+          <Toaster />
+        </Router>
+      </ConsoleProvider>
     </QueryClientProvider>
   );
 }
