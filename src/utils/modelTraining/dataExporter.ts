@@ -16,6 +16,14 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
   try {
     console.log('Starting training data export...');
     
+    // First check if user is authenticated
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error('No authenticated session found');
+      toast.error('Please login to export data');
+      return;
+    }
+
     // Set default date range if not provided (last 7 days for more likely data capture)
     const defaultStartDate = new Date();
     defaultStartDate.setDate(defaultStartDate.getDate() - 7);
