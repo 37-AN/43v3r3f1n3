@@ -17,18 +17,26 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
         console.log('Initializing AI models...');
         const extractor = await pipeline(
           "feature-extraction",
-          "Xenova/all-MiniLM-L6-v2",
-          {
-            revision: "main"
-          }
+          "sentence-transformers/all-MiniLM-L6-v2"
         );
         
-        // Initialize with a simple text to validate the model
-        const testInput = "Initializing model with test input";
+        if (!extractor) {
+          throw new Error('Failed to initialize feature extractor');
+        }
+
+        // Test with a guaranteed valid input
+        const testInput = "Testing AI model initialization";
         console.log('Testing model with input:', testInput);
-        const testFeatures = await extractor(testInput);
-        console.log('Model test successful:', testFeatures !== null);
+        const testFeatures = await extractor(testInput, {
+          pooling: "mean",
+          normalize: true
+        });
         
+        if (!testFeatures) {
+          throw new Error('Model test failed - no features returned');
+        }
+        
+        console.log('Model test successful:', testFeatures !== null);
         setFeatureExtractor(extractor);
         console.log('AI models initialized successfully');
         toast.success('AI models loaded successfully');
@@ -45,33 +53,34 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
     if (selectedDeviceId && Object.keys(simulatedData).length > 0 && featureExtractor) {
       const analyzeData = async () => {
         try {
-          console.log('Analyzing data for device:', selectedDeviceId, 'Data:', simulatedData);
+          console.log('Analyzing data for device:', selectedDeviceId);
           
-          // Validate and format data before processing
+          // Ensure we have valid data to process
           const textData = Object.entries(simulatedData)
             .filter(([_, value]) => value !== null && value !== undefined)
             .map(([key, value]) => `${key}: ${value}`);
 
-          // Check if we have valid data to process
           if (textData.length === 0) {
             console.log('No valid data to analyze');
             return;
           }
 
-          console.log('Processing text data:', textData);
+          // Join data points with periods for better context
+          const inputText = textData.join('. ');
+          console.log('Processing text data:', inputText);
 
           // Extract features using the AI model
-          const features = await featureExtractor(textData.join('. '), {
+          const features = await featureExtractor(inputText, {
             pooling: "mean",
             normalize: true
           });
-
-          console.log('Extracted features:', features);
 
           if (!features) {
             console.error('Feature extraction failed - no features returned');
             return;
           }
+
+          console.log('Extracted features:', features);
 
           // Send data and features to the analysis function
           const { data, error } = await supabase.functions.invoke('analyze-plc-data', {
