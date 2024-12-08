@@ -2,11 +2,10 @@ import React from 'react';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DataIngestionManager } from '@/components/industrial/DataIngestionManager';
 import { SimulationDashboard } from '@/components/simulation/SimulationDashboard';
+import { useDeviceSelection } from '@/hooks/useDeviceSelection';
 
 const Index = () => {
-  // For now, we'll use a default device ID. In a real application, 
-  // this would likely come from a route parameter or state management
-  const defaultDeviceId = "default-device-id";
+  const selectedDeviceId = useDeviceSelection();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -14,7 +13,11 @@ const Index = () => {
         <DashboardHeader title="Industrial Data Dashboard" />
         
         <div className="grid grid-cols-1 gap-4">
-          <SimulationDashboard deviceId={defaultDeviceId} />
+          {selectedDeviceId ? (
+            <SimulationDashboard deviceId={selectedDeviceId} />
+          ) : (
+            <div className="text-center p-4">Loading device...</div>
+          )}
           <DataIngestionManager />
         </div>
       </div>

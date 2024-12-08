@@ -15,6 +15,16 @@ export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
   const isSimulationRunning = useSimulationState();
   const chartData = useSimulationData(isSimulationRunning);
 
+  if (!deviceId) {
+    return (
+      <Card className="p-3 glass-panel">
+        <div className="text-center p-4">
+          No device selected
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className="p-3 glass-panel">
       <div className="flex items-center justify-between mb-2">
