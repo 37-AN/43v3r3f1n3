@@ -1,51 +1,23 @@
-import { SimulationHeader } from "@/features/simulation/components/SimulationHeader";
+import { ConnectionStatusBanner } from "@/components/ConnectionStatusBanner";
 import { SimulationDashboard } from "@/features/simulation/components/SimulationDashboard";
-import { useSimulationState } from "@/hooks/useSimulationState";
-import { useSimulationData } from "@/hooks/useSimulationData";
-import { useSimulationTransform } from "@/features/simulation/hooks/useSimulationTransform";
-import { ConsoleProvider } from "@/contexts/ConsoleContext";
-import { useEffect } from "react";
-import { processAndRefineData, storeRefinedData } from "@/utils/industrial/dataProcessingService";
-import { toast } from "sonner";
+import { useOPCUAClients } from "@/hooks/useOPCUAClients";
+import { usePLCData } from "@/hooks/usePLCData";
+import { useSession } from "@/hooks/useSession";
 
 export default function Index() {
-  const isSimulationRunning = useSimulationState();
-  const chartData = useSimulationData(isSimulationRunning);
-  const deviceId = 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5';
-  
-  const transformedData = useSimulationTransform(chartData);
-  console.log('Transformed simulation data:', transformedData);
+  const { session } = useSession();
+  const { simulatedData } = useOPCUAClients();
+  const { plcData } = usePLCData(!!session);
 
-  useEffect(() => {
-    if (isSimulationRunning && Object.keys(transformedData).length > 0) {
-      const processData = async () => {
-        console.log('Processing new simulation data...');
-        const refinedData = await processAndRefineData({
-          deviceId,
-          ...transformedData
-        });
-
-        if (refinedData) {
-          const stored = await storeRefinedData(refinedData);
-          if (stored) {
-            toast.success('Data processed and stored successfully');
-          }
-        }
-      };
-
-      processData();
-    }
-  }, [isSimulationRunning, transformedData, deviceId]);
+  const selectedDeviceId = "e2fae487-1ee2-4ea2-b87f-decedb7d12a5";
 
   return (
-    <ConsoleProvider>
-      <div className="container mx-auto p-4 space-y-8">
-        <SimulationHeader />
-        <SimulationDashboard 
-          deviceId={deviceId}
-          simulatedData={transformedData}
-        />
-      </div>
-    </ConsoleProvider>
+    <div className="container mx-auto p-4">
+      <ConnectionStatusBanner />
+      <SimulationDashboard 
+        deviceId={selectedDeviceId}
+        simulatedData={simulatedData}
+      />
+    </div>
   );
 }
