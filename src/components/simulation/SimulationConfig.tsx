@@ -39,18 +39,28 @@ export function SimulationConfig() {
 
   const startSimulation = async () => {
     try {
+      console.log('Starting simulation with config:', config);
+      
       const simulationData = {
         device_id: config.deviceId,
         simulation_type: 'industrial',
-        parameters: config as unknown as Json,
+        parameters: {
+          ...config,
+          timestamp: new Date().toISOString()
+        } as unknown as Json,
         is_running: true
       };
 
+      console.log('Sending simulation data to database:', simulationData);
+      
       const { error } = await supabase
         .from('device_simulations')
         .upsert(simulationData);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
       
       setIsRunning(true);
       toast.success('Simulation started successfully');
@@ -62,12 +72,17 @@ export function SimulationConfig() {
 
   const stopSimulation = async () => {
     try {
+      console.log('Stopping simulation for device:', config.deviceId);
+      
       const { error } = await supabase
         .from('device_simulations')
         .update({ is_running: false })
         .eq('device_id', config.deviceId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
       
       setIsRunning(false);
       toast.success('Simulation stopped successfully');

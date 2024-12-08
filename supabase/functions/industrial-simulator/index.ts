@@ -35,6 +35,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    console.log('Fetching active simulations...');
+    
     // Get active simulations
     const { data: simulations, error: simulationError } = await supabase
       .from('device_simulations')
@@ -42,15 +44,24 @@ serve(async (req) => {
       .eq('is_running', true)
       .eq('simulation_type', 'industrial');
 
-    if (simulationError) throw simulationError;
+    if (simulationError) {
+      console.error('Error fetching simulations:', simulationError);
+      throw simulationError;
+    }
+
+    console.log('Found active simulations:', simulations?.length);
 
     for (const simulation of simulations || []) {
       const params = simulation.parameters as any;
       const isAnomaly = params.simulationType === 'anomaly';
       
+      console.log(`Generating data for device ${simulation.device_id}, anomaly mode: ${isAnomaly}`);
+      
       // Generate data for each parameter
       for (const [key, range] of Object.entries(params.parameters as SimulationParameters)) {
         const value = generateValue(range.min, range.max, isAnomaly);
+        
+        console.log(`Generated ${key} value: ${value}`);
         
         const { error: insertError } = await supabase
           .from('arduino_plc_data')
@@ -66,6 +77,7 @@ serve(async (req) => {
 
         if (insertError) {
           console.error(`Error inserting ${key} data:`, insertError);
+          throw insertError;
         }
       }
     }
