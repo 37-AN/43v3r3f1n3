@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { MetricsChart } from "@/components/MetricsChart";
 import { useDataProcessing } from "@/hooks/useDataProcessing";
 import { ModbusRegisterData } from "@/types/modbus";
+import { toast } from "sonner";
 
 interface ArduinoPLCData {
   id: string;
@@ -17,7 +18,7 @@ interface ArduinoPLCData {
 }
 
 export function ArduinoPLCDataGrid() {
-  const { data: arduinoData, isLoading } = useQuery({
+  const { data: arduinoData, isLoading, error } = useQuery({
     queryKey: ["arduino-plc-data"],
     queryFn: async () => {
       console.log("Fetching Arduino PLC data...");
@@ -25,23 +26,34 @@ export function ArduinoPLCDataGrid() {
       
       if (!user) {
         console.log("No user found");
-        return [];
+        throw new Error("Authentication required");
       }
 
-      const { data, error } = await supabase
-        .from("arduino_plc_data")
-        .select("*, plc_devices(name)")
-        .order("timestamp", { ascending: true });
+      console.log("Authenticated user:", user.email);
 
-      if (error) {
-        console.error("Error fetching Arduino PLC data:", error);
+      try {
+        const { data, error } = await supabase
+          .from("arduino_plc_data")
+          .select("*, plc_devices(name)")
+          .order("timestamp", { ascending: true });
+
+        if (error) {
+          console.error("Error fetching Arduino PLC data:", error);
+          toast.error("Failed to fetch PLC data");
+          throw error;
+        }
+
+        console.log("Successfully fetched Arduino PLC data:", data);
+        return data as ArduinoPLCData[];
+      } catch (error) {
+        console.error("Network or server error:", error);
+        toast.error("Network error while fetching PLC data");
         throw error;
       }
-
-      console.log("Fetched Arduino PLC data:", data);
-      return data as ArduinoPLCData[];
     },
-    refetchInterval: 5000 // Refresh every 5 seconds
+    refetchInterval: 5000, // Refresh every 5 seconds
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 
   const groupedData = arduinoData?.reduce((acc, item) => {
@@ -53,10 +65,21 @@ export function ArduinoPLCDataGrid() {
       timestamp: new Date(item.timestamp).toLocaleTimeString(),
       value: item.value,
       registerType: 'input' as const,
-      address: parseInt(item.data_type.split('_').pop() || '0', 10) // Use data_type as basis for address
+      address: parseInt(item.data_type.split('_').pop() || '0', 10)
     });
     return acc;
   }, {} as Record<string, ModbusRegisterData[]>) ?? {};
+
+  if (error) {
+    console.error("Error in ArduinoPLCDataGrid:", error);
+    return (
+      <Card className="p-6">
+        <div className="text-red-500">
+          Failed to load PLC data. Please check your connection and try again.
+        </div>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -64,6 +87,16 @@ export function ArduinoPLCDataGrid() {
         <div className="animate-pulse space-y-4">
           <div className="h-4 bg-gray-200 rounded w-1/4"></div>
           <div className="h-48 bg-gray-200 rounded"></div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (!arduinoData?.length) {
+    return (
+      <Card className="p-6">
+        <div className="text-gray-500">
+          No PLC data available.
         </div>
       </Card>
     );
