@@ -1,5 +1,5 @@
 export const OPC_UA_ENDPOINTS = {
-  simulation: "opc.tcp://DESKTOP-3RVJI44:53530/OPCUA/SimulationServer"
+  simulation: "opc.tcp://localhost:53530/OPCUA/SimulationServer"
 };
 
 export const NODE_IDS = {
