@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SimulationControls } from "./SimulationControls";
@@ -29,11 +28,18 @@ const defaultParameters: SimulationParameters = {
   machine_efficiency: { min: 70, max: 100 }
 };
 
+interface SimulationConfig {
+  deviceId: string;
+  updateInterval: number;
+  simulationType: 'normal' | 'anomaly';
+  parameters: SimulationParameters;
+}
+
 export function SimulationConfig() {
-  const [config, setConfig] = useState({
+  const [config, setConfig] = useState<SimulationConfig>({
     deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
     updateInterval: 2000,
-    simulationType: 'normal' as 'normal' | 'anomaly',
+    simulationType: 'normal',
     parameters: defaultParameters
   });
 
@@ -50,14 +56,17 @@ export function SimulationConfig() {
         .eq('device_id', config.deviceId)
         .single();
 
+      // Create a properly typed simulation parameters object
+      const simulationParameters: Json = {
+        updateInterval: config.updateInterval,
+        simulationType: config.simulationType,
+        parameters: config.parameters
+      };
+
       const simulationData = {
         device_id: config.deviceId,
         simulation_type: 'industrial',
-        parameters: {
-          updateInterval: config.updateInterval,
-          simulationType: config.simulationType,
-          parameters: config.parameters
-        } as Json,
+        parameters: simulationParameters,
         is_running: start
       };
 
@@ -119,9 +128,19 @@ export function SimulationConfig() {
 
       <div className="flex justify-end gap-4">
         {!isRunning ? (
-          <Button onClick={() => handleSimulation(true)}>Start Simulation</Button>
+          <button 
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            onClick={() => handleSimulation(true)}
+          >
+            Start Simulation
+          </button>
         ) : (
-          <Button onClick={() => handleSimulation(false)} variant="destructive">Stop Simulation</Button>
+          <button 
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+            onClick={() => handleSimulation(false)}
+          >
+            Stop Simulation
+          </button>
         )}
       </div>
     </Card>
