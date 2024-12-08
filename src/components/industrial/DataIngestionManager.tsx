@@ -55,25 +55,26 @@ export const DataIngestionManager = () => {
       const updatedSources = await Promise.all(
         initialSources.map(async (source) => {
           try {
-            // Check if device already exists
+            console.log(`Looking for existing device: ${source.name}`);
+            // Try to find existing device
             const { data: existingDevices, error: fetchError } = await supabase
               .from('plc_devices')
               .select('id')
               .eq('name', source.name)
-              .eq('owner_id', user.id)
-              .single();
+              .eq('owner_id', user.id);
 
-            if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+            if (fetchError) {
               console.error(`Error fetching device for ${source.name}:`, fetchError);
               throw fetchError;
             }
 
-            if (existingDevices) {
-              console.log(`Device exists for ${source.name}:`, existingDevices.id);
-              return { ...source, deviceId: existingDevices.id };
+            if (existingDevices && existingDevices.length > 0) {
+              console.log(`Device exists for ${source.name}:`, existingDevices[0].id);
+              return { ...source, deviceId: existingDevices[0].id };
             }
 
             // Create new device if it doesn't exist
+            console.log(`Creating new device for ${source.name}`);
             const { data: newDevice, error: createError } = await supabase
               .from('plc_devices')
               .insert({
