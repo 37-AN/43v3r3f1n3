@@ -43,7 +43,14 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     // Create and connect clients
     Object.entries(OPC_UA_ENDPOINTS).forEach(([name, endpoint]) => {
       console.log(`Creating client for ${name} at ${endpoint}`);
-      const options = {
+      const options: {
+        applicationName: string;
+        serverUri?: string;
+        connectionStrategy: {
+          initialDelay: number;
+          maxRetry: number;
+        }
+      } = {
         applicationName: "Industrial IoT Client",
         connectionStrategy: {
           initialDelay: 1000,
