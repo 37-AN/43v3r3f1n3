@@ -3,7 +3,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Json } from "@/integrations/supabase/types";
 import { SimulationControls } from "./SimulationControls";
 import { SimulationParameterRange } from "./SimulationParameterRange";
 
@@ -12,33 +11,36 @@ interface SimulationParameters {
   pressure: { min: number; max: number; };
   vibration: { min: number; max: number; };
   production_rate: { min: number; max: number; };
+  downtime_minutes: { min: number; max: number; };
+  defect_rate: { min: number; max: number; };
+  energy_consumption: { min: number; max: number; };
+  machine_efficiency: { min: number; max: number; };
 }
 
-interface SimulationConfig {
-  deviceId: string;
-  updateInterval: number;
-  simulationType: 'normal' | 'anomaly';
-  parameters: SimulationParameters;
-}
+const defaultParameters: SimulationParameters = {
+  temperature: { min: 20, max: 80 },
+  pressure: { min: 0, max: 100 },
+  vibration: { min: 0, max: 50 },
+  production_rate: { min: 50, max: 200 },
+  downtime_minutes: { min: 0, max: 60 },
+  defect_rate: { min: 0, max: 5 },
+  energy_consumption: { min: 50, max: 150 },
+  machine_efficiency: { min: 70, max: 100 }
+};
 
 export function SimulationConfig() {
-  const [config, setConfig] = useState<SimulationConfig>({
+  const [config, setConfig] = useState({
     deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
     updateInterval: 2000,
     simulationType: 'normal',
-    parameters: {
-      temperature: { min: 20, max: 80 },
-      pressure: { min: 0, max: 100 },
-      vibration: { min: 0, max: 50 },
-      production_rate: { min: 50, max: 200 }
-    }
+    parameters: defaultParameters
   });
 
   const [isRunning, setIsRunning] = useState(false);
 
-  const startSimulation = async () => {
+  const handleSimulation = async (start: boolean) => {
     try {
-      console.log('Starting simulation with config:', config);
+      console.log(`${start ? 'Starting' : 'Stopping'} simulation with config:`, config);
       
       const simulationData = {
         device_id: config.deviceId,
@@ -46,48 +48,21 @@ export function SimulationConfig() {
         parameters: {
           ...config,
           timestamp: new Date().toISOString()
-        } as unknown as Json,
-        is_running: true
+        },
+        is_running: start
       };
 
-      console.log('Sending simulation data to database:', simulationData);
-      
       const { error } = await supabase
         .from('device_simulations')
         .upsert(simulationData);
 
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      setIsRunning(true);
-      toast.success('Simulation started successfully');
+      setIsRunning(start);
+      toast.success(`Simulation ${start ? 'started' : 'stopped'} successfully`);
     } catch (error) {
-      console.error('Error starting simulation:', error);
-      toast.error('Failed to start simulation');
-    }
-  };
-
-  const stopSimulation = async () => {
-    try {
-      console.log('Stopping simulation for device:', config.deviceId);
-      
-      const { error } = await supabase
-        .from('device_simulations')
-        .update({ is_running: false })
-        .eq('device_id', config.deviceId);
-
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
-      
-      setIsRunning(false);
-      toast.success('Simulation stopped successfully');
-    } catch (error) {
-      console.error('Error stopping simulation:', error);
-      toast.error('Failed to stop simulation');
+      console.error(`Error ${start ? 'starting' : 'stopping'} simulation:`, error);
+      toast.error(`Failed to ${start ? 'start' : 'stop'} simulation`);
     }
   };
 
@@ -103,7 +78,7 @@ export function SimulationConfig() {
 
   return (
     <Card className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold">Industrial Data Simulator</h2>
+      <h2 className="text-2xl font-bold">Industrial Process Simulator</h2>
       
       <SimulationControls
         updateInterval={config.updateInterval}
@@ -112,7 +87,7 @@ export function SimulationConfig() {
         onSimulationTypeChange={(type) => setConfig(prev => ({ ...prev, simulationType: type }))}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Object.entries(config.parameters).map(([key, value]) => (
           <SimulationParameterRange
             key={key}
@@ -125,9 +100,9 @@ export function SimulationConfig() {
 
       <div className="flex justify-end gap-4">
         {!isRunning ? (
-          <Button onClick={startSimulation}>Start Simulation</Button>
+          <Button onClick={() => handleSimulation(true)}>Start Simulation</Button>
         ) : (
-          <Button onClick={stopSimulation} variant="destructive">Stop Simulation</Button>
+          <Button onClick={() => handleSimulation(false)} variant="destructive">Stop Simulation</Button>
         )}
       </div>
     </Card>

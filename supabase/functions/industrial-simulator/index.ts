@@ -11,17 +11,24 @@ interface SimulationParameters {
   pressure: { min: number; max: number; };
   vibration: { min: number; max: number; };
   production_rate: { min: number; max: number; };
+  downtime_minutes: { min: number; max: number; };
+  defect_rate: { min: number; max: number; };
+  energy_consumption: { min: number; max: number; };
+  machine_efficiency: { min: number; max: number; };
 }
 
 function generateValue(min: number, max: number, isAnomaly: boolean): number {
   const normalValue = min + Math.random() * (max - min);
-  if (!isAnomaly) return normalValue;
+  if (!isAnomaly) return Number(normalValue.toFixed(2));
   
   // 20% chance of generating anomaly
   if (Math.random() < 0.2) {
-    return Math.random() < 0.5 ? min - (Math.random() * 10) : max + (Math.random() * 10);
+    const anomalyValue = Math.random() < 0.5 ? 
+      min - (Math.random() * 10) : 
+      max + (Math.random() * 10);
+    return Number(anomalyValue.toFixed(2));
   }
-  return normalValue;
+  return Number(normalValue.toFixed(2));
 }
 
 serve(async (req) => {
@@ -37,7 +44,6 @@ serve(async (req) => {
 
     console.log('Fetching active simulations...');
     
-    // Get active simulations
     const { data: simulations, error: simulationError } = await supabase
       .from('device_simulations')
       .select('*')
@@ -71,7 +77,15 @@ serve(async (req) => {
             value: value,
             metadata: {
               simulation: true,
-              anomaly: isAnomaly
+              anomaly: isAnomaly,
+              unit: key === 'temperature' ? '°C' :
+                    key === 'pressure' ? 'bar' :
+                    key === 'vibration' ? 'mm/s' :
+                    key === 'production_rate' ? 'units/hr' :
+                    key === 'downtime_minutes' ? 'min' :
+                    key === 'defect_rate' ? '%' :
+                    key === 'energy_consumption' ? 'kWh' :
+                    key === 'machine_efficiency' ? '%' : ''
             }
           });
 
