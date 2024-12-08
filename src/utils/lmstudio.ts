@@ -1,1 +1,2 @@
-export { lmStudio, LMStudioAPI } from '@/api/lmstudio';
+// This file is intentionally empty as we're transitioning to OpenAI
+export {};
