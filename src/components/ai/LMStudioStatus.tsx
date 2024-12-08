@@ -7,14 +7,24 @@ import { lmStudio } from "@/utils/lmstudio";
 export function LMStudioStatus() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isChecking, setIsChecking] = useState<boolean>(true);
+  const [isHosted, setIsHosted] = useState<boolean>(false);
 
   useEffect(() => {
+    // Check if we're running on localhost or hosted
+    const isHostedEnvironment = !window.location.hostname.includes('localhost');
+    setIsHosted(isHostedEnvironment);
+
     const checkConnection = async () => {
       setIsChecking(true);
       try {
-        const connected = await lmStudio.testConnection();
-        console.log('LM Studio connection status:', connected);
-        setIsConnected(connected);
+        // Only attempt connection if running locally
+        if (!isHostedEnvironment) {
+          const connected = await lmStudio.testConnection();
+          console.log('LM Studio connection status:', connected);
+          setIsConnected(connected);
+        } else {
+          setIsConnected(false);
+        }
       } catch (error) {
         console.error('Error checking LM Studio connection:', error);
         setIsConnected(false);
@@ -24,9 +34,9 @@ export function LMStudioStatus() {
     };
 
     checkConnection();
-    // Check connection every 30 seconds
-    const interval = setInterval(checkConnection, 30000);
-    return () => clearInterval(interval);
+    // Check connection every 30 seconds if running locally
+    const interval = !isHostedEnvironment ? setInterval(checkConnection, 30000) : null;
+    return () => interval && clearInterval(interval);
   }, []);
 
   return (
@@ -44,7 +54,25 @@ export function LMStudioStatus() {
         </Badge>
       </div>
 
-      {!isConnected && !isChecking && (
+      {isHosted && (
+        <Alert>
+          <AlertDescription className="text-sm">
+            <p className="mb-2 font-medium text-amber-600">
+              Important: LM Studio connections are only possible when running the application locally
+            </p>
+            <p>To use LM Studio:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Clone and run this application on your local machine</li>
+              <li>Install and open LM Studio on your computer</li>
+              <li>Load a model in LM Studio</li>
+              <li>Enable Local Server in LM Studio settings</li>
+              <li>Ensure it's running on http://localhost:1234</li>
+            </ol>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!isHosted && !isConnected && !isChecking && (
         <Alert>
           <AlertDescription className="text-sm">
             <p className="mb-2">To use LM Studio with this application:</p>
@@ -53,7 +81,6 @@ export function LMStudioStatus() {
               <li>Load a model in LM Studio</li>
               <li>Enable Local Server in LM Studio settings</li>
               <li>Ensure it's running on http://localhost:1234</li>
-              <li>For security reasons, you must run this app locally to connect to LM Studio</li>
             </ol>
           </AlertDescription>
         </Alert>
