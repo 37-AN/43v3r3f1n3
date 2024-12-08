@@ -25,7 +25,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
 
   return (
     <Card className={cn(
-      "w-full p-4",
+      "w-full p-3",
       "bg-white/80 dark:bg-system-gray-800/80 backdrop-blur-lg",
       "border border-white/20 dark:border-system-gray-700/20",
       "shadow-lg",
@@ -37,7 +37,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
         lastTimestamp={lastTimestamp}
       />
       
-      <div className="h-[200px] w-full">
+      <div className="h-[200px] w-full mt-2">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={data} 
@@ -46,29 +46,29 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
             <CartesianGrid 
               strokeDasharray="3 3" 
               stroke="#E5E5E5" 
-              className="opacity-50"
+              className="opacity-30"
             />
             <XAxis
               dataKey="timestamp"
               stroke="#8E8E93"
-              fontSize={9}
+              fontSize={8}
               tickLine={false}
               angle={-45}
               textAnchor="end"
-              height={35}
-              dy={10}
+              height={50}
+              dy={20}
               tickFormatter={formatXAxis}
               interval="preserveStartEnd"
             />
             <YAxis 
               stroke="#8E8E93" 
-              fontSize={12} 
+              fontSize={10}
               tickLine={false}
               domain={['auto', 'auto']}
-              dx={-10}
+              dx={-5}
               tickFormatter={(value) => 
                 registerType === 'coil' || registerType === 'discrete' ? 
-                value.toString() : value.toFixed(2)
+                value.toString() : value.toFixed(1)
               }
             />
             <Tooltip
@@ -86,7 +86,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
               stroke={getRegisterColor(registerType)}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4 }}
+              activeDot={{ r: 3 }}
               isAnimationActive={true}
               animationDuration={500}
             />
