@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface MESMetric {
+export interface MESMetric {
   id: string;
   device_id: string;
   metric_type: string;
@@ -16,11 +16,11 @@ interface MESMetric {
   };
 }
 
-interface TokenizedAsset {
+export interface TokenizedAsset {
   id: string;
   asset_type: string;
   name: string;
-  description: string;
+  description: string | null;
   token_symbol: string;
   total_supply: number;
   price_per_token: number;
@@ -28,7 +28,7 @@ interface TokenizedAsset {
     source_metric: MESMetric;
     timestamp: string;
     quality_score: number;
-  };
+  } | null;
 }
 
 export const useMESData = (deviceId: string) => {
@@ -72,7 +72,7 @@ export const useMESData = (deviceId: string) => {
       }
 
       console.log('Retrieved tokenized assets:', data);
-      return data as TokenizedAsset[];
+      return (data as unknown) as TokenizedAsset[];
     },
     refetchInterval: 5000
   });
