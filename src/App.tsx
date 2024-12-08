@@ -8,7 +8,7 @@ import Login from "./pages/Login";
 import TokenizedAssets from "./pages/TokenizedAssets";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PLCConnector } from "@/utils/plcsimCommunication";
+import { PLCConnector, PLCDevice } from "@/utils/plcsimCommunication";
 import { PLCData } from "@/utils/plcData";
 import { toast } from "@/components/ui/use-toast";
 
@@ -40,19 +40,24 @@ const App = () => {
     const initializePLCConnector = async () => {
       if (isAuthenticated) {
         try {
+          console.log('Fetching PLC devices...');
           const { data: devices, error } = await supabase
             .from('plc_devices')
             .select('*')
             .eq('is_active', true);
 
-          if (error) throw error;
+          if (error) {
+            console.error('Error fetching PLC devices:', error);
+            throw error;
+          }
 
-          const connector = new PLCConnector(devices);
+          console.log('Retrieved devices:', devices);
+          const connector = new PLCConnector(devices as PLCDevice[]);
           await connector.connect();
           setPlcConnector(connector);
           
-          // Check and set connection status
           const status = connector.getConnectionStatus();
+          console.log('Connection status:', status);
           setConnectionStatus(status);
         } catch (error) {
           console.error('Error initializing PLC connector:', error);
@@ -104,21 +109,27 @@ const App = () => {
           ];
 
           const data = await plcConnector.readData(dataBlocks);
+          console.log('Read PLC data:', data);
           setPlcData(data);
 
           // Store PLC data in Supabase
-          for (const [key, value] of Object.entries(data)) {
+          const entries = Object.entries(data).map(([key, value]) => {
             const [deviceId, address] = key.split('.');
-            const { error } = await supabase
-              .from('arduino_plc_data')
-              .insert({
-                device_id: deviceId,
-                data_type: typeof value,
-                value: Number(value),
-                timestamp: new Date().toISOString(),
-                metadata: JSON.stringify({ address })
-              });
-            if (error) throw error;
+            return {
+              device_id: deviceId,
+              data_type: typeof value,
+              value: Number(value),
+              metadata: { address }
+            };
+          });
+
+          const { error } = await supabase
+            .from('arduino_plc_data')
+            .insert(entries);
+
+          if (error) {
+            console.error('Error storing PLC data:', error);
+            throw error;
           }
         } catch (error) {
           console.error('Error fetching PLC data:', error);
@@ -131,8 +142,7 @@ const App = () => {
       }
     };
 
-    const interval = setInterval(fetchPLCData, 5000); // Fetch data every 5 seconds
-
+    const interval = setInterval(fetchPLCData, 5000);
     return () => clearInterval(interval);
   }, [plcConnector]);
 
@@ -185,4 +195,3 @@ const App = () => {
 };
 
 export default App;
-
