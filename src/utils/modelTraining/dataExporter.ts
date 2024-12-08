@@ -17,36 +17,59 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
     console.log('Starting training data export...');
     console.log('Date range:', { startDate, endDate });
     
-    // Fetch PLC data with corresponding insights
+    // First fetch PLC data
     const { data: plcData, error: plcError } = await supabase
       .from('arduino_plc_data')
       .select(`
         *,
-        plc_devices!inner(name),
-        ai_insights(
-          message,
-          confidence,
-          severity
-        )
+        plc_devices!inner(name)
       `)
       .gte('timestamp', startDate?.toISOString() || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .lte('timestamp', endDate?.toISOString() || new Date().toISOString())
       .order('timestamp', { ascending: true });
 
     if (plcError) {
-      console.error('Error fetching training data:', plcError);
+      console.error('Error fetching PLC data:', plcError);
       toast.error('Failed to export training data');
       throw plcError;
     }
 
     if (!plcData || plcData.length === 0) {
-      console.log('No data found for the specified date range');
+      console.log('No PLC data found for the specified date range');
       toast.error('No data found for the specified date range');
       return;
     }
 
-    console.log('Raw data fetched:', plcData.length, 'records');
-    console.log('Sample record:', plcData[0]);
+    console.log('Raw PLC data fetched:', plcData.length, 'records');
+
+    // Get unique device IDs from PLC data
+    const deviceIds = [...new Set(plcData.map(record => record.device_id))];
+
+    // Fetch insights for these devices within the same time range
+    const { data: insightsData, error: insightsError } = await supabase
+      .from('ai_insights')
+      .select('*')
+      .in('device_id', deviceIds)
+      .gte('created_at', startDate?.toISOString() || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      .lte('created_at', endDate?.toISOString() || new Date().toISOString());
+
+    if (insightsError) {
+      console.error('Error fetching insights:', insightsError);
+      // Continue without insights if there's an error
+      console.log('Continuing without insights data');
+    }
+
+    console.log('Insights data fetched:', insightsData?.length || 0, 'records');
+
+    // Group insights by device ID and timestamp
+    const insightsByDevice = (insightsData || []).reduce((acc, insight) => {
+      const key = insight.device_id;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(insight);
+      return acc;
+    }, {} as Record<string, any[]>);
 
     // Group data by timestamp and device
     const groupedData = new Map<string, TrainingDataPoint>();
@@ -59,25 +82,12 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
           timestamp: record.timestamp,
           deviceId: record.device_id,
           values: {},
-          insights: []
+          insights: insightsByDevice[record.device_id] || []
         });
       }
       
       const dataPoint = groupedData.get(key)!;
       dataPoint.values[record.data_type] = record.value;
-      
-      // Handle insights if they exist
-      if (record.ai_insights && Array.isArray(record.ai_insights)) {
-        record.ai_insights.forEach(insight => {
-          if (insight && typeof insight === 'object') {
-            dataPoint.insights.push({
-              message: insight.message || '',
-              confidence: insight.confidence || 0,
-              severity: insight.severity || 'info'
-            });
-          }
-        });
-      }
     });
 
     const trainingData = Array.from(groupedData.values());
