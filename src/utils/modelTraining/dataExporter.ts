@@ -59,36 +59,43 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
       dataPoint.values[record.data_type] = record.value;
       
       if (record.ai_insights) {
-        dataPoint.insights.push({
+        const insight = {
           message: record.ai_insights.message,
           confidence: record.ai_insights.confidence,
           severity: record.ai_insights.severity
-        });
+        };
+        dataPoint.insights.push(insight);
       }
     });
 
     const trainingData = Array.from(groupedData.values());
     console.log('Processed training data points:', trainingData.length);
 
-    // Format data for export
+    // Format data specifically for LLM training
     const formattedData = trainingData.map(point => ({
-      input: {
-        timestamp: point.timestamp,
-        measurements: point.values,
-      },
-      output: {
-        insights: point.insights.filter(i => i.confidence > 0.7)
-      }
+      instruction: "Analyze this industrial IoT data and provide insights:",
+      input: `Timestamp: ${point.timestamp}
+Device Measurements: ${Object.entries(point.values)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ')}`,
+      output: point.insights
+        .filter(i => i.confidence > 0.7)
+        .map(i => i.message)
+        .join('\n')
     }));
 
-    // Export as JSON
-    const blob = new Blob([JSON.stringify(formattedData, null, 2)], { type: 'application/json' });
+    // Export as JSONL (one JSON object per line, common format for LLM training)
+    const jsonlContent = formattedData
+      .map(item => JSON.stringify(item))
+      .join('\n');
+
+    // Create blob and trigger download
+    const blob = new Blob([jsonlContent], { type: 'application/jsonl' });
     const url = URL.createObjectURL(blob);
     
-    // Trigger download
     const a = document.createElement('a');
     a.href = url;
-    a.download = `plc-training-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `plc-training-data-${new Date().toISOString().split('T')[0]}.jsonl`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
