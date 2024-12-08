@@ -10,9 +10,11 @@ export const useFeatureExtractor = () => {
       try {
         console.log('Starting AI model initialization...');
         
+        // Using a smaller, more reliable model
         const extractor = await pipeline(
           "feature-extraction",
-          "Xenova/all-MiniLM-L6-v2"
+          "Xenova/all-MiniLM-L6-v2",
+          { quantized: true } // Use quantized model for better performance
         );
         
         if (!extractor) {
@@ -22,13 +24,9 @@ export const useFeatureExtractor = () => {
 
         console.log('Feature extractor created successfully');
 
-        // Test the model with a simple string
-        const testInput = "Test initialization string";
+        // Test with a simple, guaranteed non-null string
+        const testInput = "test";
         console.log('Testing model with input:', testInput);
-
-        if (!testInput) {
-          throw new Error('Invalid test input');
-        }
 
         const testFeatures = await extractor(testInput, {
           pooling: "mean",

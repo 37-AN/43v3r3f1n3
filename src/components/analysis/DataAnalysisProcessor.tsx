@@ -25,17 +25,23 @@ export const DataAnalysisProcessor = ({
             .map(([key, value]) => {
               if (!value) return null;
               
-              let finalValue: number | undefined;
+              let finalValue: number | null = null;
               
               if (typeof value === 'object' && value !== null) {
-                if ('value' in value && typeof value.value === 'object' && value.value !== null && 'value' in value.value) {
-                  finalValue = Number(value.value.value);
+                if ('value' in value && 
+                    typeof value.value === 'object' && 
+                    value.value !== null && 
+                    'value' in value.value) {
+                  const numValue = Number(value.value.value);
+                  if (!isNaN(numValue)) {
+                    finalValue = numValue;
+                  }
                 }
-              } else if (typeof value === 'number') {
+              } else if (typeof value === 'number' && !isNaN(value)) {
                 finalValue = value;
               }
               
-              return !isNaN(finalValue as number) ? `${key}: ${finalValue}` : null;
+              return finalValue !== null ? `${key}: ${finalValue}` : null;
             })
             .filter((item): item is string => Boolean(item));
 
@@ -47,12 +53,6 @@ export const DataAnalysisProcessor = ({
           const inputText = textData.join('. ');
           console.log('Prepared text for analysis:', inputText);
 
-          if (!inputText) {
-            console.log('Empty input text after processing');
-            return;
-          }
-
-          console.log('Starting feature extraction...');
           const features = await featureExtractor(inputText, {
             pooling: "mean",
             normalize: true
