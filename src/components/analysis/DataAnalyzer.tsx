@@ -24,9 +24,14 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
           throw new Error('Failed to initialize feature extractor');
         }
 
-        // Test with a guaranteed valid input
-        const testInput = "Testing AI model initialization";
+        // Test with a simple, guaranteed valid input
+        const testInput = "Test input string";
         console.log('Testing model with input:', testInput);
+        
+        if (!testInput || typeof testInput !== 'string') {
+          throw new Error('Invalid test input format');
+        }
+
         const testFeatures = await extractor(testInput, {
           pooling: "mean",
           normalize: true
@@ -68,6 +73,10 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
           // Join data points with periods for better context
           const inputText = textData.join('. ');
           console.log('Processing text data:', inputText);
+
+          if (!inputText || typeof inputText !== 'string') {
+            throw new Error('Invalid input text format');
+          }
 
           // Extract features using the AI model
           const features = await featureExtractor(inputText, {
