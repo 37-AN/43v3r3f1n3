@@ -4,25 +4,32 @@ export class ModbusClient implements ModbusTCPClient {
   private socket: WebSocket | null = null;
   private connected: boolean = false;
 
-  constructor(private ip: string, private port: number, private slaveId: number) {
+  constructor(
+    private ip: string,
+    private port: number,
+    private slaveId: number
+  ) {
     console.log(`Creating ModbusClient for ${ip}:${port}`);
   }
 
   async connect(): Promise<void> {
     try {
-      // Use WebSocket instead of net.Socket for browser environment
-      const ws = new WebSocket(`ws://${this.ip}:${this.port}`);
+      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plc-proxy`;
+      const wsUrl = `wss://${new URL(proxyUrl).host}/functions/v1/plc-proxy?host=${this.ip}&port=${this.port}&protocol=modbus`;
+      
+      this.socket = new WebSocket(wsUrl);
       
       return new Promise((resolve, reject) => {
-        ws.onopen = () => {
+        if (!this.socket) return reject(new Error('Failed to create WebSocket'));
+
+        this.socket.onopen = () => {
           console.log(`Connected to Modbus device at ${this.ip}:${this.port}`);
-          this.socket = ws;
           this.connected = true;
           resolve();
         };
         
-        ws.onerror = (error) => {
-          console.error(`WebSocket error:`, error);
+        this.socket.onerror = (error) => {
+          console.error(`Failed to connect to Modbus device:`, error);
           reject(error);
         };
       });

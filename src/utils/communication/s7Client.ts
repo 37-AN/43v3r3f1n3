@@ -1,24 +1,33 @@
 export class S7Client {
+  private socket: WebSocket | null = null;
   private connected: boolean = false;
 
-  constructor(private ip: string, private rack: number, private slot: number) {
+  constructor(
+    private ip: string,
+    private rack: number,
+    private slot: number
+  ) {
     console.log(`Creating S7Client for ${ip} (rack: ${rack}, slot: ${slot})`);
   }
 
   async connect(): Promise<void> {
     try {
-      // Use WebSocket for S7 communication in browser
-      const ws = new WebSocket(`ws://${this.ip}:102`);
+      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plc-proxy`;
+      const wsUrl = `wss://${new URL(proxyUrl).host}/functions/v1/plc-proxy?host=${this.ip}&port=102&protocol=s7`;
+      
+      this.socket = new WebSocket(wsUrl);
       
       return new Promise((resolve, reject) => {
-        ws.onopen = () => {
+        if (!this.socket) return reject(new Error('Failed to create WebSocket'));
+
+        this.socket.onopen = () => {
           console.log(`Connected to S7 device at ${this.ip}`);
           this.connected = true;
           resolve();
         };
         
-        ws.onerror = (error) => {
-          console.error(`WebSocket error:`, error);
+        this.socket.onerror = (error) => {
+          console.error(`Failed to connect to S7 device:`, error);
           reject(error);
         };
       });
@@ -38,7 +47,10 @@ export class S7Client {
   }
 
   disconnect(): void {
-    this.connected = false;
+    if (this.socket) {
+      this.socket.close();
+      this.connected = false;
+    }
   }
 
   isConnected(): boolean {
