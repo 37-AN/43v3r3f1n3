@@ -15,7 +15,7 @@ interface IndexProps {
   connectionStatus: { [key: string]: boolean };
 }
 
-const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
+const Index: React.FC<IndexProps> = ({ plcData, connectionStatus: plcConnectionStatus }) => {
   const { simulatedData, deviceStatus } = useOPCUAClients();
   const selectedDeviceId = useDeviceSelection();
 
@@ -53,7 +53,10 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
         )}
 
         <div className="glass-panel p-6 rounded-xl animate-fade-up">
-          <OPCUAMetrics simulatedData={simulatedData} />
+          <OPCUAMetrics 
+            simulatedData={simulatedData} 
+            connectionStatus={deviceStatus}
+          />
         </div>
       </div>
     </div>
