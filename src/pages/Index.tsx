@@ -3,7 +3,7 @@ import { PLCData } from '@/utils/plcData';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { OPCUAClient } from '@/utils/communication/opcuaClient';
+import { CustomOPCUAClient } from '@/utils/communication/opcuaClient';
 import { toast } from 'sonner';
 
 interface IndexProps {
@@ -11,7 +11,7 @@ interface IndexProps {
   connectionStatus: { [key: string]: boolean };
 }
 
-// Simulated OPC UA server endpoints (in production, these would be real OPC UA servers)
+// Simulated OPC UA server endpoints
 const DEMO_ENDPOINTS = {
   temperature: "opc.tcp://localhost:4840/temperature",
   pressure: "opc.tcp://localhost:4840/pressure",
@@ -20,14 +20,14 @@ const DEMO_ENDPOINTS = {
 
 const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
   const [simulatedData, setSimulatedData] = useState<Record<string, number>>({});
-  const [opcuaClients, setOpcuaClients] = useState<Record<string, OPCUAClient>>({});
+  const [opcuaClients, setOpcuaClients] = useState<Record<string, CustomOPCUAClient>>({});
 
   useEffect(() => {
     // Initialize OPC UA clients
-    const clients: Record<string, OPCUAClient> = {};
+    const clients: Record<string, CustomOPCUAClient> = {};
     
     Object.entries(DEMO_ENDPOINTS).forEach(([name, endpoint]) => {
-      clients[name] = new OPCUAClient(endpoint);
+      clients[name] = new CustomOPCUAClient(endpoint);
     });
     
     setOpcuaClients(clients);
@@ -38,10 +38,10 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
         await client.connect();
         
         // Subscribe to value changes
-        await client.subscribe("ns=1;s=Temperature", (dataValue) => {
+        await client.subscribe(name, (dataValue) => {
           setSimulatedData(prev => ({
             ...prev,
-            [name]: dataValue.value.value
+            [name]: dataValue.value.value as number
           }));
         });
       } catch (error) {

@@ -1,11 +1,20 @@
-import { OPCUAClient, AttributeIds, DataValue } from "node-opcua-client";
 import { toast } from "sonner";
 
-export class OPCUAClient {
-  private client: any;
-  private session: any;
-  private subscription: any;
+// Simulated data types to match OPC UA structure
+export interface DataValue {
+  value: {
+    value: number | boolean;
+  };
+}
+
+export interface AttributeIds {
+  Value: number;
+}
+
+export class CustomOPCUAClient {
   private connected: boolean = false;
+  private simulatedValues: Map<string, number> = new Map();
+  private subscriptionCallbacks: Map<string, ((value: DataValue) => void)[]> = new Map();
 
   constructor(
     private endpointUrl: string,
@@ -17,30 +26,53 @@ export class OPCUAClient {
       }
     }
   ) {
-    console.log(`Creating OPC UA Client for ${endpointUrl}`);
-    this.client = OPCUAClient.create(this.options);
+    console.log(`Creating simulated OPC UA Client for ${endpointUrl}`);
+    // Initialize with some random values
+    this.simulatedValues.set("temperature", Math.random() * 100);
+    this.simulatedValues.set("pressure", Math.random() * 50);
+    this.simulatedValues.set("speed", Math.random() * 1000);
+    
+    // Start simulation
+    this.startSimulation();
+  }
+
+  private startSimulation() {
+    setInterval(() => {
+      if (this.connected) {
+        // Update simulated values with some random fluctuation
+        this.simulatedValues.forEach((value, key) => {
+          const newValue = value + (Math.random() - 0.5) * 2;
+          this.simulatedValues.set(key, newValue);
+          
+          // Notify subscribers
+          const callbacks = this.subscriptionCallbacks.get(key) || [];
+          callbacks.forEach(callback => {
+            callback({
+              value: { value: newValue }
+            });
+          });
+        });
+      }
+    }, 1000);
   }
 
   async connect(): Promise<void> {
     try {
-      console.log(`Connecting to OPC UA server at ${this.endpointUrl}`);
-      await this.client.connect(this.endpointUrl);
-      this.session = await this.client.createSession();
+      console.log(`Connecting to simulated OPC UA server at ${this.endpointUrl}`);
+      // Simulate connection delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       this.connected = true;
-      console.log('Successfully connected to OPC UA server');
+      console.log('Successfully connected to simulated OPC UA server');
     } catch (error) {
-      console.error('Failed to connect to OPC UA server:', error);
+      console.error('Failed to connect to simulated OPC UA server:', error);
       throw error;
     }
   }
 
   async readValue(nodeId: string): Promise<number | boolean | null> {
     try {
-      const dataValue = await this.session.read({
-        nodeId,
-        attributeId: AttributeIds.Value
-      });
-      return dataValue.value.value;
+      const value = this.simulatedValues.get(nodeId);
+      return value ?? null;
     } catch (error) {
       console.error(`Error reading node ${nodeId}:`, error);
       return null;
@@ -49,16 +81,7 @@ export class OPCUAClient {
 
   async writeValue(nodeId: string, value: number | boolean): Promise<void> {
     try {
-      await this.session.write({
-        nodeId,
-        attributeId: AttributeIds.Value,
-        value: {
-          value: {
-            dataType: typeof value === 'boolean' ? 'Boolean' : 'Double',
-            value: value
-          }
-        }
-      });
+      this.simulatedValues.set(nodeId, value as number);
       toast.success(`Value written successfully to ${nodeId}`);
     } catch (error) {
       console.error(`Error writing to node ${nodeId}:`, error);
@@ -69,28 +92,9 @@ export class OPCUAClient {
 
   async subscribe(nodeId: string, callback: (dataValue: DataValue) => void): Promise<void> {
     try {
-      if (!this.subscription) {
-        this.subscription = await this.session.createSubscription2({
-          requestedPublishingInterval: 1000,
-          requestedLifetimeCount: 100,
-          requestedMaxKeepAliveCount: 10,
-          maxNotificationsPerPublish: 100,
-          publishingEnabled: true,
-          priority: 10
-        });
-      }
-
-      await this.subscription.monitor({
-        nodeId,
-        attributeId: AttributeIds.Value
-      }, 
-      {
-        samplingInterval: 1000,
-        discardOldest: true,
-        queueSize: 10
-      }, 
-      callback);
-
+      const callbacks = this.subscriptionCallbacks.get(nodeId) || [];
+      callbacks.push(callback);
+      this.subscriptionCallbacks.set(nodeId, callbacks);
     } catch (error) {
       console.error(`Error subscribing to node ${nodeId}:`, error);
       throw error;
@@ -98,15 +102,9 @@ export class OPCUAClient {
   }
 
   async disconnect(): Promise<void> {
-    if (this.subscription) {
-      await this.subscription.terminate();
-    }
-    if (this.session) {
-      await this.session.close();
-    }
-    await this.client.disconnect();
     this.connected = false;
-    console.log('Disconnected from OPC UA server');
+    this.subscriptionCallbacks.clear();
+    console.log('Disconnected from simulated OPC UA server');
   }
 
   isConnected(): boolean {
