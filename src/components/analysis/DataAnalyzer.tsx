@@ -38,10 +38,18 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
         try {
           console.log('Analyzing data for device:', selectedDeviceId, 'Data:', simulatedData);
           
-          // Convert numerical data to text format for feature extraction
-          const textData = Object.entries(simulatedData).map(
-            ([key, value]) => `${key}: ${value}`
-          );
+          // Validate and format data before processing
+          const textData = Object.entries(simulatedData)
+            .filter(([_, value]) => value !== null && value !== undefined)
+            .map(([key, value]) => `${key}: ${value}`);
+
+          // Check if we have valid data to process
+          if (textData.length === 0) {
+            console.log('No valid data to analyze');
+            return;
+          }
+
+          console.log('Processing text data:', textData);
 
           // Extract features using the AI model
           const features = await featureExtractor(textData, {
@@ -50,6 +58,11 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
           });
 
           console.log('Extracted features:', features);
+
+          if (!features) {
+            console.error('Feature extraction failed - no features returned');
+            return;
+          }
 
           // Send data and features to the analysis function
           const { data, error } = await supabase.functions.invoke('analyze-plc-data', {
