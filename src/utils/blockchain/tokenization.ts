@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import IndustrialAssetTokenABI from '@/contracts/IndustrialAssetToken.json';
 
-const CONTRACT_ADDRESS = '0x...'; // This will be set after deployment
+// Deployed to Sepolia testnet
+const CONTRACT_ADDRESS = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
 
 export async function initializeBlockchainConnection() {
   try {
@@ -17,7 +18,7 @@ export async function initializeBlockchainConnection() {
     
     const contract = new ethers.Contract(
       CONTRACT_ADDRESS,
-      IndustrialAssetTokenABI,
+      IndustrialAssetTokenABI.abi,
       signer
     );
 

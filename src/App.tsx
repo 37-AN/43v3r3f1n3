@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import TokenizedAssets from "./pages/TokenizedAssets";
+import ComplianceMonitoring from "./pages/ComplianceMonitoring";
 import { useAuthState } from "@/hooks/useAuthState";
 import { usePLCData } from "@/hooks/usePLCData";
 import { ConsoleProvider } from "@/contexts/ConsoleContext";
@@ -59,6 +60,16 @@ const App = () => {
                     element={
                       isAuthenticated ? (
                         <TokenizedAssets />
+                      ) : (
+                        <Navigate to="/login" replace />
+                      )
+                    }
+                  />
+                  <Route
+                    path="/compliance-monitoring"
+                    element={
+                      isAuthenticated ? (
+                        <ComplianceMonitoring />
                       ) : (
                         <Navigate to="/login" replace />
                       )
