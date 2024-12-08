@@ -20,10 +20,21 @@ export const DataAnalysisProcessor = ({
           console.log('Starting data analysis for device:', selectedDeviceId);
           console.log('Current simulated data:', simulatedData);
           
-          // Filter out null/undefined values and create text representation
+          // Extract and format data, handling nested structures
           const textData = Object.entries(simulatedData)
-            .filter(([_, value]) => value !== null && value !== undefined)
-            .map(([key, value]) => `${key}: ${value}`);
+            .filter(([_, value]) => {
+              // Handle both direct numbers and nested value objects
+              const actualValue = typeof value === 'object' && value?.value?.value !== undefined 
+                ? value.value.value 
+                : value;
+              return actualValue !== null && actualValue !== undefined;
+            })
+            .map(([key, value]) => {
+              const actualValue = typeof value === 'object' && value?.value?.value !== undefined
+                ? value.value.value
+                : value;
+              return `${key}: ${actualValue}`;
+            });
 
           if (textData.length === 0) {
             console.log('No valid data to analyze');

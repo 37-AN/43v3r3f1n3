@@ -26,9 +26,9 @@ export const useFeatureExtractor = () => {
         const testInput = "Test initialization string";
         console.log('Testing model with input:', testInput);
 
-        // Ensure input is valid before processing
-        if (!testInput?.trim()) {
-          console.error('Test input is empty or invalid');
+        // Ensure test input is a valid string
+        if (typeof testInput !== 'string' || !testInput.trim()) {
+          console.error('Test input is invalid:', testInput);
           throw new Error('Invalid test input');
         }
 
