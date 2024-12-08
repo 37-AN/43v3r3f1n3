@@ -12,7 +12,7 @@ export interface AttributeIds {
 
 interface OPCUAClientOptions {
   applicationName: string;
-  serverUri?: string;  // Added this optional property
+  serverUri?: string;  // Optional property for server URI
   connectionStrategy: {
     initialDelay: number;
     maxRetry: number;
