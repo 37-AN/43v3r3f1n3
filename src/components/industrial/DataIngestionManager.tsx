@@ -10,33 +10,102 @@ interface DataSourceStatus {
   name: string;
   connected: boolean;
   lastUpdate: Date | null;
-  deviceId: string; // Added to store UUID
+  deviceId: string;
 }
 
 export const DataIngestionManager = () => {
-  const [sources, setSources] = useState<DataSourceStatus[]>([
-    { 
-      id: 'mes-1', 
-      name: 'MES System', 
-      connected: false, 
-      lastUpdate: null,
-      deviceId: '550e8400-e29b-41d4-a716-446655440000' // Example UUID
-    },
-    { 
-      id: 'scada-1', 
-      name: 'SCADA Controller', 
-      connected: false, 
-      lastUpdate: null,
-      deviceId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
-    },
-    { 
-      id: 'iot-gateway', 
-      name: 'IoT Gateway', 
-      connected: false, 
-      lastUpdate: null,
-      deviceId: '7ba7b810-9dad-11d1-80b4-00c04fd430c9'
-    }
-  ]);
+  const [sources, setSources] = useState<DataSourceStatus[]>([]);
+
+  useEffect(() => {
+    const initializeDevices = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log('No authenticated user found');
+        toast.error('Authentication required');
+        return;
+      }
+
+      // Define our data sources
+      const initialSources = [
+        { 
+          id: 'mes-1', 
+          name: 'MES System',
+          deviceId: '', // Will be set after device creation
+          connected: false,
+          lastUpdate: null
+        },
+        { 
+          id: 'scada-1', 
+          name: 'SCADA Controller',
+          deviceId: '',
+          connected: false,
+          lastUpdate: null
+        },
+        { 
+          id: 'iot-gateway', 
+          name: 'IoT Gateway',
+          deviceId: '',
+          connected: false,
+          lastUpdate: null
+        }
+      ];
+
+      // Create or get devices for each source
+      const updatedSources = await Promise.all(
+        initialSources.map(async (source) => {
+          try {
+            // Check if device already exists
+            const { data: existingDevices, error: fetchError } = await supabase
+              .from('plc_devices')
+              .select('id')
+              .eq('name', source.name)
+              .eq('owner_id', user.id)
+              .single();
+
+            if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+              console.error(`Error fetching device for ${source.name}:`, fetchError);
+              throw fetchError;
+            }
+
+            if (existingDevices) {
+              console.log(`Device exists for ${source.name}:`, existingDevices.id);
+              return { ...source, deviceId: existingDevices.id };
+            }
+
+            // Create new device if it doesn't exist
+            const { data: newDevice, error: createError } = await supabase
+              .from('plc_devices')
+              .insert({
+                name: source.name,
+                description: `Data source for ${source.name}`,
+                owner_id: user.id,
+                is_active: true,
+                protocol: 'industrial'
+              })
+              .select()
+              .single();
+
+            if (createError) {
+              console.error(`Error creating device for ${source.name}:`, createError);
+              throw createError;
+            }
+
+            console.log(`Created new device for ${source.name}:`, newDevice.id);
+            return { ...source, deviceId: newDevice.id };
+          } catch (error) {
+            console.error(`Error setting up device for ${source.name}:`, error);
+            toast.error(`Failed to setup ${source.name}`);
+            return source;
+          }
+        })
+      );
+
+      setSources(updatedSources);
+    };
+
+    initializeDevices();
+  }, []);
 
   useEffect(() => {
     const simulateDataIngestion = async () => {
@@ -44,10 +113,15 @@ export const DataIngestionManager = () => {
         console.log('Starting data ingestion simulation');
         // Simulate data from different sources
         for (const source of sources) {
+          if (!source.deviceId) {
+            console.log(`Skipping ${source.name} - no device ID`);
+            continue;
+          }
+
           if (Math.random() > 0.3) { // 70% chance of receiving data
             const mockData = {
               source: source.id,
-              deviceId: source.deviceId, // Using UUID deviceId
+              deviceId: source.deviceId,
               timestamp: new Date().toISOString(),
               values: {
                 temperature: Math.random() * 100,

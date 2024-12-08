@@ -24,8 +24,8 @@ serve(async (req) => {
   }
 
   try {
-    // Create Supabase client
-    const supabaseClient = createClient(
+    // Create Supabase client with service role key for bypassing RLS
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
@@ -50,6 +50,27 @@ serve(async (req) => {
       )
     }
 
+    // Verify device exists and get owner_id
+    const { data: device, error: deviceError } = await supabaseAdmin
+      .from('plc_devices')
+      .select('owner_id')
+      .eq('id', data.deviceId)
+      .single()
+
+    if (deviceError || !device) {
+      console.error('Device not found:', deviceError)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Device not found',
+          details: deviceError?.message || 'No device found with the provided ID'
+        }),
+        { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
     // Store data in arduino_plc_data table
     const entries = Object.entries(data.values).map(([key, value]) => ({
       device_id: data.deviceId,
@@ -64,16 +85,16 @@ serve(async (req) => {
 
     console.log('Preparing to insert entries:', entries)
 
-    const { error } = await supabaseClient
+    const { error: insertError } = await supabaseAdmin
       .from('arduino_plc_data')
       .insert(entries)
 
-    if (error) {
-      console.error('Error inserting data:', error)
+    if (insertError) {
+      console.error('Error inserting data:', insertError)
       return new Response(
         JSON.stringify({ 
           error: 'Failed to insert data',
-          details: error.message
+          details: insertError.message
         }),
         { 
           status: 500,
