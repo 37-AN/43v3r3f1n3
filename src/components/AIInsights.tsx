@@ -20,6 +20,8 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
 
   useEffect(() => {
     const fetchInsights = async () => {
+      console.log('Fetching insights for device:', deviceId);
+      
       const { data, error } = await supabase
         .from('ai_insights')
         .select('*')
@@ -33,11 +35,13 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
         return;
       }
 
-      // Type assertion to ensure data matches our AIInsight interface
+      console.log('Received insights data:', data);
       setInsights(data as AIInsight[]);
     };
 
-    fetchInsights();
+    if (deviceId) {
+      fetchInsights();
+    }
 
     // Subscribe to real-time updates
     const subscription = supabase
@@ -82,22 +86,23 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
     <Card className="p-4 space-y-4">
       <h3 className="text-lg font-semibold">AI Insights</h3>
       <div className="space-y-3">
-        {insights.map((insight) => (
-          <div
-            key={insight.id}
-            className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
-          >
-            {getSeverityIcon(insight.severity)}
-            <div>
-              <p className="text-sm font-medium">{insight.message}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Confidence: {(insight.confidence * 100).toFixed(1)}% | 
-                {new Date(insight.created_at).toLocaleTimeString()}
-              </p>
+        {insights.length > 0 ? (
+          insights.map((insight) => (
+            <div
+              key={insight.id}
+              className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
+            >
+              {getSeverityIcon(insight.severity)}
+              <div>
+                <p className="text-sm font-medium">{insight.message}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Confidence: {(insight.confidence * 100).toFixed(1)}% | 
+                  {new Date(insight.created_at).toLocaleTimeString()}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
-        {insights.length === 0 && (
+          ))
+        ) : (
           <p className="text-sm text-gray-500 text-center py-4">
             No insights available yet
           </p>
