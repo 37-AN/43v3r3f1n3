@@ -1,18 +1,15 @@
-import { toast } from "sonner";
-
-export interface DataValue {
-  value: {
-    value: number | boolean;
-  };
-}
-
-export interface AttributeIds {
-  Value: number;
-}
+import {
+  OPCUAClient,
+  MessageSecurityMode,
+  SecurityPolicy,
+  AttributeIds,
+  ClientSubscription,
+  ClientMonitoredItem,
+  DataValue
+} from "node-opcua";
 
 export interface OPCUAClientOptions {
   applicationName: string;
-  serverUri?: string;
   connectionStrategy: {
     initialDelay: number;
     maxRetry: number;
@@ -20,104 +17,120 @@ export interface OPCUAClientOptions {
 }
 
 export class CustomOPCUAClient {
+  private client: OPCUAClient;
+  private session: any;
+  private subscription: ClientSubscription | null = null;
   private connected: boolean = false;
-  private subscriptionCallbacks: Map<string, ((value: DataValue) => void)[]> = new Map();
-  private simulationInterval: NodeJS.Timeout | null = null;
+  private monitoredItems: Map<string, ClientMonitoredItem> = new Map();
 
   constructor(
     private endpointUrl: string,
-    private options: OPCUAClientOptions = {
-      applicationName: "Industrial IoT Client",
-      connectionStrategy: {
-        initialDelay: 1000,
-        maxRetry: 3
-      }
-    }
+    private options: OPCUAClientOptions
   ) {
-    console.log(`Creating OPC UA Client for ${endpointUrl} with options:`, options);
+    console.log(`Creating OPC UA Client for ${endpointUrl}`);
+    
+    this.client = OPCUAClient.create({
+      applicationName: options.applicationName,
+      connectionStrategy: options.connectionStrategy,
+      securityMode: MessageSecurityMode.None,
+      securityPolicy: SecurityPolicy.None,
+    });
   }
 
   async connect(): Promise<void> {
     try {
       console.log(`Connecting to OPC UA server at ${this.endpointUrl}`);
-      // Simulate successful connection
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await this.client.connect(this.endpointUrl);
+      
+      console.log("Creating session...");
+      this.session = await this.client.createSession();
+      
+      console.log("Creating subscription...");
+      this.subscription = ClientSubscription.create(this.session, {
+        requestedPublishingInterval: 1000,
+        requestedLifetimeCount: 100,
+        requestedMaxKeepAliveCount: 10,
+        maxNotificationsPerPublish: 100,
+        publishingEnabled: true,
+        priority: 10
+      });
+
       this.connected = true;
-      console.log('Successfully connected to OPC UA server');
-      
-      // Start simulation data
-      this.startSimulation();
-      
-      toast.success(`Connected to OPC UA server at ${this.endpointUrl}`);
+      console.log("Successfully connected to OPC UA server");
     } catch (error) {
-      console.error('Failed to connect to OPC UA server:', error);
-      toast.error(`Failed to connect to OPC UA server: ${error}`);
+      console.error("Failed to connect to OPC UA server:", error);
       throw error;
     }
   }
 
-  private startSimulation() {
-    console.log('Starting simulation data generation');
-    this.simulationInterval = setInterval(() => {
-      this.subscriptionCallbacks.forEach((callbacks, nodeId) => {
-        const simulatedValue = this.generateSimulatedValue(nodeId);
-        callbacks.forEach(callback => {
-          callback({
-            value: {
-              value: simulatedValue
-            }
-          });
-        });
-      });
-    }, 1000);
-  }
-
-  private generateSimulatedValue(nodeId: string): number {
-    if (nodeId.includes('Counter')) {
-      return Math.floor(Date.now() / 1000) % 100;
-    } else if (nodeId.includes('Random')) {
-      return Math.random() * 100;
-    } else if (nodeId.includes('Sinusoid')) {
-      return Math.sin(Date.now() / 1000) * 50 + 50;
-    }
-    return 0;
-  }
-
   async subscribe(nodeId: string, callback: (dataValue: DataValue) => void): Promise<void> {
+    if (!this.subscription) {
+      throw new Error("No active subscription");
+    }
+
     try {
       console.log(`Subscribing to node ${nodeId}`);
-      const callbacks = this.subscriptionCallbacks.get(nodeId) || [];
-      callbacks.push(callback);
-      this.subscriptionCallbacks.set(nodeId, callbacks);
       
-      // Immediately send initial value
-      const initialValue = this.generateSimulatedValue(nodeId);
-      callback({
-        value: {
-          value: initialValue
-        }
+      const itemToMonitor = {
+        nodeId: nodeId,
+        attributeId: AttributeIds.Value
+      };
+
+      const parameters = {
+        samplingInterval: 100,
+        discardOldest: true,
+        queueSize: 10
+      };
+
+      const monitoredItem = ClientMonitoredItem.create(
+        this.subscription,
+        itemToMonitor,
+        parameters,
+        TimestampToDate
+      );
+
+      monitoredItem.on("changed", (dataValue: DataValue) => {
+        console.log(`Received data for ${nodeId}:`, dataValue);
+        callback(dataValue);
       });
-      
-      console.log(`Subscribed to node ${nodeId}`);
+
+      this.monitoredItems.set(nodeId, monitoredItem);
+      console.log(`Successfully subscribed to node ${nodeId}`);
     } catch (error) {
       console.error(`Error subscribing to node ${nodeId}:`, error);
-      toast.error(`Failed to subscribe to node ${nodeId}`);
       throw error;
     }
   }
 
   async disconnect(): Promise<void> {
-    if (this.simulationInterval) {
-      clearInterval(this.simulationInterval);
-      this.simulationInterval = null;
+    try {
+      if (this.subscription) {
+        console.log("Terminating subscription...");
+        await this.subscription.terminate();
+      }
+      
+      if (this.session) {
+        console.log("Closing session...");
+        await this.session.close();
+      }
+      
+      console.log("Disconnecting client...");
+      await this.client.disconnect();
+      
+      this.connected = false;
+      this.monitoredItems.clear();
+      console.log("Disconnected from OPC UA server");
+    } catch (error) {
+      console.error("Error during disconnect:", error);
+      throw error;
     }
-    this.connected = false;
-    this.subscriptionCallbacks.clear();
-    console.log('Disconnected from OPC UA server');
-    toast.info('Disconnected from OPC UA server');
   }
 
   isConnected(): boolean {
     return this.connected;
   }
+}
+
+function TimestampToDate(timestamp: number): Date {
+  return new Date(timestamp);
 }
