@@ -5,6 +5,7 @@ import { SimulationCharts } from "./SimulationCharts";
 import { Button } from "@/components/ui/button";
 import { Settings2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { SimulationConfig } from "./SimulationConfig";
 
 interface SimulationDashboardProps {
   deviceId: string;
