@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
+import { SimulationControls } from "./SimulationControls";
+import { SimulationParameterRange } from "./SimulationParameterRange";
 
 interface SimulationParameters {
   temperature: { min: number; max: number; };
@@ -92,73 +91,35 @@ export function SimulationConfig() {
     }
   };
 
+  const handleParameterChange = (key: string, min: number, max: number) => {
+    setConfig(prev => ({
+      ...prev,
+      parameters: {
+        ...prev.parameters,
+        [key]: { min, max }
+      }
+    }));
+  };
+
   return (
     <Card className="p-6 space-y-6">
       <h2 className="text-2xl font-bold">Industrial Data Simulator</h2>
       
+      <SimulationControls
+        updateInterval={config.updateInterval}
+        simulationType={config.simulationType}
+        onUpdateIntervalChange={(interval) => setConfig(prev => ({ ...prev, updateInterval: interval }))}
+        onSimulationTypeChange={(type) => setConfig(prev => ({ ...prev, simulationType: type }))}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Update Interval (ms)</Label>
-          <Input
-            type="number"
-            value={config.updateInterval}
-            onChange={(e) => setConfig(prev => ({
-              ...prev,
-              updateInterval: parseInt(e.target.value)
-            }))}
-            min={1000}
-            max={10000}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Simulation Type</Label>
-          <Select
-            value={config.simulationType}
-            onValueChange={(value: 'normal' | 'anomaly') => 
-              setConfig(prev => ({ ...prev, simulationType: value }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="normal">Normal Operation</SelectItem>
-              <SelectItem value="anomaly">Anomaly Simulation</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {Object.entries(config.parameters).map(([key, value]) => (
-          <div key={key} className="space-y-2">
-            <Label className="capitalize">{key.replace('_', ' ')} Range</Label>
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                value={value.min}
-                onChange={(e) => setConfig(prev => ({
-                  ...prev,
-                  parameters: {
-                    ...prev.parameters,
-                    [key]: { ...value, min: parseFloat(e.target.value) }
-                  }
-                }))}
-                placeholder="Min"
-              />
-              <Input
-                type="number"
-                value={value.max}
-                onChange={(e) => setConfig(prev => ({
-                  ...prev,
-                  parameters: {
-                    ...prev.parameters,
-                    [key]: { ...value, max: parseFloat(e.target.value) }
-                  }
-                }))}
-                placeholder="Max"
-              />
-            </div>
-          </div>
+          <SimulationParameterRange
+            key={key}
+            parameterKey={key}
+            value={value}
+            onChange={handleParameterChange}
+          />
         ))}
       </div>
 
