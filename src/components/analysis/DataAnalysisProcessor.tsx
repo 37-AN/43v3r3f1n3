@@ -20,22 +20,21 @@ export const DataAnalysisProcessor = ({
           console.log('Starting data analysis for device:', selectedDeviceId);
           console.log('Current simulated data:', simulatedData);
           
-          // Safely extract and format data
+          // Extract and format data
           const textData = Object.entries(simulatedData)
             .map(([key, value]) => {
+              // Skip if value is falsy
               if (!value) return null;
               
-              // Handle nested structure
-              let finalValue: number | null = null;
-              if (typeof value === 'object' && value.value?.value !== undefined) {
-                finalValue = value.value.value;
-              } else if (typeof value === 'number') {
-                finalValue = value;
-              }
+              // Extract value from nested structure if present
+              const finalValue = typeof value === 'object' && 'value' in value && 
+                typeof value.value === 'object' && 'value' in value.value ? 
+                value.value.value : value;
               
-              return finalValue !== null ? `${key}: ${finalValue}` : null;
+              // Only return string if we have a valid number
+              return typeof finalValue === 'number' ? `${key}: ${finalValue}` : null;
             })
-            .filter((item): item is string => item !== null);
+            .filter((item): item is string => Boolean(item));
 
           if (textData.length === 0) {
             console.log('No valid data to analyze');
@@ -45,7 +44,7 @@ export const DataAnalysisProcessor = ({
           const inputText = textData.join('. ');
           console.log('Prepared text for analysis:', inputText);
 
-          if (!inputText?.trim()) {
+          if (!inputText) {
             console.log('Empty input text after processing');
             return;
           }
