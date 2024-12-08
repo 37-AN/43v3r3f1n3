@@ -27,24 +27,50 @@ export function SimulationControl() {
         const values = simulationEngine.generateNextValues();
         
         try {
-          // Store each metric as a separate data point
-          for (const [metric, value] of Object.entries(values)) {
-            const [category, name] = metric.split('.');
-            
-            const { error } = await supabase
-              .from('arduino_plc_data')
-              .insert({
-                device_id: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
-                data_type: `${category}_${name}`,
-                value: value,
-                metadata: {
-                  category,
-                  name,
-                  simulation: true
+          // First, send data to industrial-data-refinery
+          console.log('Sending simulation data to refinery:', values);
+          const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
+            'industrial-data-refinery',
+            {
+              body: {
+                rawData: {
+                  deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
+                  values: Object.values(values),
+                  dataType: 'simulation',
+                  timestamp: new Date().toISOString(),
+                  metadata: {
+                    simulation: true,
+                    metrics: Object.keys(values)
+                  }
                 }
-              });
+              }
+            }
+          );
 
-            if (error) throw error;
+          if (refineryError) {
+            console.error('Error in data refinement:', refineryError);
+            throw refineryError;
+          }
+
+          console.log('Received refined data:', refinedData);
+
+          // Then send refined data to MES tokenization engine
+          const { error: mesError } = await supabase.functions.invoke(
+            'mes-tokenization-engine',
+            {
+              body: {
+                refinedData: {
+                  ...refinedData,
+                  deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
+                  timestamp: new Date().toISOString()
+                }
+              }
+            }
+          );
+
+          if (mesError) {
+            console.error('Error in MES tokenization:', mesError);
+            throw mesError;
           }
 
           // Update history with latest values
@@ -57,9 +83,11 @@ export function SimulationControl() {
             ...prev
           ].slice(0, 50));
 
+          console.log('Successfully processed simulation data');
+
         } catch (error) {
-          console.error('Error storing simulation data:', error);
-          toast.error('Failed to store simulation data');
+          console.error('Error in simulation pipeline:', error);
+          toast.error('Failed to process simulation data');
           setIsRunning(false);
         }
       }, 2000);
