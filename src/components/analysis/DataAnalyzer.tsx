@@ -14,39 +14,52 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
   useEffect(() => {
     const initializeAI = async () => {
       try {
-        console.log('Initializing AI models...');
+        console.log('Starting AI model initialization...');
+        
+        // Initialize the pipeline with explicit model configuration
         const extractor = await pipeline(
           "feature-extraction",
-          "Xenova/all-MiniLM-L6-v2"
+          "Xenova/all-MiniLM-L6-v2",
+          {
+            quantized: false, // Disable quantization to ensure full model loading
+            revision: "main"
+          }
         );
         
         if (!extractor) {
+          console.error('Feature extractor initialization failed');
           throw new Error('Failed to initialize feature extractor');
         }
 
-        // Test with a simple, guaranteed valid input
-        const testInput = "Test input string";
+        console.log('Feature extractor created successfully');
+
+        // Test the model with a simple string
+        const testInput = "Hello world";
         console.log('Testing model with input:', testInput);
-        
+
+        // Validate test input
         if (!testInput || typeof testInput !== 'string') {
+          console.error('Invalid test input:', testInput);
           throw new Error('Invalid test input format');
         }
 
+        // Test feature extraction
         const testFeatures = await extractor(testInput, {
           pooling: "mean",
           normalize: true
         });
-        
+
         if (!testFeatures) {
+          console.error('Test feature extraction failed');
           throw new Error('Model test failed - no features returned');
         }
-        
+
         console.log('Model test successful:', testFeatures !== null);
         setFeatureExtractor(extractor);
-        console.log('AI models initialized successfully');
+        console.log('AI model initialization completed successfully');
         toast.success('AI models loaded successfully');
       } catch (error) {
-        console.error('Error initializing AI models:', error);
+        console.error('Error in AI initialization:', error);
         toast.error('Failed to load AI models');
       }
     };
@@ -58,7 +71,8 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
     if (selectedDeviceId && Object.keys(simulatedData).length > 0 && featureExtractor) {
       const analyzeData = async () => {
         try {
-          console.log('Analyzing data for device:', selectedDeviceId);
+          console.log('Starting data analysis for device:', selectedDeviceId);
+          console.log('Current simulated data:', simulatedData);
           
           // Ensure we have valid data to process
           const textData = Object.entries(simulatedData)
@@ -72,24 +86,27 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
 
           // Join data points with periods for better context
           const inputText = textData.join('. ');
-          console.log('Processing text data:', inputText);
+          console.log('Prepared text for analysis:', inputText);
 
+          // Validate input text
           if (!inputText || typeof inputText !== 'string') {
+            console.error('Invalid input text:', inputText);
             throw new Error('Invalid input text format');
           }
 
           // Extract features using the AI model
+          console.log('Starting feature extraction...');
           const features = await featureExtractor(inputText, {
             pooling: "mean",
             normalize: true
           });
 
           if (!features) {
-            console.error('Feature extraction failed - no features returned');
-            return;
+            console.error('Feature extraction returned no results');
+            throw new Error('Feature extraction failed - no features returned');
           }
 
-          console.log('Extracted features:', features);
+          console.log('Feature extraction successful:', features);
 
           // Send data and features to the analysis function
           const { data, error } = await supabase.functions.invoke('analyze-plc-data', {
@@ -101,13 +118,13 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
           });
 
           if (error) {
-            console.error('Error analyzing data:', error);
+            console.error('Error in data analysis:', error);
             throw error;
           }
 
-          console.log('Analysis result:', data);
+          console.log('Analysis completed successfully:', data);
         } catch (error) {
-          console.error('Error analyzing data:', error);
+          console.error('Error in data analysis:', error);
           toast.error('Failed to analyze PLC data');
         }
       };
