@@ -31,12 +31,12 @@ export default function AssetManagement() {
       if (error) throw error;
 
       // Convert snake_case to camelCase and ensure metadata type safety
-      return data.map((asset): TokenizedAsset => ({
+      return (data || []).map((asset): TokenizedAsset => ({
         id: asset.id,
         name: asset.name,
         description: asset.description || '',
         tokenSymbol: asset.token_symbol,
-        totalSupply: asset.total_supply,
+        totalSupply: asset.total_supply || 0,
         pricePerToken: asset.price_per_token,
         assetType: asset.asset_type,
         metadata: asset.metadata as TokenizedAsset['metadata'],
@@ -94,7 +94,11 @@ export default function AssetManagement() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Total Supply:</span>
-                      <span>{asset.totalSupply.toLocaleString()}</span>
+                      <span>
+                        {typeof asset.totalSupply === 'number' 
+                          ? asset.totalSupply.toLocaleString()
+                          : '0'}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Price per Token:</span>
