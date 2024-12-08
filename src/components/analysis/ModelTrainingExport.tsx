@@ -31,6 +31,8 @@ export function ModelTrainingExport() {
         return;
       }
 
+      console.log('Session found:', session.user.email);
+
       // Set default date range if not provided (last 30 days for more data)
       const defaultStartDate = new Date();
       defaultStartDate.setDate(defaultStartDate.getDate() - 30);
@@ -44,22 +46,31 @@ export function ModelTrainingExport() {
         end: queryEndDate.toISOString() 
       });
 
-      // First try fetching any record to verify table access
-      const { data: sampleData } = await supabase
+      // First verify we can access the table
+      console.log('Verifying table access...');
+      const { data: testData, error: testError } = await supabase
         .from('arduino_plc_data')
-        .select('timestamp')
-        .limit(1);
-      
-      console.log('Sample data check:', {
-        hasSampleData: !!sampleData,
-        sampleLength: sampleData?.length || 0
-      });
+        .select('id')
+        .limit(1)
+        .single();
+
+      if (testError) {
+        console.error('Table access test failed:', testError);
+        throw new Error('Failed to access PLC data table');
+      }
+
+      console.log('Table access verified');
 
       // Fetch PLC data with detailed logging
+      console.log('Fetching PLC data...');
       const { data: plcData, error: plcError } = await supabase
         .from('arduino_plc_data')
         .select(`
-          *,
+          id,
+          device_id,
+          data_type,
+          value,
+          timestamp,
           plc_devices(name)
         `)
         .gte('timestamp', queryStartDate.toISOString())
@@ -68,54 +79,36 @@ export function ModelTrainingExport() {
 
       if (plcError) {
         console.error('Error fetching PLC data:', plcError);
-        toast.error('Failed to fetch PLC data');
-        return;
+        throw plcError;
       }
 
-      console.log('PLC data query response:', {
+      console.log('PLC data fetch response:', {
         hasData: !!plcData,
-        length: plcData?.length || 0,
+        recordCount: plcData?.length || 0,
         firstRecord: plcData?.[0],
         lastRecord: plcData?.[plcData?.length - 1]
       });
 
       if (!plcData || plcData.length === 0) {
-        console.log('No PLC data found for the date range:', {
-          start: queryStartDate.toISOString(),
-          end: queryEndDate.toISOString()
+        console.log('No data found in range:', {
+          start: queryStartDate,
+          end: queryEndDate,
         });
         toast.error('No data found for the specified date range');
         return;
       }
 
-      // Get unique device IDs from PLC data
-      const deviceIds = [...new Set(plcData.map(record => record.device_id))];
-      console.log('Unique device IDs:', deviceIds);
-
-      // Fetch insights for these devices within the same time range
-      const { data: insightsData, error: insightsError } = await supabase
-        .from('ai_insights')
-        .select('*')
-        .in('device_id', deviceIds)
-        .gte('created_at', queryStartDate.toISOString())
-        .lte('created_at', queryEndDate.toISOString());
-
-      if (insightsError) {
-        console.error('Error fetching insights:', insightsError);
-        // Continue without insights if there's an error
-        console.log('Continuing without insights data');
-      }
-
-      console.log('Insights data fetched:', insightsData?.length || 0, 'records');
-
       // Format data for export
       const formattedData = plcData.map(record => ({
+        id: record.id,
         timestamp: record.timestamp,
         device: record.plc_devices?.name || 'Unknown Device',
+        device_id: record.device_id,
         type: record.data_type,
-        value: record.value,
-        metadata: record.metadata
+        value: record.value
       }));
+
+      console.log('Formatted data sample:', formattedData[0]);
 
       // Create and download file
       const blob = new Blob([JSON.stringify(formattedData, null, 2)], {
@@ -135,7 +128,7 @@ export function ModelTrainingExport() {
       console.log('Export completed successfully');
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Failed to export data');
+      toast.error('Failed to export data: ' + (error as Error).message);
     } finally {
       setIsExporting(false);
     }
