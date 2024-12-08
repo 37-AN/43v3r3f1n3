@@ -4,6 +4,7 @@ import { ArduinoPLCDataGrid } from "@/components/ArduinoPLCDataGrid";
 import { AIInsights } from "@/components/AIInsights";
 import { AdvancedAIInsights } from "@/components/ai/AdvancedAIInsights";
 import { DataAnalyzer } from "@/components/analysis/DataAnalyzer";
+import { MESDataDisplay } from "@/components/MESDataDisplay";
 import { generatePerformanceData, generateResourceData } from "@/utils/sampleDataGenerator";
 
 interface SimulationDashboardProps {
@@ -25,6 +26,8 @@ export function SimulationDashboard({ deviceId, simulatedData }: SimulationDashb
         refinedPerformance={generatePerformanceData()}
         refinedResources={generateResourceData()}
       />
+
+      <MESDataDisplay deviceId={deviceId} />
 
       <ArduinoPLCDataGrid />
 
