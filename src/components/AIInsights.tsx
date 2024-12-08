@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { AlertCircle, AlertTriangle, Info, Activity, Zap, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useConsole } from "@/contexts/ConsoleContext";
 
 interface AIInsight {
   id: string;
@@ -22,6 +22,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
     stability: 0,
     anomalyCount: 0
   });
+  const { addMessage } = useConsole();
 
   useEffect(() => {
     const fetchInsights = async () => {
@@ -50,9 +51,8 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
 
         if (error) {
           console.error('Error fetching insights:', error);
-          // Only show toast for authentication errors
           if (error.message.includes('JWT')) {
-            toast.error('Session expired. Please log in again.');
+            addMessage('error', 'Session expired. Please log in again.');
           }
           return;
         }
@@ -96,11 +96,9 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
           console.log('New insight received:', payload);
           setInsights(current => [payload.new as AIInsight, ...current.slice(0, 4)]);
           
-          // Only show toast for critical insights
+          // Only show critical insights in console
           if (payload.new.severity === 'critical') {
-            toast.error(payload.new.message, {
-              description: "Critical system alert"
-            });
+            addMessage('error', payload.new.message);
           }
         }
       )
@@ -109,7 +107,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [deviceId]);
+  }, [deviceId, addMessage]);
 
   const getSeverityIcon = (severity: AIInsight['severity']) => {
     switch (severity) {

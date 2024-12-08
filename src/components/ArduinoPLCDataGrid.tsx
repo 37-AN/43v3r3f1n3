@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { MetricsChart } from "@/components/MetricsChart";
 import { ModbusRegisterData } from "@/types/modbus";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useConsole } from "@/contexts/ConsoleContext";
 
 interface ArduinoPLCData {
   id: string;
@@ -18,6 +18,8 @@ interface ArduinoPLCData {
 }
 
 export function ArduinoPLCDataGrid() {
+  const { addMessage } = useConsole();
+
   const { data: arduinoData, isLoading, error } = useQuery({
     queryKey: ["arduino-plc-data"],
     queryFn: async () => {
@@ -26,6 +28,7 @@ export function ArduinoPLCDataGrid() {
       
       if (!user) {
         console.log("No user found");
+        addMessage('error', 'Authentication required');
         throw new Error("Authentication required");
       }
 
@@ -44,9 +47,8 @@ export function ArduinoPLCDataGrid() {
 
         if (error) {
           console.error("Error fetching Arduino PLC data:", error);
-          // Only show toast for network or authentication errors
           if (error.message.includes('JWT') || error.message.includes('network')) {
-            toast.error("Failed to fetch PLC data. Please check your connection.");
+            addMessage('error', 'Failed to fetch PLC data. Please check your connection.');
           }
           throw error;
         }
@@ -55,6 +57,7 @@ export function ArduinoPLCDataGrid() {
         
         if (!data || data.length === 0) {
           console.log("No PLC data found in the selected time range");
+          addMessage('info', 'No PLC data found in the selected time range');
         }
         
         return data as ArduinoPLCData[];
