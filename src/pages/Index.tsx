@@ -1,18 +1,66 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { PLCData } from '@/utils/plcData';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { OPCUAClient } from '@/utils/communication/opcuaClient';
+import { toast } from 'sonner';
 
 interface IndexProps {
   plcData: PLCData | null;
   connectionStatus: { [key: string]: boolean };
 }
 
+// Simulated OPC UA server endpoints (in production, these would be real OPC UA servers)
+const DEMO_ENDPOINTS = {
+  temperature: "opc.tcp://localhost:4840/temperature",
+  pressure: "opc.tcp://localhost:4840/pressure",
+  speed: "opc.tcp://localhost:4840/speed"
+};
+
 const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
+  const [simulatedData, setSimulatedData] = useState<Record<string, number>>({});
+  const [opcuaClients, setOpcuaClients] = useState<Record<string, OPCUAClient>>({});
+
+  useEffect(() => {
+    // Initialize OPC UA clients
+    const clients: Record<string, OPCUAClient> = {};
+    
+    Object.entries(DEMO_ENDPOINTS).forEach(([name, endpoint]) => {
+      clients[name] = new OPCUAClient(endpoint);
+    });
+    
+    setOpcuaClients(clients);
+
+    // Connect to each endpoint
+    Object.entries(clients).forEach(async ([name, client]) => {
+      try {
+        await client.connect();
+        
+        // Subscribe to value changes
+        await client.subscribe("ns=1;s=Temperature", (dataValue) => {
+          setSimulatedData(prev => ({
+            ...prev,
+            [name]: dataValue.value.value
+          }));
+        });
+      } catch (error) {
+        console.error(`Failed to connect to ${name} endpoint:`, error);
+        toast.error(`Failed to connect to ${name} endpoint`);
+      }
+    });
+
+    // Cleanup
+    return () => {
+      Object.values(clients).forEach(client => {
+        client.disconnect().catch(console.error);
+      });
+    };
+  }, []);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold mb-6">PLC Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6">Manufacturing Dashboard</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
@@ -20,7 +68,7 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
           <div className="space-y-3">
             {Object.entries(connectionStatus).map(([deviceId, status]) => (
               <div key={deviceId} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium">PLCSIM Device ({deviceId})</span>
+                <span className="text-sm font-medium">Device ({deviceId})</span>
                 <Badge variant={status ? "success" : "destructive"} className="capitalize">
                   {status ? 'Connected' : 'Disconnected'}
                 </Badge>
@@ -30,24 +78,26 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
         </Card>
 
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">PLC Data</h2>
+          <h2 className="text-xl font-semibold mb-4">Real-time Data</h2>
           <ScrollArea className="h-[300px] pr-4">
-            {plcData ? (
-              <div className="space-y-3">
-                {Object.entries(plcData).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium">{key}</span>
-                    <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                      {value?.toString() ?? 'N/A'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-4">
-                Waiting for PLC data...
-              </div>
-            )}
+            <div className="space-y-3">
+              {Object.entries(simulatedData).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium capitalize">{key}</span>
+                  <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                    {typeof value === 'number' ? value.toFixed(2) : value?.toString() ?? 'N/A'}
+                  </span>
+                </div>
+              ))}
+              {plcData && Object.entries(plcData).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium">{key}</span>
+                  <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                    {value?.toString() ?? 'N/A'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </ScrollArea>
         </Card>
       </div>
