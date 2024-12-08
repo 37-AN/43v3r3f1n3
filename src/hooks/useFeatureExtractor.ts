@@ -12,10 +12,7 @@ export const useFeatureExtractor = () => {
         
         const extractor = await pipeline(
           "feature-extraction",
-          "Xenova/all-MiniLM-L6-v2",
-          {
-            revision: "main"
-          }
+          "Xenova/all-MiniLM-L6-v2"
         );
         
         if (!extractor) {
@@ -26,13 +23,8 @@ export const useFeatureExtractor = () => {
         console.log('Feature extractor created successfully');
 
         // Test the model with a simple string
-        const testInput = "Hello world";
+        const testInput = "Test initialization";
         console.log('Testing model with input:', testInput);
-
-        if (!testInput || typeof testInput !== 'string') {
-          console.error('Invalid test input:', testInput);
-          throw new Error('Invalid test input format');
-        }
 
         const testFeatures = await extractor(testInput, {
           pooling: "mean",
@@ -44,7 +36,7 @@ export const useFeatureExtractor = () => {
           throw new Error('Model test failed - no features returned');
         }
 
-        console.log('Model test successful:', testFeatures !== null);
+        console.log('Model test successful, features shape:', testFeatures.shape);
         setFeatureExtractor(extractor);
         console.log('AI model initialization completed successfully');
         toast.success('AI models loaded successfully');
