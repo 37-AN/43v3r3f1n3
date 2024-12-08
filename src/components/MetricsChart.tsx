@@ -27,10 +27,27 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
     }
   };
 
-  // Format timestamp to be more compact (HH:mm)
+  // Format timestamp to be more compact (HH:mm:ss)
   const formatXAxis = (tickItem: string) => {
-    const date = new Date(tickItem);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      // First check if it's already a valid date string
+      let date = new Date(tickItem);
+      
+      // If invalid, try parsing as a timestamp
+      if (isNaN(date.getTime())) {
+        console.log('Invalid date, attempting to parse timestamp:', tickItem);
+        return '';
+      }
+      
+      return date.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
   };
 
   return (
