@@ -1,4 +1,4 @@
-import { ModbusTCPClient } from '../types/modbus';
+import { ModbusTCPClient } from '@/types/modbus';
 
 export class ModbusClient {
   private socket: WebSocket | null = null;

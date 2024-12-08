@@ -1,4 +1,4 @@
-import { PLCDevice } from './types/plc';
+import { PLCDevice } from '@/types/plc';
 import { PLCData } from './plcData';
 import { ModbusClient } from './communication/modbusClient';
 import { S7Client } from './communication/s7Client';
