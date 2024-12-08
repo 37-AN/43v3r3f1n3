@@ -20,32 +20,42 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
   const selectedDeviceId = useDeviceSelection();
 
   return (
-    <div className="container mx-auto p-6 space-y-8 animate-fade-up">
-      <DashboardHeader title="Manufacturing Dashboard" />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <DashboardGrid 
-          deviceStatus={deviceStatus}
-          simulatedData={simulatedData}
-          plcData={plcData}
-        />
-      </div>
-
-      {selectedDeviceId && (
-        <>
-          <AIInsights deviceId={selectedDeviceId} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ModelTraining />
-            <ModelTrainingExport />
-          </div>
-          <DataAnalyzer 
-            selectedDeviceId={selectedDeviceId}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <DashboardHeader title="Manufacturing Dashboard" />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DashboardGrid 
+            deviceStatus={deviceStatus}
             simulatedData={simulatedData}
+            plcData={plcData}
           />
-        </>
-      )}
+        </div>
 
-      <OPCUAMetrics simulatedData={simulatedData} />
+        {selectedDeviceId && (
+          <div className="space-y-8 animate-fade-up">
+            <div className="glass-panel p-6 rounded-xl">
+              <AIInsights deviceId={selectedDeviceId} />
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ModelTraining />
+              <ModelTrainingExport />
+            </div>
+            
+            <div className="glass-panel p-6 rounded-xl">
+              <DataAnalyzer 
+                selectedDeviceId={selectedDeviceId}
+                simulatedData={simulatedData}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="glass-panel p-6 rounded-xl animate-fade-up">
+          <OPCUAMetrics simulatedData={simulatedData} />
+        </div>
+      </div>
     </div>
   );
 };
