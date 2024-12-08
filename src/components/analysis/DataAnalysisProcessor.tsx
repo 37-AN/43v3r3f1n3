@@ -18,6 +18,7 @@ export const DataAnalysisProcessor = ({
 }: DataAnalysisProcessorProps) => {
   useEffect(() => {
     if (!selectedDeviceId || !featureExtractor) {
+      console.log('Missing required props:', { selectedDeviceId, featureExtractor });
       return;
     }
 
@@ -28,12 +29,27 @@ export const DataAnalysisProcessor = ({
         const features = featureExtractor(preparedData);
         console.log('Extracted features:', features);
 
-        // Format raw data for the edge function
+        // Validate and format raw data
+        if (!preparedData) {
+          console.error('No prepared data available');
+          return null;
+        }
+
+        const values = preparedData.split(' ').map(Number);
+        if (values.length === 0 || values.some(isNaN)) {
+          console.error('Invalid numerical values in prepared data');
+          return null;
+        }
+
         const formattedData = {
           deviceId: selectedDeviceId,
           dataType: 'measurement',
-          values: preparedData.split(' ').map(Number),
-          timestamp: new Date().toISOString()
+          values: values,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            source: 'plc_analysis',
+            featureCount: features.length
+          }
         };
 
         console.log('Sending formatted data to edge function:', formattedData);
@@ -47,10 +63,16 @@ export const DataAnalysisProcessor = ({
 
         if (aiError) {
           console.error('Error in AI analysis:', aiError);
-          throw aiError;
+          toast.error('Failed to process data in AI refinery');
+          return null;
         }
 
         console.log('AI analysis response:', aiData);
+
+        if (!aiData || !aiData.deviceId) {
+          console.error('Invalid AI analysis response');
+          return null;
+        }
 
         const insight = aiData?.analysis ? {
           message: aiData.analysis,

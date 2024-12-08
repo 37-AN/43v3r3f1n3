@@ -15,8 +15,9 @@ serve(async (req) => {
     console.log('Received raw data for refinement:', rawData);
 
     // Validate input data
-    if (!rawData || typeof rawData !== 'object') {
-      throw new Error('Invalid or missing raw data');
+    if (!rawData || !rawData.deviceId || !rawData.values || !Array.isArray(rawData.values)) {
+      console.error('Invalid or missing raw data structure:', rawData);
+      throw new Error('Invalid or missing raw data structure');
     }
 
     // Initialize quality metrics
@@ -24,9 +25,7 @@ serve(async (req) => {
     const anomalyThreshold = 2.5;
     
     // Basic statistical analysis
-    const values = Object.entries(rawData)
-      .filter(([_, value]) => typeof value === 'number' && !isNaN(value))
-      .map(([_, value]) => value as number);
+    const values = rawData.values.filter(value => typeof value === 'number' && !isNaN(value));
 
     if (values.length === 0) {
       throw new Error('No valid numerical values found in raw data');
@@ -42,23 +41,24 @@ serve(async (req) => {
       const zScore = Math.abs((value - mean) / stdDev);
       if (zScore > anomalyThreshold) {
         qualityScore *= 0.9;
-        return mean; // Replace anomaly with mean
+        return mean;
       }
       return value;
     });
 
     // Process and refine the data
     const refinedData = {
-      deviceId: rawData.deviceId || rawData.device_id,
-      dataType: rawData.dataType || rawData.type || 'measurement',
-      value: cleanedValues[0], // Use first cleaned value
+      deviceId: rawData.deviceId,
+      dataType: rawData.dataType || 'measurement',
+      value: cleanedValues[0],
       qualityScore,
       metadata: {
         mean,
         stdDev,
-        timestamp: new Date().toISOString(),
+        timestamp: rawData.timestamp || new Date().toISOString(),
         originalValue: values[0],
-        anomaliesDetected: values.length - cleanedValues.length
+        anomaliesDetected: values.length - cleanedValues.length,
+        ...rawData.metadata
       }
     };
 
