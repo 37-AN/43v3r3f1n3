@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,12 +14,24 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data for refinement:', rawData);
 
+    // Validate input data
+    if (!rawData || typeof rawData !== 'object') {
+      throw new Error('Invalid or missing raw data');
+    }
+
     // Initialize quality metrics
     let qualityScore = 1.0;
     const anomalyThreshold = 2.5;
     
     // Basic statistical analysis
-    const values = Object.values(rawData).filter(v => typeof v === 'number');
+    const values = Object.entries(rawData)
+      .filter(([_, value]) => typeof value === 'number' && !isNaN(value))
+      .map(([_, value]) => value as number);
+
+    if (values.length === 0) {
+      throw new Error('No valid numerical values found in raw data');
+    }
+
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
     const stdDev = Math.sqrt(
       values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length

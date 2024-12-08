@@ -15,6 +15,15 @@ serve(async (req) => {
     const { refinedData, timestamp } = await req.json();
     console.log('Received refined data for MES tokenization:', refinedData);
 
+    // Validate input data
+    if (!refinedData || typeof refinedData !== 'object') {
+      throw new Error('Invalid or missing refined data');
+    }
+
+    if (!refinedData.deviceId) {
+      throw new Error('Missing deviceId in refined data');
+    }
+
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -25,15 +34,17 @@ serve(async (req) => {
     const mesMetrics = {
       device_id: refinedData.deviceId,
       metric_type: 'performance',
-      value: refinedData.value,
+      value: refinedData.value || 0,
       unit: refinedData.metadata?.unit || 'unit',
-      timestamp: timestamp,
+      timestamp: timestamp || new Date().toISOString(),
       metadata: {
-        quality_score: refinedData.qualityScore,
+        quality_score: refinedData.qualityScore || 1.0,
         source: 'ai_refinery',
         ...refinedData.metadata
       }
     };
+
+    console.log('Generated MES metrics:', mesMetrics);
 
     // Store MES metrics
     const { error: metricsError } = await supabaseClient
@@ -46,19 +57,21 @@ serve(async (req) => {
     }
 
     // Create tokenization record if quality score is above threshold
-    if (refinedData.qualityScore >= 0.8) {
+    if ((refinedData.qualityScore || 0) >= 0.8) {
       const tokenData = {
         asset_type: 'industrial_data',
-        name: `${refinedData.dataType}_${timestamp}`,
-        description: `Tokenized industrial data for ${refinedData.dataType}`,
+        name: `${refinedData.dataType || 'measurement'}_${timestamp || new Date().toISOString()}`,
+        description: `Tokenized industrial data for ${refinedData.dataType || 'measurement'}`,
         token_symbol: 'IND',
         owner_id: refinedData.metadata?.owner_id,
         metadata: {
           source_data: refinedData,
-          timestamp,
-          quality_score: refinedData.qualityScore
+          timestamp: timestamp || new Date().toISOString(),
+          quality_score: refinedData.qualityScore || 1.0
         }
       };
+
+      console.log('Creating token data:', tokenData);
 
       const { error: tokenError } = await supabaseClient
         .from('tokenized_assets')
