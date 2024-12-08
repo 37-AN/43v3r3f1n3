@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export async function initializeBlockchainConnection() {
   try {

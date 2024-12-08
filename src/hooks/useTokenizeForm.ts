@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface TokenizeFormData {
-  name: string;
-  description: string;
-  tokenSymbol: string;
-  totalSupply: string;
-  pricePerToken: string;
-}
+import { TokenizeFormData } from "@/types/tokenize";
 
 export function useTokenizeForm(onSuccess: () => void) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,7 +10,8 @@ export function useTokenizeForm(onSuccess: () => void) {
     description: '',
     tokenSymbol: '',
     totalSupply: '1000000',
-    pricePerToken: '0.001'
+    pricePerToken: '0.001',
+    assetType: 'machine' // Added default value for assetType
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +31,7 @@ export function useTokenizeForm(onSuccess: () => void) {
       const { data, error } = await supabase
         .from('tokenized_assets')
         .insert({
-          asset_type: 'device',
+          asset_type: formData.assetType,
           name: formData.name,
           description: formData.description,
           token_symbol: formData.tokenSymbol,
