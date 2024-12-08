@@ -32,8 +32,9 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
     try {
       // If it's already a time string (e.g., "1:51:09 PM"), return it directly
       if (tickItem.includes(':') && (tickItem.includes('AM') || tickItem.includes('PM'))) {
-        console.log('Using time string directly:', tickItem);
-        return tickItem;
+        // Convert "1:51:09 PM" to "1:51 PM" format
+        const parts = tickItem.split(':');
+        return `${parts[0]}:${parts[1]} ${tickItem.slice(-2)}`;
       }
 
       // Otherwise, try to parse as a date
@@ -41,8 +42,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
       if (!isNaN(date.getTime())) {
         return date.toLocaleTimeString([], { 
           hour: '2-digit', 
-          minute: '2-digit',
-          second: '2-digit'
+          minute: '2-digit'
         });
       }
 
@@ -89,7 +89,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
             <XAxis
               dataKey="timestamp"
               stroke="#8E8E93"
-              fontSize={10}
+              fontSize={9}
               tickLine={false}
               angle={-45}
               textAnchor="end"
