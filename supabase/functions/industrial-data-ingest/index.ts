@@ -30,7 +30,20 @@ serve(async (req) => {
     const data: IndustrialData = await req.json()
     console.log('Received industrial data:', data);
 
-    // Store data in arduino_plc_data table (which supports generic industrial data)
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(data.deviceId)) {
+      console.error('Invalid UUID format:', data.deviceId);
+      return new Response(
+        JSON.stringify({ error: 'Invalid UUID format for deviceId' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Store data in arduino_plc_data table
     const entries = Object.entries(data.values).map(([key, value]) => ({
       device_id: data.deviceId,
       data_type: key,

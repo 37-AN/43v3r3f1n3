@@ -10,24 +10,44 @@ interface DataSourceStatus {
   name: string;
   connected: boolean;
   lastUpdate: Date | null;
+  deviceId: string; // Added to store UUID
 }
 
 export const DataIngestionManager = () => {
   const [sources, setSources] = useState<DataSourceStatus[]>([
-    { id: 'mes-1', name: 'MES System', connected: false, lastUpdate: null },
-    { id: 'scada-1', name: 'SCADA Controller', connected: false, lastUpdate: null },
-    { id: 'iot-gateway', name: 'IoT Gateway', connected: false, lastUpdate: null }
+    { 
+      id: 'mes-1', 
+      name: 'MES System', 
+      connected: false, 
+      lastUpdate: null,
+      deviceId: '550e8400-e29b-41d4-a716-446655440000' // Example UUID
+    },
+    { 
+      id: 'scada-1', 
+      name: 'SCADA Controller', 
+      connected: false, 
+      lastUpdate: null,
+      deviceId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
+    },
+    { 
+      id: 'iot-gateway', 
+      name: 'IoT Gateway', 
+      connected: false, 
+      lastUpdate: null,
+      deviceId: '7ba7b810-9dad-11d1-80b4-00c04fd430c9'
+    }
   ]);
 
   useEffect(() => {
     const simulateDataIngestion = async () => {
       try {
+        console.log('Starting data ingestion simulation');
         // Simulate data from different sources
         for (const source of sources) {
           if (Math.random() > 0.3) { // 70% chance of receiving data
             const mockData = {
               source: source.id,
-              deviceId: `${source.id}-device-1`,
+              deviceId: source.deviceId, // Using UUID deviceId
               timestamp: new Date().toISOString(),
               values: {
                 temperature: Math.random() * 100,
@@ -40,6 +60,7 @@ export const DataIngestionManager = () => {
               }
             };
 
+            console.log('Sending data to edge function:', mockData);
             const { error } = await supabase.functions.invoke('industrial-data-ingest', {
               body: mockData
             });
@@ -50,6 +71,7 @@ export const DataIngestionManager = () => {
               continue;
             }
 
+            console.log(`Successfully ingested data for ${source.name}`);
             setSources(prev => prev.map(s => 
               s.id === source.id 
                 ? { ...s, connected: true, lastUpdate: new Date() }
