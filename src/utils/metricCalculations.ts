@@ -8,21 +8,25 @@ function generateSensorValue(min: number, max: number, currentValue: number): nu
   return Math.min(Math.max(newValue, min), max);
 }
 
-export function generateMetricValue(currentValue: number, parameters: SimulationParameters | null): number {
+export function generateMetricValue(
+  metricKey: string,
+  currentValue: number,
+  parameters: SimulationParameters | null
+): number {
   if (!parameters) {
     // Default behavior for devices without specific parameters
     return currentValue + (Math.random() - 0.5) * 5;
   }
   
-  // Use simulation parameters to generate more realistic values
-  const register = parameters.registers[0];
-  if (!register) return currentValue;
-
-  // Generate values based on register type and range
-  const minValue = 0;
-  const maxValue = register.value * 2; // Use register value as a reference point
+  // Get the parameter range for this metric
+  const paramKey = metricKey.toLowerCase().replace(/\s+/g, '_') as keyof SimulationParameters;
+  const range = parameters[paramKey];
   
-  return generateSensorValue(minValue, maxValue, currentValue);
+  if (!range) {
+    return currentValue + (Math.random() - 0.5) * 5;
+  }
+  
+  return generateSensorValue(range.min, range.max, currentValue);
 }
 
 export function updateDeviceMetrics(
@@ -33,29 +37,10 @@ export function updateDeviceMetrics(
   
   return metrics.map(metric => {
     if (typeof metric.value === 'number') {
-      // Apply different update logic based on metric type
-      switch (metric.label.toLowerCase()) {
-        case 'cpu load':
-          return {
-            ...metric,
-            value: generateSensorValue(0, 100, metric.value)
-          };
-        case 'memory usage':
-          return {
-            ...metric,
-            value: generateSensorValue(0, 8, metric.value)
-          };
-        case 'network i/o':
-          return {
-            ...metric,
-            value: generateSensorValue(0, 10, parseFloat(metric.value.toString())).toFixed(1)
-          };
-        default:
-          return {
-            ...metric,
-            value: generateMetricValue(metric.value, validParameters)
-          };
-      }
+      return {
+        ...metric,
+        value: generateMetricValue(metric.label, metric.value, validParameters)
+      };
     }
     return metric;
   });
