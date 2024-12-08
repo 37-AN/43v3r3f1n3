@@ -16,25 +16,26 @@ export function SimulationControls({
   onSimulationTypeChange
 }: SimulationControlsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label>Update Interval (ms)</Label>
+    <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-1">
+        <Label className="text-xs">Update Interval (ms)</Label>
         <Input
           type="number"
           value={updateInterval}
           onChange={(e) => onUpdateIntervalChange(parseInt(e.target.value))}
           min={1000}
           max={10000}
+          className="h-7 text-xs"
         />
       </div>
 
-      <div className="space-y-2">
-        <Label>Simulation Type</Label>
+      <div className="space-y-1">
+        <Label className="text-xs">Simulation Type</Label>
         <Select
           value={simulationType}
           onValueChange={(value: 'normal' | 'anomaly') => onSimulationTypeChange(value)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="h-7 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

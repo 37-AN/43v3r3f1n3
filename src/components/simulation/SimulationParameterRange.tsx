@@ -9,20 +9,22 @@ interface SimulationParameterRangeProps {
 
 export function SimulationParameterRange({ parameterKey, value, onChange }: SimulationParameterRangeProps) {
   return (
-    <div className="space-y-2">
-      <Label className="capitalize">{parameterKey.replace('_', ' ')} Range</Label>
-      <div className="flex gap-2">
+    <div className="space-y-1">
+      <Label className="text-xs capitalize">{parameterKey.replace('_', ' ')}</Label>
+      <div className="flex gap-1">
         <Input
           type="number"
           value={value.min}
           onChange={(e) => onChange(parameterKey, parseFloat(e.target.value), value.max)}
           placeholder="Min"
+          className="h-7 text-xs"
         />
         <Input
           type="number"
           value={value.max}
           onChange={(e) => onChange(parameterKey, value.min, parseFloat(e.target.value))}
           placeholder="Max"
+          className="h-7 text-xs"
         />
       </div>
     </div>

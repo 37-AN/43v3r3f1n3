@@ -83,43 +83,45 @@ export function SimulationConfig() {
   };
 
   return (
-    <Card className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold">Industrial Process Simulator</h2>
+    <Card className="p-4 glass-panel">
+      <h2 className="text-lg font-semibold mb-3">Industrial Process Simulator</h2>
       
-      <SimulationControls
-        updateInterval={config.updateInterval}
-        simulationType={config.simulationType}
-        onUpdateIntervalChange={(interval) => setConfig(prev => ({ ...prev, updateInterval: interval }))}
-        onSimulationTypeChange={(type) => setConfig(prev => ({ ...prev, simulationType: type }))}
-      />
+      <div className="space-y-3">
+        <SimulationControls
+          updateInterval={config.updateInterval}
+          simulationType={config.simulationType}
+          onUpdateIntervalChange={(interval) => setConfig(prev => ({ ...prev, updateInterval: interval }))}
+          onSimulationTypeChange={(type) => setConfig(prev => ({ ...prev, simulationType: type }))}
+        />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Object.entries(config.parameters).map(([key, value]) => (
-          <SimulationParameterRange
-            key={key}
-            parameterKey={key}
-            value={value}
-            onChange={handleParameterChange}
-          />
-        ))}
-      </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {Object.entries(config.parameters).map(([key, value]) => (
+            <SimulationParameterRange
+              key={key}
+              parameterKey={key}
+              value={value}
+              onChange={handleParameterChange}
+            />
+          ))}
+        </div>
 
-      <div className="flex justify-end gap-4">
-        {!isRunning ? (
-          <button 
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-            onClick={() => handleSimulation(true)}
-          >
-            Start Simulation
-          </button>
-        ) : (
-          <button 
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-            onClick={() => handleSimulation(false)}
-          >
-            Stop Simulation
-          </button>
-        )}
+        <div className="flex justify-end">
+          {!isRunning ? (
+            <button 
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm"
+              onClick={() => handleSimulation(true)}
+            >
+              Start Simulation
+            </button>
+          ) : (
+            <button 
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-sm"
+              onClick={() => handleSimulation(false)}
+            >
+              Stop Simulation
+            </button>
+          )}
+        </div>
       </div>
     </Card>
   );

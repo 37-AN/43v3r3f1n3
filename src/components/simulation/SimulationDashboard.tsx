@@ -9,9 +9,9 @@ export function SimulationDashboard() {
 
   if (!isSimulationRunning) {
     return (
-      <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-6">Real-time Simulation Data</h2>
-        <p className="text-muted-foreground text-center py-8">
+      <Card className="p-4 glass-panel">
+        <h2 className="text-lg font-semibold mb-2">Real-time Simulation Data</h2>
+        <p className="text-sm text-muted-foreground text-center py-4">
           Start the simulation to see real-time data visualization
         </p>
       </Card>
@@ -19,8 +19,8 @@ export function SimulationDashboard() {
   }
 
   return (
-    <Card className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Real-time Simulation Data</h2>
+    <Card className="p-4 glass-panel">
+      <h2 className="text-lg font-semibold mb-3">Real-time Simulation Data</h2>
       <SimulationCharts chartData={chartData} />
     </Card>
   );
