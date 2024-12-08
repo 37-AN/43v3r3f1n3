@@ -9,7 +9,7 @@ interface ChartsGridProps {
 export function ChartsGrid({ performanceData, resourceData }: ChartsGridProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div className="w-full min-h-[400px] p-4">
+      <div className="w-full h-[500px] p-6">
         <MetricsChart
           title="System Performance"
           data={performanceData.map(data => ({
@@ -21,7 +21,7 @@ export function ChartsGrid({ performanceData, resourceData }: ChartsGridProps) {
           className="h-full transition-transform hover:scale-[1.01]"
         />
       </div>
-      <div className="w-full min-h-[400px] p-4">
+      <div className="w-full h-[500px] p-6">
         <MetricsChart
           title="Resource Utilization"
           data={resourceData.map(data => ({
