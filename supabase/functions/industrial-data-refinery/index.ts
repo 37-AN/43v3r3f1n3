@@ -44,10 +44,10 @@ serve(async (req) => {
       data_type: rawData.dataType || 'measurement',
       value: values[0],
       quality_score: 0.95,
+      timestamp: rawData.timestamp || new Date().toISOString(),
       metadata: {
         mean,
         stdDev,
-        timestamp: rawData.timestamp || new Date().toISOString(),
         originalValue: values[0],
         source: 'ai_refinery',
         owner_id: rawData.metadata?.owner_id

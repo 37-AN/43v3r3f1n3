@@ -27,6 +27,14 @@ export const DataAnalysisProcessor = ({
         console.log('Starting data analysis for device:', selectedDeviceId);
         
         // First verify device exists and user has access
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.error('No active session');
+          toast.error('Please log in to analyze data');
+          return null;
+        }
+
         const { data: deviceData, error: deviceError } = await supabase
           .from('plc_devices')
           .select('id, owner_id')
@@ -47,9 +55,6 @@ export const DataAnalysisProcessor = ({
 
         console.log('Device data:', deviceData);
         
-        const features = featureExtractor(preparedData);
-        console.log('Extracted features:', features);
-
         // Validate and format raw data
         if (!preparedData) {
           console.error('No prepared data available');
@@ -70,12 +75,11 @@ export const DataAnalysisProcessor = ({
           timestamp: new Date().toISOString(),
           metadata: {
             source: 'plc_analysis',
-            featureCount: features.length,
-            owner_id: deviceData.owner_id
+            owner_id: session.user.id
           }
         };
 
-        console.log('Sending formatted data to edge function:', rawData);
+        console.log('Sending data to industrial-data-refinery:', rawData);
 
         // Get AI analysis from our edge function
         const { data: refinedData, error: aiError } = await supabase.functions.invoke('industrial-data-refinery', {
@@ -88,12 +92,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        console.log('AI analysis response:', refinedData);
-
-        if (!refinedData || !refinedData.deviceId) {
-          console.error('Invalid AI analysis response');
-          return null;
-        }
+        console.log('Received refined data:', refinedData);
 
         // Send refined data to MES tokenization engine
         const { data: mesData, error: mesError } = await supabase.functions.invoke('mes-tokenization-engine', {
@@ -110,6 +109,9 @@ export const DataAnalysisProcessor = ({
         }
 
         console.log('MES tokenization response:', mesData);
+
+        const features = featureExtractor(preparedData);
+        console.log('Extracted features:', features);
 
         const insight = refinedData?.analysis ? {
           message: refinedData.analysis,
