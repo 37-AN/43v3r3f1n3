@@ -35,14 +35,14 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
 
   return (
     <Card className={cn(
-      "w-full h-full p-6",
+      "w-full p-4",
       "bg-white/80 dark:bg-system-gray-800/80 backdrop-blur-lg",
       "border border-white/20 dark:border-system-gray-700/20",
-      "shadow-lg animate-fade-up",
+      "shadow-lg",
       className
     )}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="space-y-1">
+      <div className="flex items-center justify-between mb-2">
+        <div>
           <h3 className="text-lg font-semibold text-system-gray-900 dark:text-system-gray-100">
             {title}
           </h3>
@@ -54,11 +54,11 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
           Last updated: {data.length > 0 ? formatXAxis(data[data.length - 1].timestamp) : 'N/A'}
         </div>
       </div>
-      <div className="h-[300px] w-full">
+      <div className="h-[200px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={data} 
-            margin={{ top: 10, right: 30, left: 20, bottom: 25 }}
+            margin={{ top: 5, right: 10, left: 0, bottom: 20 }}
           >
             <CartesianGrid 
               strokeDasharray="3 3" 
@@ -72,7 +72,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
               tickLine={false}
               angle={-45}
               textAnchor="end"
-              height={40}
+              height={35}
               dy={10}
               tickFormatter={formatXAxis}
               interval="preserveStartEnd"
@@ -98,7 +98,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
               }}
               formatter={(value: number, name: string) => [
                 registerType === 'coil' || registerType === 'discrete' ? 
-                  value.toString() : value.toFixed(2),
+                value.toString() : value.toFixed(2),
                 `${title} (Address: ${data[0]?.address})`
               ]}
               labelFormatter={formatXAxis}
