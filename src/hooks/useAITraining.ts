@@ -79,7 +79,7 @@ Please learn from this example.`
       console.log('Training completed successfully');
       toast.success('AI model training completed');
       
-      // Store training metadata
+      // Store training metadata - Convert dates to ISO strings for JSON compatibility
       const { error: metadataError } = await supabase
         .from('ai_insights')
         .insert({
@@ -91,8 +91,8 @@ Please learn from this example.`
           metadata: {
             training_examples: trainingData.length,
             time_range: {
-              start: timeRange.start,
-              end: timeRange.end
+              start: timeRange.start.toISOString(),
+              end: timeRange.end.toISOString()
             }
           }
         });
