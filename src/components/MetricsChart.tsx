@@ -28,10 +28,18 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
   };
 
   return (
-    <Card className={cn("p-6 h-full w-full animate-fade-up glass-panel", className)}>
+    <Card className={cn(
+      "relative p-6 h-full w-full animate-fade-up",
+      "bg-white/80 dark:bg-system-gray-800/80 backdrop-blur-lg",
+      "border border-white/20 dark:border-system-gray-700/20",
+      "shadow-lg",
+      className
+    )}>
       <div className="flex items-center justify-between mb-4">
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold text-system-gray-900">{title}</h3>
+          <h3 className="text-lg font-semibold text-system-gray-900 dark:text-system-gray-100">
+            {title}
+          </h3>
           <p className="text-sm text-muted-foreground">
             Register Type: {registerType.charAt(0).toUpperCase() + registerType.slice(1)}
           </p>
@@ -40,23 +48,34 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
           Last updated: {data.length > 0 ? data[data.length - 1].timestamp : 'N/A'}
         </div>
       </div>
-      <div className="h-[300px] w-full">
+      <div className="relative h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
+          <LineChart 
+            data={data} 
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              stroke="#E5E5E5" 
+              className="opacity-50"
+            />
             <XAxis
               dataKey="timestamp"
               stroke="#8E8E93"
               fontSize={12}
               tickLine={false}
+              dy={10}
             />
             <YAxis 
               stroke="#8E8E93" 
               fontSize={12} 
               tickLine={false}
               domain={['auto', 'auto']}
-              tickFormatter={(value) => registerType === 'coil' || registerType === 'discrete' ? 
-                value.toString() : value.toFixed(2)}
+              dx={-10}
+              tickFormatter={(value) => 
+                registerType === 'coil' || registerType === 'discrete' ? 
+                value.toString() : value.toFixed(2)
+              }
             />
             <Tooltip
               contentStyle={{
@@ -64,12 +83,17 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
                 border: "none",
                 borderRadius: "8px",
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                padding: "8px 12px",
               }}
               formatter={(value: number, name: string) => [
                 registerType === 'coil' || registerType === 'discrete' ? 
                   value.toString() : value.toFixed(2),
                 `${title} (Address: ${data[0]?.address})`
               ]}
+              labelStyle={{
+                color: "#8E8E93",
+                marginBottom: "4px",
+              }}
             />
             <Line
               type="monotone"
