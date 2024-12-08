@@ -12,11 +12,11 @@ serve(async (req) => {
   }
 
   try {
-    const { refinedData, timestamp } = await req.json();
-    console.log('Received refined data for MES tokenization:', refinedData);
+    const { refinedData } = await req.json();
+    console.log('Received refined data for MES processing:', refinedData);
 
     // Validate input data
-    if (!refinedData || !refinedData.deviceId || refinedData.value === undefined) {
+    if (!refinedData || !refinedData.deviceId || refinedData.values === undefined) {
       console.error('Invalid or missing refined data:', refinedData);
       throw new Error('Invalid or missing refined data');
     }
@@ -27,65 +27,67 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Generate MES metrics from refined data
-    const mesMetrics = {
+    // Process each value from the refined data
+    const mesMetrics = refinedData.values.map((value: number, index: number) => ({
       device_id: refinedData.deviceId,
-      metric_type: 'performance',
-      value: refinedData.value,
+      metric_type: refinedData.metadata?.metrics?.[index] || 'unknown',
+      value: value,
       unit: refinedData.metadata?.unit || 'unit',
-      timestamp: timestamp || new Date().toISOString(),
+      timestamp: refinedData.timestamp || new Date().toISOString(),
       metadata: {
         quality_score: refinedData.quality_score || 1.0,
-        source: 'ai_refinery',
-        ...refinedData.metadata
+        source: refinedData.metadata?.source || 'simulation',
+        category: refinedData.metadata?.category || 'default'
       }
-    };
+    }));
 
     console.log('Storing MES metrics:', mesMetrics);
 
-    // Store MES metrics
-    const { error: metricsError } = await supabaseClient
-      .from('mes_metrics')
-      .insert(mesMetrics);
+    // Store MES metrics in batches
+    for (const metric of mesMetrics) {
+      const { error: metricsError } = await supabaseClient
+        .from('mes_metrics')
+        .insert(metric);
 
-    if (metricsError) {
-      console.error('Error storing MES metrics:', metricsError);
-      throw metricsError;
+      if (metricsError) {
+        console.error('Error storing MES metric:', metricsError);
+        throw metricsError;
+      }
     }
 
     console.log('Successfully stored MES metrics');
 
-    // Create tokenization record if quality score is above threshold
-    if ((refinedData.quality_score || 0) >= 0.8) {
-      const tokenData = {
-        asset_type: 'industrial_data',
-        name: `${refinedData.data_type || 'measurement'}_${timestamp || new Date().toISOString()}`,
-        description: `Tokenized industrial data for ${refinedData.data_type || 'measurement'}`,
-        token_symbol: 'IND',
-        owner_id: refinedData.metadata?.owner_id,
-        metadata: {
-          source_data: refinedData,
-          timestamp: timestamp || new Date().toISOString(),
-          quality_score: refinedData.quality_score || 1.0
-        }
-      };
+    // Create tokenization records for high-quality metrics
+    const tokenizationPromises = mesMetrics
+      .filter(metric => (metric.metadata.quality_score || 0) >= 0.8)
+      .map(metric => {
+        const tokenData = {
+          asset_type: 'industrial_data',
+          name: `${metric.metric_type}_${metric.timestamp}`,
+          description: `Tokenized industrial data for ${metric.metric_type}`,
+          token_symbol: 'IND',
+          total_supply: 1000000,
+          price_per_token: 0.001,
+          owner_id: refinedData.metadata?.owner_id,
+          metadata: {
+            source_metric: metric,
+            timestamp: metric.timestamp,
+            quality_score: metric.metadata.quality_score
+          }
+        };
 
-      console.log('Creating token data:', tokenData);
+        return supabaseClient
+          .from('tokenized_assets')
+          .insert(tokenData);
+      });
 
-      const { error: tokenError } = await supabaseClient
-        .from('tokenized_assets')
-        .insert(tokenData);
-
-      if (tokenError) {
-        console.error('Error creating token:', tokenError);
-        throw tokenError;
-      }
-    }
+    await Promise.all(tokenizationPromises);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: 'Data processed and tokenized successfully'
+        message: 'Data processed and tokenized successfully',
+        processedMetrics: mesMetrics.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
