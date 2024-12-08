@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { SimulatedData } from '@/types/simulation';
 
 interface DataPreparationProps {
   simulatedData: Record<string, any>;
@@ -40,7 +40,8 @@ export const DataPreparation = ({ simulatedData, onPreparedData }: DataPreparati
     }
   };
 
-  useEffect(() => {
+  // Process data whenever simulatedData changes
+  React.useEffect(() => {
     prepareData();
   }, [simulatedData]);
 
