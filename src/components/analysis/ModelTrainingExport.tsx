@@ -22,68 +22,45 @@ export function ModelTrainingExport() {
 
     try {
       setIsExporting(true);
-      console.log('Starting export with auth check...');
+      console.log('Starting export process...');
 
-      // Get current session
+      // Get the current session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Authentication required');
         return;
       }
 
-      // Set default date range if not provided (last 7 days)
-      const defaultStartDate = new Date();
-      defaultStartDate.setDate(defaultStartDate.getDate() - 7);
-      
-      const queryStartDate = startDate ? new Date(startDate) : defaultStartDate;
-      const queryEndDate = endDate ? new Date(endDate) : new Date();
+      // Call the Edge Function with authentication token
+      const response = await fetch(
+        'https://ipglcejtzonamkpsbwgz.supabase.co/functions/v1/export-plc-data',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            startDate: startDate?.toISOString(),
+            endDate: endDate?.toISOString(),
+          }),
+        }
+      );
 
-      // Ensure full day range
-      queryStartDate.setHours(0, 0, 0, 0);
-      queryEndDate.setHours(23, 59, 59, 999);
-
-      console.log('Querying with date range:', {
-        start: queryStartDate.toISOString(),
-        end: queryEndDate.toISOString()
-      });
-
-      // First try to fetch any record to verify table access
-      const { data: testData, error: testError } = await supabase
-        .from('arduino_plc_data')
-        .select('id')
-        .limit(1);
-
-      if (testError) {
-        console.error('Table access test failed:', testError);
-        toast.error('Unable to access data. Please check your permissions.');
-        return;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to export data');
       }
 
-      // Fetch actual data
-      const { data: plcData, error: plcError } = await supabase
-        .from('arduino_plc_data')
-        .select('*, plc_devices(name)')
-        .gte('timestamp', queryStartDate.toISOString())
-        .lte('timestamp', queryEndDate.toISOString());
+      const { data } = await response.json();
 
-      if (plcError) {
-        console.error('Error fetching PLC data:', plcError);
-        toast.error('Failed to fetch data');
-        return;
-      }
-
-      if (!plcData?.length) {
-        console.log('No data found in range:', {
-          start: queryStartDate,
-          end: queryEndDate,
-          testDataExists: testData?.length > 0
-        });
+      if (!data?.length) {
         toast.error('No data found for the selected date range');
         return;
       }
 
       // Format the data for export
-      const exportData = plcData.map(record => ({
+      const exportData = data.map(record => ({
         timestamp: record.timestamp,
         device: record.plc_devices?.name || 'Unknown Device',
         type: record.data_type,
@@ -106,9 +83,10 @@ export function ModelTrainingExport() {
       URL.revokeObjectURL(url);
 
       toast.success('Data exported successfully');
+      console.log('Export completed successfully');
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Export failed');
+      toast.error('Failed to export data');
     } finally {
       setIsExporting(false);
     }
