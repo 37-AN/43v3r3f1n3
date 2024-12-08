@@ -17,7 +17,7 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
         console.log('Initializing AI models...');
         const extractor = await pipeline(
           "feature-extraction",
-          "sentence-transformers/all-MiniLM-L6-v2"
+          "Xenova/all-MiniLM-L6-v2"
         );
         
         if (!extractor) {
