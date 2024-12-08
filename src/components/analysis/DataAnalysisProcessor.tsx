@@ -26,6 +26,27 @@ export const DataAnalysisProcessor = ({
       try {
         console.log('Starting data analysis for device:', selectedDeviceId);
         
+        // First verify device exists and user has access
+        const { data: deviceData, error: deviceError } = await supabase
+          .from('plc_devices')
+          .select('id, owner_id')
+          .eq('id', selectedDeviceId)
+          .single();
+
+        if (deviceError) {
+          console.error('Error fetching device:', deviceError);
+          toast.error('Failed to verify device access');
+          return null;
+        }
+
+        if (!deviceData) {
+          console.error('Device not found or no access');
+          toast.error('Device not found or no access');
+          return null;
+        }
+
+        console.log('Device data:', deviceData);
+        
         const features = featureExtractor(preparedData);
         console.log('Extracted features:', features);
 
@@ -48,7 +69,8 @@ export const DataAnalysisProcessor = ({
           timestamp: new Date().toISOString(),
           metadata: {
             source: 'plc_analysis',
-            featureCount: features.length
+            featureCount: features.length,
+            owner_id: deviceData.owner_id
           }
         };
 

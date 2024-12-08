@@ -16,12 +16,9 @@ serve(async (req) => {
     console.log('Received refined data for MES tokenization:', refinedData);
 
     // Validate input data
-    if (!refinedData || typeof refinedData !== 'object') {
+    if (!refinedData || !refinedData.deviceId || refinedData.value === undefined) {
+      console.error('Invalid or missing refined data:', refinedData);
       throw new Error('Invalid or missing refined data');
-    }
-
-    if (!refinedData.deviceId) {
-      throw new Error('Missing deviceId in refined data');
     }
 
     // Initialize Supabase client
@@ -34,7 +31,7 @@ serve(async (req) => {
     const mesMetrics = {
       device_id: refinedData.deviceId,
       metric_type: 'performance',
-      value: refinedData.value || 0,
+      value: refinedData.value,
       unit: refinedData.metadata?.unit || 'unit',
       timestamp: timestamp || new Date().toISOString(),
       metadata: {
@@ -83,19 +80,12 @@ serve(async (req) => {
       }
     }
 
-    console.log('Successfully processed data in MES engine');
-
     return new Response(
       JSON.stringify({ 
         success: true,
         message: 'Data processed and tokenized successfully'
       }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error in MES tokenization engine:', error);
@@ -106,10 +96,7 @@ serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
