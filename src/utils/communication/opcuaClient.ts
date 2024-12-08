@@ -10,6 +10,15 @@ export interface AttributeIds {
   Value: number;
 }
 
+interface OPCUAClientOptions {
+  applicationName: string;
+  serverUri?: string;
+  connectionStrategy: {
+    initialDelay: number;
+    maxRetry: number;
+  };
+}
+
 export class CustomOPCUAClient {
   private connected: boolean = false;
   private simulatedValues: Map<string, number> = new Map();
@@ -18,9 +27,8 @@ export class CustomOPCUAClient {
 
   constructor(
     private endpointUrl: string,
-    private options = {
+    private options: OPCUAClientOptions = {
       applicationName: "Industrial IoT Client",
-      serverUri?: string,
       connectionStrategy: {
         initialDelay: 1000,
         maxRetry: 3
