@@ -4,14 +4,15 @@ import { useSimulationData } from "@/hooks/useSimulationData";
 import { SimulationCharts } from "./SimulationCharts";
 import { Button } from "@/components/ui/button";
 import { Settings2 } from "lucide-react";
-import { useState } from "react";
-import { SimulationConfig } from "./SimulationConfig";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
-export function SimulationDashboard() {
+interface SimulationDashboardProps {
+  deviceId: string;
+}
+
+export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
   const isSimulationRunning = useSimulationState();
   const chartData = useSimulationData(isSimulationRunning);
-  const [showConfig, setShowConfig] = useState(false);
 
   return (
     <Card className="p-3 glass-panel">
@@ -31,7 +32,7 @@ export function SimulationDashboard() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <SimulationConfig />
+            <SimulationConfig deviceId={deviceId} />
           </DialogContent>
         </Dialog>
       </div>
