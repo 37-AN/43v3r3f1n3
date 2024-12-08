@@ -50,6 +50,82 @@ export type Database = {
           },
         ]
       }
+      annotation_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          data_item_id: string
+          dataset_id: string | null
+          id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          data_item_id: string
+          dataset_id?: string | null
+          id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          data_item_id?: string
+          dataset_id?: string | null
+          id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annotation_tasks_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      annotations: {
+        Row: {
+          annotation_data: Json
+          annotator_id: string | null
+          created_at: string | null
+          id: string
+          status: string
+          task_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          annotation_data: Json
+          annotator_id?: string | null
+          created_at?: string | null
+          id?: string
+          status?: string
+          task_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          annotation_data?: Json
+          annotator_id?: string | null
+          created_at?: string | null
+          id?: string
+          status?: string
+          task_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annotations_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "annotation_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       arduino_plc_data: {
         Row: {
           data_type: string
@@ -119,6 +195,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      datasets: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          data_type: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          data_type: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          data_type?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       device_configurations: {
         Row: {
@@ -298,6 +404,44 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      quality_reviews: {
+        Row: {
+          annotation_id: string | null
+          created_at: string | null
+          feedback: string | null
+          id: string
+          reviewer_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          annotation_id?: string | null
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          reviewer_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          annotation_id?: string | null
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          reviewer_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_reviews_annotation_id_fkey"
+            columns: ["annotation_id"]
+            isOneToOne: false
+            referencedRelation: "annotations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       token_transactions: {
         Row: {
