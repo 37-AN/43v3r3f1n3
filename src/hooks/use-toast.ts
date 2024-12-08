@@ -8,6 +8,13 @@ import type {
 const TOAST_LIMIT = 3 // Increased from 1 to allow multiple toasts
 const TOAST_REMOVE_DELAY = 3000 // Reduced from 1000000 to auto-remove toasts
 
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
