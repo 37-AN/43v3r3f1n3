@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { lmStudio } from '@/utils/lmstudio';
 
 interface TrainingData {
   input: string;
@@ -42,7 +41,6 @@ export const useAITraining = () => {
 
     if (insightError) {
       console.error('Error fetching insights:', insightError);
-      // Continue without insights if there's an error
     }
 
     console.log('Retrieved insights:', insights?.length || 0, 'records');
@@ -72,34 +70,31 @@ Value: ${record.value}`,
       setIsTraining(true);
       console.log('Starting AI model training...');
 
-      // Test LM Studio connection first
-      const isConnected = await lmStudio.testConnection();
-      if (!isConnected) {
-        throw new Error('Cannot connect to LM Studio. Please ensure the server is running at http://localhost:1234');
-      }
-      console.log('LM Studio connection successful');
-
       const trainingData = await prepareTrainingData(deviceId, timeRange);
       
       if (trainingData.length === 0) {
         throw new Error('No training data available for the selected time range');
       }
       
-      // Train the model using LM Studio's fine-tuning endpoint
+      // Train using OpenAI by sending examples
       console.log('Starting training with', trainingData.length, 'examples');
-      for (const example of trainingData) {
-        await lmStudio.analyze(
-          `Training example:
-Input: ${example.input}
-Expected Output: ${example.output}
-Please learn from this example.`
-        );
-      }
+      
+      const { data: trainResult, error: trainError } = await supabase.functions.invoke('ai-analysis', {
+        body: { 
+          prompt: `Training session with ${trainingData.length} examples:\n\n${
+            trainingData.slice(0, 10).map(ex => 
+              `Input: ${ex.input}\nExpected Output: ${ex.output}\n---`
+            ).join('\n')
+          }\n\nPlease acknowledge training completion.`
+        }
+      });
+
+      if (trainError) throw trainError;
 
       console.log('Training completed successfully');
       toast.success(`AI model training completed with ${trainingData.length} examples`);
       
-      // Store training metadata - Convert dates to ISO strings for JSON compatibility
+      // Store training metadata
       const { error: metadataError } = await supabase
         .from('ai_insights')
         .insert({

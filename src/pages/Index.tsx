@@ -9,7 +9,6 @@ import { useOPCUAClients } from '@/hooks/useOPCUAClients';
 import { useDeviceSelection } from '@/hooks/useDeviceSelection';
 import { ModelTraining } from '@/components/ai/ModelTraining';
 import { ModelTrainingExport } from '@/components/analysis/ModelTrainingExport';
-import { LMStudioStatus } from '@/components/ai/LMStudioStatus';
 
 interface IndexProps {
   plcData: PLCData | null;
@@ -24,17 +23,12 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     <div className="container mx-auto p-6 space-y-8 animate-fade-up">
       <DashboardHeader title="Manufacturing Dashboard" />
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <DashboardGrid 
-            deviceStatus={deviceStatus}
-            simulatedData={simulatedData}
-            plcData={plcData}
-          />
-        </div>
-        <div>
-          <LMStudioStatus />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <DashboardGrid 
+          deviceStatus={deviceStatus}
+          simulatedData={simulatedData}
+          plcData={plcData}
+        />
       </div>
 
       {selectedDeviceId && (
