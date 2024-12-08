@@ -14,7 +14,11 @@ export const usePLCData = (isAuthenticated: boolean) => {
     const initializePLCConnector = async () => {
       if (isAuthenticated) {
         try {
-          console.log('Fetching PLC devices from database...');
+          console.log('Checking authentication status...');
+          const { data: { session } } = await supabase.auth.getSession();
+          console.log('Current session:', session ? 'Active' : 'None');
+
+          console.log('Fetching PLC device...');
           const { data: devices, error } = await supabase
             .from('plc_devices')
             .select('*')
