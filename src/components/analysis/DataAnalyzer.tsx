@@ -15,13 +15,12 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
     const initializeAI = async () => {
       try {
         console.log('Initializing AI models...');
-        // Initialize with a dummy text to ensure the model loads properly
         const extractor = await pipeline(
           "feature-extraction",
           "Xenova/all-MiniLM-L6-v2",
           { 
             revision: "main",
-            init_text: "Initializing model" // Add initialization text
+            quantized: false // Use full precision model
           }
         );
         setFeatureExtractor(extractor);
