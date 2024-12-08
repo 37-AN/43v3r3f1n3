@@ -27,6 +27,12 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
     }
   };
 
+  // Format timestamp to be more compact (HH:mm)
+  const formatXAxis = (tickItem: string) => {
+    const date = new Date(tickItem);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <Card className={cn(
       "w-full h-full p-6",
@@ -44,15 +50,15 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
             Register Type: {registerType.charAt(0).toUpperCase() + registerType.slice(1)}
           </p>
         </div>
-        <div className="text-sm text-muted-foreground">
-          Last updated: {data.length > 0 ? data[data.length - 1].timestamp : 'N/A'}
+        <div className="text-xs text-muted-foreground">
+          Last updated: {data.length > 0 ? formatXAxis(data[data.length - 1].timestamp) : 'N/A'}
         </div>
       </div>
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={data} 
-            margin={{ top: 10, right: 30, left: 20, bottom: 50 }}
+            margin={{ top: 10, right: 30, left: 20, bottom: 25 }}
           >
             <CartesianGrid 
               strokeDasharray="3 3" 
@@ -62,12 +68,14 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
             <XAxis
               dataKey="timestamp"
               stroke="#8E8E93"
-              fontSize={12}
+              fontSize={10}
               tickLine={false}
               angle={-45}
               textAnchor="end"
-              height={50}
-              dy={15}
+              height={40}
+              dy={10}
+              tickFormatter={formatXAxis}
+              interval="preserveStartEnd"
             />
             <YAxis 
               stroke="#8E8E93" 
@@ -93,6 +101,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
                   value.toString() : value.toFixed(2),
                 `${title} (Address: ${data[0]?.address})`
               ]}
+              labelFormatter={formatXAxis}
               labelStyle={{
                 color: "#8E8E93",
                 marginBottom: "4px",
