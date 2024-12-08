@@ -1,6 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { ChartHeader } from "./charts/ChartHeader";
+import { ChartTooltipContent } from "./charts/ChartTooltipContent";
+import { formatXAxis, getRegisterColor } from "@/utils/chart/formatters";
 
 interface ModbusRegisterData {
   timestamp: string;
@@ -17,42 +20,8 @@ interface MetricsChartProps {
 }
 
 export function MetricsChart({ title, data, className, registerType }: MetricsChartProps) {
-  const getRegisterColor = (type: string) => {
-    switch (type) {
-      case 'coil': return "#34C759";
-      case 'discrete': return "#FF9500";
-      case 'input': return "#5856D6";
-      case 'holding': return "#FF2D55";
-      default: return "#34C759";
-    }
-  };
-
-  // Format timestamp to handle both date objects and time strings
-  const formatXAxis = (tickItem: string) => {
-    try {
-      // If it's already a time string (e.g., "1:51:09 PM"), return it directly
-      if (tickItem.includes(':') && (tickItem.includes('AM') || tickItem.includes('PM'))) {
-        // Convert "1:51:09 PM" to "1:51 PM" format
-        const parts = tickItem.split(':');
-        return `${parts[0]}:${parts[1]} ${tickItem.slice(-2)}`;
-      }
-
-      // Otherwise, try to parse as a date
-      const date = new Date(tickItem);
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleTimeString([], { 
-          hour: '2-digit', 
-          minute: '2-digit'
-        });
-      }
-
-      console.error('Invalid timestamp format:', tickItem);
-      return tickItem;
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return tickItem;
-    }
-  };
+  const lastTimestamp = data.length > 0 ? data[data.length - 1].timestamp : undefined;
+  const address = data.length > 0 ? data[0].address : 0;
 
   return (
     <Card className={cn(
@@ -62,19 +31,12 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
       "shadow-lg",
       className
     )}>
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h3 className="text-lg font-semibold text-system-gray-900 dark:text-system-gray-100">
-            {title}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Register Type: {registerType.charAt(0).toUpperCase() + registerType.slice(1)}
-          </p>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Last updated: {data.length > 0 ? formatXAxis(data[data.length - 1].timestamp) : 'N/A'}
-        </div>
-      </div>
+      <ChartHeader 
+        title={title}
+        registerType={registerType}
+        lastTimestamp={lastTimestamp}
+      />
+      
       <div className="h-[200px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
@@ -110,23 +72,13 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
               }
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
-                border: "none",
-                borderRadius: "8px",
-                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                padding: "8px 12px",
-              }}
-              formatter={(value: number, name: string) => [
-                registerType === 'coil' || registerType === 'discrete' ? 
-                value.toString() : value.toFixed(2),
-                `${title} (Address: ${data[0]?.address})`
-              ]}
-              labelFormatter={formatXAxis}
-              labelStyle={{
-                color: "#8E8E93",
-                marginBottom: "4px",
-              }}
+              content={
+                <ChartTooltipContent 
+                  title={title}
+                  address={address}
+                  registerType={registerType}
+                />
+              }
             />
             <Line
               type="monotone"
