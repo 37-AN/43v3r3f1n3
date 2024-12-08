@@ -31,9 +31,19 @@ export class CustomOPCUAClient {
     
     this.client = OPCUAClient.create({
       applicationName: options.applicationName,
-      connectionStrategy: options.connectionStrategy,
+      connectionStrategy: {
+        initialDelay: 1000,
+        maxRetry: 3
+      },
       securityMode: MessageSecurityMode.None,
       securityPolicy: SecurityPolicy.None,
+      endpointMustExist: false
+    });
+
+    this.client.on("backoff", (retry, delay) => {
+      console.log(
+        `Retrying to connect to ${endpointUrl}. Attempt ${retry}, delay: ${delay}ms`
+      );
     });
   }
 
@@ -77,7 +87,7 @@ export class CustomOPCUAClient {
       };
 
       const parameters = {
-        samplingInterval: 100,
+        samplingInterval: 1000,
         discardOldest: true,
         queueSize: 10
       };
