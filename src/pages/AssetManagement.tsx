@@ -30,7 +30,7 @@ export default function AssetManagement() {
 
       if (error) throw error;
 
-      // Convert snake_case to camelCase
+      // Convert snake_case to camelCase and ensure metadata type safety
       return data.map((asset): TokenizedAsset => ({
         id: asset.id,
         name: asset.name,
@@ -39,7 +39,7 @@ export default function AssetManagement() {
         totalSupply: asset.total_supply,
         pricePerToken: asset.price_per_token,
         assetType: asset.asset_type,
-        metadata: asset.metadata,
+        metadata: asset.metadata as TokenizedAsset['metadata'],
         created_at: asset.created_at
       }));
     },
@@ -125,4 +125,4 @@ export default function AssetManagement() {
       )}
     </div>
   );
-}
+};

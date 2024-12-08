@@ -16,11 +16,11 @@ export interface TokenizedAsset {
   pricePerToken: number;
   assetType: string;
   metadata?: {
-    contract_address: string;
-    transaction_hash: string;
-    blockchain: string;
-    network: string;
-  };
+    contract_address?: string;
+    transaction_hash?: string;
+    blockchain?: string;
+    network?: string;
+  } | null;
   created_at: string;
 }
 
