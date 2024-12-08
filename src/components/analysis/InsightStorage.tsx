@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -43,7 +44,7 @@ export const InsightStorage = ({ deviceId, insight, features }: InsightStoragePr
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     storeInsight();
   }, [deviceId, insight, features]);
 
