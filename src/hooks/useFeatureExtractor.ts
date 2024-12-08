@@ -26,13 +26,17 @@ export const useFeatureExtractor = () => {
         const testInput = "Test initialization string";
         console.log('Testing model with input:', testInput);
 
-        // Ensure test input is a valid string
-        if (typeof testInput !== 'string' || !testInput.trim()) {
-          console.error('Test input is invalid:', testInput);
-          throw new Error('Invalid test input');
+        // Validate test input
+        if (!testInput || typeof testInput !== 'string') {
+          throw new Error('Invalid test input type');
         }
 
-        const testFeatures = await extractor(testInput, {
+        const trimmedInput = testInput.trim();
+        if (!trimmedInput) {
+          throw new Error('Empty test input after trimming');
+        }
+
+        const testFeatures = await extractor(trimmedInput, {
           pooling: "mean",
           normalize: true
         });
@@ -42,9 +46,9 @@ export const useFeatureExtractor = () => {
           throw new Error('Model test failed - no features returned');
         }
 
-        // Convert tensor to array and log its dimensions
         const featuresList = testFeatures.tolist();
-        console.log('Model test successful, features dimensions:', Array.isArray(featuresList) ? featuresList.length : 'unknown');
+        console.log('Model test successful, features dimensions:', 
+          Array.isArray(featuresList) ? featuresList.length : 'unknown');
         
         setFeatureExtractor(extractor);
         console.log('AI model initialization completed successfully');

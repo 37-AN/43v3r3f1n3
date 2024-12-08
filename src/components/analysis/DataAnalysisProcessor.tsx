@@ -20,21 +20,22 @@ export const DataAnalysisProcessor = ({
           console.log('Starting data analysis for device:', selectedDeviceId);
           console.log('Current simulated data:', simulatedData);
           
-          // Extract and format data, handling nested structures
+          // Safely extract and format data
           const textData = Object.entries(simulatedData)
-            .filter(([_, value]) => {
-              // Handle both direct numbers and nested value objects
-              const actualValue = typeof value === 'object' && value?.value?.value !== undefined 
-                ? value.value.value 
-                : value;
-              return actualValue !== null && actualValue !== undefined;
-            })
             .map(([key, value]) => {
-              const actualValue = typeof value === 'object' && value?.value?.value !== undefined
-                ? value.value.value
-                : value;
-              return `${key}: ${actualValue}`;
-            });
+              if (!value) return null;
+              
+              // Handle nested structure
+              let finalValue: number | null = null;
+              if (typeof value === 'object' && value.value?.value !== undefined) {
+                finalValue = value.value.value;
+              } else if (typeof value === 'number') {
+                finalValue = value;
+              }
+              
+              return finalValue !== null ? `${key}: ${finalValue}` : null;
+            })
+            .filter((item): item is string => item !== null);
 
           if (textData.length === 0) {
             console.log('No valid data to analyze');
@@ -44,7 +45,6 @@ export const DataAnalysisProcessor = ({
           const inputText = textData.join('. ');
           console.log('Prepared text for analysis:', inputText);
 
-          // Ensure input text is valid and not empty
           if (!inputText?.trim()) {
             console.log('Empty input text after processing');
             return;
