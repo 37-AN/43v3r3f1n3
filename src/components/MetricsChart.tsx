@@ -27,26 +27,30 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
     }
   };
 
-  // Format timestamp to be more compact (HH:mm:ss)
+  // Format timestamp to handle both date objects and time strings
   const formatXAxis = (tickItem: string) => {
     try {
-      // First check if it's already a valid date string
-      let date = new Date(tickItem);
-      
-      // If invalid, try parsing as a timestamp
-      if (isNaN(date.getTime())) {
-        console.log('Invalid date, attempting to parse timestamp:', tickItem);
-        return '';
+      // If it's already a time string (e.g., "1:51:09 PM"), return it directly
+      if (tickItem.includes(':') && (tickItem.includes('AM') || tickItem.includes('PM'))) {
+        console.log('Using time string directly:', tickItem);
+        return tickItem;
       }
-      
-      return date.toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
-      });
+
+      // Otherwise, try to parse as a date
+      const date = new Date(tickItem);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      }
+
+      console.error('Invalid timestamp format:', tickItem);
+      return tickItem;
     } catch (error) {
       console.error('Error formatting date:', error);
-      return '';
+      return tickItem;
     }
   };
 
