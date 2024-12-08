@@ -20,6 +20,7 @@ export const DataAnalysisProcessor = ({
           console.log('Starting data analysis for device:', selectedDeviceId);
           console.log('Current simulated data:', simulatedData);
           
+          // Filter out null/undefined values and create text representation
           const textData = Object.entries(simulatedData)
             .filter(([_, value]) => value !== null && value !== undefined)
             .map(([key, value]) => `${key}: ${value}`);
@@ -32,8 +33,9 @@ export const DataAnalysisProcessor = ({
           const inputText = textData.join('. ');
           console.log('Prepared text for analysis:', inputText);
 
-          if (!inputText || typeof inputText !== 'string' || inputText.trim() === '') {
-            console.error('Invalid input text:', inputText);
+          // Ensure input text is valid and not empty
+          if (!inputText?.trim()) {
+            console.log('Empty input text after processing');
             return;
           }
 

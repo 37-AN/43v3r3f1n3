@@ -24,12 +24,13 @@ export const useFeatureExtractor = () => {
 
         // Test the model with a simple string
         const testInput = "Test initialization string";
-        if (!testInput || typeof testInput !== 'string') {
-          console.error('Invalid test input:', testInput);
-          throw new Error('Invalid test input format');
-        }
-
         console.log('Testing model with input:', testInput);
+
+        // Ensure input is valid before processing
+        if (!testInput?.trim()) {
+          console.error('Test input is empty or invalid');
+          throw new Error('Invalid test input');
+        }
 
         const testFeatures = await extractor(testInput, {
           pooling: "mean",
