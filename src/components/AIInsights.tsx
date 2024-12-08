@@ -50,10 +50,9 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
 
         if (error) {
           console.error('Error fetching insights:', error);
+          // Only show toast for authentication errors
           if (error.message.includes('JWT')) {
-            toast.error('Authentication error. Please log in again.');
-          } else {
-            toast.error('Failed to fetch AI insights');
+            toast.error('Session expired. Please log in again.');
           }
           return;
         }
@@ -75,7 +74,6 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
 
       } catch (error) {
         console.error('Unexpected error:', error);
-        toast.error('An unexpected error occurred');
       }
     };
 
@@ -98,9 +96,11 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
           console.log('New insight received:', payload);
           setInsights(current => [payload.new as AIInsight, ...current.slice(0, 4)]);
           
-          // Show toast for critical insights
+          // Only show toast for critical insights
           if (payload.new.severity === 'critical') {
-            toast.error(payload.new.message);
+            toast.error(payload.new.message, {
+              description: "Critical system alert"
+            });
           }
         }
       )

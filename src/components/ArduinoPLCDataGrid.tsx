@@ -31,7 +31,6 @@ export function ArduinoPLCDataGrid() {
 
       console.log("Authenticated user:", user.email);
 
-      // Get the current timestamp and timestamp from 24 hours ago
       const endDate = new Date();
       const startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
 
@@ -45,7 +44,10 @@ export function ArduinoPLCDataGrid() {
 
         if (error) {
           console.error("Error fetching Arduino PLC data:", error);
-          toast.error("Failed to fetch PLC data");
+          // Only show toast for network or authentication errors
+          if (error.message.includes('JWT') || error.message.includes('network')) {
+            toast.error("Failed to fetch PLC data. Please check your connection.");
+          }
           throw error;
         }
 
@@ -58,7 +60,6 @@ export function ArduinoPLCDataGrid() {
         return data as ArduinoPLCData[];
       } catch (error) {
         console.error("Network or server error:", error);
-        toast.error("Network error while fetching PLC data");
         throw error;
       }
     },
