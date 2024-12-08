@@ -4,34 +4,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SimulationControls } from "./SimulationControls";
 import { SimulationParameterRange } from "./SimulationParameterRange";
+import { SimulationParameters, defaultParameters } from "@/types/simulation";
 import { Json } from "@/integrations/supabase/types";
-
-interface ParameterRange {
-  min: number;
-  max: number;
-}
-
-interface SimulationParameters {
-  temperature: ParameterRange;
-  pressure: ParameterRange;
-  vibration: ParameterRange;
-  production_rate: ParameterRange;
-  downtime_minutes: ParameterRange;
-  defect_rate: ParameterRange;
-  energy_consumption: ParameterRange;
-  machine_efficiency: ParameterRange;
-}
-
-const defaultParameters: SimulationParameters = {
-  temperature: { min: 20, max: 80 },
-  pressure: { min: 0, max: 100 },
-  vibration: { min: 0, max: 50 },
-  production_rate: { min: 50, max: 200 },
-  downtime_minutes: { min: 0, max: 60 },
-  defect_rate: { min: 0, max: 5 },
-  energy_consumption: { min: 50, max: 150 },
-  machine_efficiency: { min: 70, max: 100 }
-};
 
 interface SimulationConfig {
   deviceId: string;
@@ -54,14 +28,12 @@ export function SimulationConfig() {
     try {
       console.log(`${start ? 'Starting' : 'Stopping'} simulation with config:`, config);
       
-      // First, check if there's an existing simulation for this device
       const { data: existingSimulation } = await supabase
         .from('device_simulations')
         .select('*')
         .eq('device_id', config.deviceId)
         .single();
 
-      // Convert parameters to a format compatible with Json type
       const simulationParameters: Record<string, unknown> = {
         updateInterval: config.updateInterval,
         simulationType: config.simulationType,
@@ -80,13 +52,11 @@ export function SimulationConfig() {
 
       let error;
       if (existingSimulation) {
-        // Update existing simulation
         ({ error } = await supabase
           .from('device_simulations')
           .update(simulationData)
           .eq('id', existingSimulation.id));
       } else {
-        // Create new simulation
         ({ error } = await supabase
           .from('device_simulations')
           .insert(simulationData));
