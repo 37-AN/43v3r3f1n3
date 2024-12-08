@@ -12,6 +12,7 @@ interface AIInsight {
   confidence: number;
   severity: 'info' | 'warning' | 'critical';
   created_at: string;
+  metadata: Record<string, any>;
 }
 
 export function AIInsights({ deviceId }: { deviceId: string }) {
@@ -32,7 +33,8 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
         return;
       }
 
-      setInsights(data);
+      // Type assertion to ensure data matches our AIInsight interface
+      setInsights(data as AIInsight[]);
     };
 
     fetchInsights();
@@ -65,7 +67,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
     };
   }, [deviceId]);
 
-  const getSeverityIcon = (severity: string) => {
+  const getSeverityIcon = (severity: AIInsight['severity']) => {
     switch (severity) {
       case 'critical':
         return <AlertCircle className="w-5 h-5 text-red-500" />;

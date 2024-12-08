@@ -81,7 +81,7 @@ const App = () => {
 
   useEffect(() => {
     const fetchPLCData = async () => {
-      if (plcConnector) {
+      if (plcConnector && isAuthenticated) {
         try {
           const dataBlocks = [
             { deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5', address: 0, quantity: 1, type: 'holding' as const },
@@ -112,7 +112,13 @@ const App = () => {
           console.log('Read PLC data:', data);
           setPlcData(data);
 
-          // Store PLC data in Supabase
+          // Store PLC data in Supabase with authentication
+          const { data: session } = await supabase.auth.getSession();
+          if (!session?.session?.access_token) {
+            console.error('No access token available');
+            return;
+          }
+
           const entries = Object.entries(data).map(([key, value]) => {
             const [deviceId, address] = key.split('.');
             return {
@@ -123,6 +129,7 @@ const App = () => {
             };
           });
 
+          console.log('Storing PLC data:', entries);
           const { error } = await supabase
             .from('arduino_plc_data')
             .insert(entries);
@@ -144,7 +151,7 @@ const App = () => {
 
     const interval = setInterval(fetchPLCData, 5000);
     return () => clearInterval(interval);
-  }, [plcConnector]);
+  }, [plcConnector, isAuthenticated]);
 
   if (isAuthenticated === null) {
     return null; // Initial loading state
