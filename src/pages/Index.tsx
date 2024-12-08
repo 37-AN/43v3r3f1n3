@@ -12,6 +12,16 @@ export default function Index() {
   const chartData = useSimulationData(isSimulationRunning);
   const deviceId = 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5';
 
+  // Transform chartData into the format expected by DataAnalyzer
+  const transformedData = Object.entries(chartData).reduce((acc, [key, dataPoints]) => {
+    // Use the most recent value for each metric
+    const latestDataPoint = dataPoints[dataPoints.length - 1];
+    acc[key] = latestDataPoint?.value || 0;
+    return acc;
+  }, {} as Record<string, number>);
+
+  console.log('Transformed simulation data:', transformedData);
+
   return (
     <div className="container mx-auto p-4 space-y-8">
       <h1 className="text-4xl font-bold mb-2">Industrial Data Simulation Platform</h1>
@@ -33,7 +43,7 @@ export default function Index() {
 
         <DataAnalyzer
           selectedDeviceId={deviceId}
-          simulatedData={chartData}
+          simulatedData={transformedData}
         />
       </div>
     </div>
