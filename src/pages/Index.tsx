@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { ConnectionStatus } from '@/components/dashboard/ConnectionStatus';
 import { RealTimeData } from '@/components/dashboard/RealTimeData';
 import { OPCUAMetrics } from '@/components/opcua/OPCUAMetrics';
+import { AIInsights } from '@/components/AIInsights';
+import { supabase } from '@/integrations/supabase/client';
 
 interface IndexProps {
   plcData: PLCData | null;
@@ -28,6 +30,25 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
   const [simulatedData, setSimulatedData] = useState<Record<string, number>>({});
   const [opcuaClients, setOpcuaClients] = useState<Record<string, CustomOPCUAClient>>({});
   const [deviceStatus, setDeviceStatus] = useState<Record<string, boolean>>({});
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+
+  useEffect(() => {
+    // Fetch first active device for AI insights
+    const fetchFirstDevice = async () => {
+      const { data, error } = await supabase
+        .from('plc_devices')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      if (data) {
+        setSelectedDeviceId(data.id);
+      }
+    };
+
+    fetchFirstDevice();
+  }, []);
 
   useEffect(() => {
     console.log('Initializing OPC UA connections...');
@@ -111,6 +132,42 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedDeviceId && Object.keys(simulatedData).length > 0) {
+      const analyzeData = async () => {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-plc-data`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+              },
+              body: JSON.stringify({
+                deviceId: selectedDeviceId,
+                data: simulatedData
+              })
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error('Failed to analyze data');
+          }
+
+          const result = await response.json();
+          console.log('Analysis result:', result);
+        } catch (error) {
+          console.error('Error analyzing data:', error);
+        }
+      };
+
+      // Analyze data every 30 seconds
+      const analysisInterval = setInterval(analyzeData, 30000);
+      return () => clearInterval(analysisInterval);
+    }
+  }, [selectedDeviceId, simulatedData]);
+
   return (
     <div className="container mx-auto p-6 space-y-8 animate-fade-up">
       <h1 className="text-3xl font-bold mb-6">Manufacturing Dashboard</h1>
@@ -122,6 +179,12 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
           plcData={plcData} 
         />
       </div>
+
+      {selectedDeviceId && (
+        <div className="mt-6">
+          <AIInsights deviceId={selectedDeviceId} />
+        </div>
+      )}
 
       <OPCUAMetrics simulatedData={simulatedData} />
     </div>

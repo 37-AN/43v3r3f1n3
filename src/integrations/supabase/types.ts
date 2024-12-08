@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_insights: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          device_id: string | null
+          id: string
+          insight_type: string
+          message: string
+          metadata: Json | null
+          severity: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          device_id?: string | null
+          id?: string
+          insight_type: string
+          message: string
+          metadata?: Json | null
+          severity?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          device_id?: string | null
+          id?: string
+          insight_type?: string
+          message?: string
+          metadata?: Json | null
+          severity?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "plc_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       arduino_plc_data: {
         Row: {
           data_type: string
