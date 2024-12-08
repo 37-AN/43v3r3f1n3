@@ -7,6 +7,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardGrid } from '@/components/dashboard/DashboardGrid';
 import { useOPCUAClients } from '@/hooks/useOPCUAClients';
 import { useDeviceSelection } from '@/hooks/useDeviceSelection';
+import { ModelTrainingExport } from '@/components/analysis/ModelTrainingExport';
 
 interface IndexProps {
   plcData: PLCData | null;
@@ -34,6 +35,7 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
             selectedDeviceId={selectedDeviceId}
             simulatedData={simulatedData}
           />
+          <ModelTrainingExport />
         </>
       )}
 
