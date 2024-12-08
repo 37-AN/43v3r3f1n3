@@ -14,10 +14,22 @@ export function ChartsGrid({ performanceData: initialPerformanceData, resourceDa
 
   useEffect(() => {
     console.log('Setting up chart data update interval');
-    const interval = setInterval(() => {
-      setPerformanceData(generatePerformanceData());
-      setResourceData(generateResourceData());
-    }, 2000);
+    const updateData = () => {
+      const newPerformanceData = generatePerformanceData();
+      const newResourceData = generateResourceData();
+      console.log('Updating chart data:', { 
+        performanceDataLength: newPerformanceData.length,
+        resourceDataLength: newResourceData.length 
+      });
+      setPerformanceData(newPerformanceData);
+      setResourceData(newResourceData);
+    };
+
+    // Initial update
+    updateData();
+
+    // Set up interval for updates
+    const interval = setInterval(updateData, 2000);
 
     return () => {
       console.log('Cleaning up chart data update interval');
@@ -26,7 +38,7 @@ export function ChartsGrid({ performanceData: initialPerformanceData, resourceDa
   }, []);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-[1400px] mx-auto animate-fade-in">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-[1400px] mx-auto animate-fade-in">
       <div className="w-full h-[300px]">
         <MetricsChart
           title="System Performance"

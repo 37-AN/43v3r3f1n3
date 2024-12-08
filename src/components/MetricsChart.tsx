@@ -25,10 +25,10 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
 
   return (
     <Card className={cn(
-      "w-full p-3",
+      "w-full p-4",
       "bg-white/80 dark:bg-system-gray-800/80 backdrop-blur-lg",
       "border border-white/20 dark:border-system-gray-700/20",
-      "shadow-lg hover:shadow-xl transition-shadow duration-200",
+      "shadow-lg hover:shadow-xl transition-all duration-300",
       "animate-fade-in",
       className
     )}>
@@ -38,7 +38,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
         lastTimestamp={lastTimestamp}
       />
       
-      <div className="h-[200px] w-full mt-2">
+      <div className="h-[200px] w-full mt-4">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={data} 
@@ -87,7 +87,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
               stroke={getRegisterColor(registerType)}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 3 }}
+              activeDot={{ r: 4 }}
               isAnimationActive={true}
               animationDuration={500}
               animationEasing="ease-in-out"

@@ -9,7 +9,7 @@ interface MetricsSectionProps {
 
 export const MetricsSection = ({ refinedPerformance, refinedResources }: MetricsSectionProps) => {
   return (
-    <div className="space-y-6 animate-fade-up">
+    <div className="space-y-8 animate-fade-up">
       <MetricsGrid 
         performanceData={refinedPerformance}
         resourceData={refinedResources}
