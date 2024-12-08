@@ -36,7 +36,7 @@ const TokenizedAssets = () => {
       }
 
       console.log('Fetched assets:', data);
-      return data;
+      return data || [];
     },
   });
 
@@ -77,7 +77,11 @@ const TokenizedAssets = () => {
                     <TableCell className="font-medium">{asset.name}</TableCell>
                     <TableCell>{asset.asset_type}</TableCell>
                     <TableCell>{asset.token_symbol}</TableCell>
-                    <TableCell>{asset.total_supply.toLocaleString()}</TableCell>
+                    <TableCell>
+                      {typeof asset.total_supply === 'number' 
+                        ? asset.total_supply.toLocaleString()
+                        : '0'}
+                    </TableCell>
                     <TableCell>${asset.price_per_token}</TableCell>
                     <TableCell>
                       {new Date(asset.created_at).toLocaleDateString()}
