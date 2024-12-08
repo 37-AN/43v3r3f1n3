@@ -20,37 +20,46 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
 
   useEffect(() => {
     const fetchInsights = async () => {
-      console.log('Fetching insights for device:', deviceId);
-      
-      // First check if the device exists and is owned by the current user
-      const { data: deviceData, error: deviceError } = await supabase
-        .from('plc_devices')
-        .select('id, owner_id')
-        .eq('id', deviceId)
-        .single();
+      try {
+        console.log('Fetching insights for device:', deviceId);
+        
+        // First check if the device exists and is owned by the current user
+        const { data: deviceData, error: deviceError } = await supabase
+          .from('plc_devices')
+          .select('id, owner_id')
+          .eq('id', deviceId)
+          .single();
 
-      if (deviceError) {
-        console.error('Error checking device:', deviceError);
-        return;
+        if (deviceError) {
+          console.error('Error checking device:', deviceError);
+          return;
+        }
+
+        console.log('Device data:', deviceData);
+        
+        const { data, error } = await supabase
+          .from('ai_insights')
+          .select('*')
+          .eq('device_id', deviceId)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (error) {
+          console.error('Error fetching insights:', error);
+          if (error.message.includes('JWT')) {
+            toast.error('Authentication error. Please log in again.');
+          } else {
+            toast.error('Failed to fetch AI insights');
+          }
+          return;
+        }
+
+        console.log('Received insights data:', data);
+        setInsights(data as AIInsight[]);
+      } catch (error) {
+        console.error('Unexpected error:', error);
+        toast.error('An unexpected error occurred');
       }
-
-      console.log('Device data:', deviceData);
-      
-      const { data, error } = await supabase
-        .from('ai_insights')
-        .select('*')
-        .eq('device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (error) {
-        console.error('Error fetching insights:', error);
-        toast.error('Failed to fetch AI insights');
-        return;
-      }
-
-      console.log('Received insights data:', data);
-      setInsights(data as AIInsight[]);
     };
 
     if (deviceId) {
