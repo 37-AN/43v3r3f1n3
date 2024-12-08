@@ -1,57 +1,50 @@
 import { useState, useEffect } from 'react';
-import { pipeline } from "@huggingface/transformers";
 import { toast } from 'sonner';
 
+// Custom analyzer that doesn't rely on external AI models
 export const useFeatureExtractor = () => {
-  const [featureExtractor, setFeatureExtractor] = useState<any>(null);
+  const [analyzer, setAnalyzer] = useState<any>(null);
 
   useEffect(() => {
-    const initializeAI = async () => {
+    const initializeAnalyzer = async () => {
       try {
-        console.log('Starting AI model initialization...');
+        console.log('Initializing custom data analyzer...');
         
-        // Using a smaller, efficient model
-        const extractor = await pipeline(
-          "feature-extraction",
-          "Xenova/all-MiniLM-L6-v2"
-        );
-        
-        if (!extractor) {
-          console.error('Feature extractor initialization failed');
-          throw new Error('Failed to initialize feature extractor');
-        }
+        // Create our custom analyzer function
+        const customAnalyzer = (text: string) => {
+          console.log('Analyzing text:', text);
+          
+          // Convert input to numerical features
+          const words = text.split(' ');
+          const numbers = words
+            .map(word => parseFloat(word))
+            .filter(num => !isNaN(num));
+          
+          // Calculate basic statistical features
+          const mean = numbers.reduce((a, b) => a + b, 0) / numbers.length;
+          const variance = numbers.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / numbers.length;
+          const range = Math.max(...numbers) - Math.min(...numbers);
+          
+          // Return feature vector
+          return {
+            tolist: () => [mean, variance, range],
+            mean,
+            variance,
+            range
+          };
+        };
 
-        console.log('Feature extractor created successfully');
-
-        // Test with a simple, guaranteed non-null string
-        const testInput = "test";
-        console.log('Testing model with input:', testInput);
-
-        const testFeatures = await extractor(testInput, {
-          pooling: "mean",
-          normalize: true
-        });
-
-        if (!testFeatures) {
-          console.error('Test feature extraction failed');
-          throw new Error('Model test failed - no features returned');
-        }
-
-        const featuresList = testFeatures.tolist();
-        console.log('Model test successful, features dimensions:', 
-          Array.isArray(featuresList) ? featuresList.length : 'unknown');
-        
-        setFeatureExtractor(extractor);
-        console.log('AI model initialization completed successfully');
-        toast.success('AI models loaded successfully');
+        setAnalyzer(customAnalyzer);
+        console.log('Custom analyzer initialized successfully');
+        toast.success('Data analyzer initialized');
       } catch (error) {
-        console.error('Error in AI initialization:', error);
-        toast.error('Failed to load AI models');
+        console.error('Error initializing analyzer:', error);
+        toast.error('Failed to initialize data analyzer');
       }
     };
 
-    initializeAI();
+    initializeAnalyzer();
   }, []);
 
-  return featureExtractor;
+  return analyzer;
 };

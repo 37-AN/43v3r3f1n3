@@ -20,8 +20,8 @@ export const DataAnalysisProcessor = ({
           console.log('Starting data analysis for device:', selectedDeviceId);
           console.log('Current simulated data:', simulatedData);
           
-          // Extract and format data
-          const textData = Object.entries(simulatedData)
+          // Extract numerical values from simulated data
+          const numericalData = Object.entries(simulatedData)
             .map(([key, value]) => {
               if (!value) return null;
               
@@ -41,40 +41,63 @@ export const DataAnalysisProcessor = ({
                 finalValue = value;
               }
               
-              return finalValue !== null ? `${key}: ${finalValue}` : null;
+              return finalValue !== null ? `${finalValue}` : null;
             })
-            .filter((item): item is string => Boolean(item));
+            .filter((item): item is string => item !== null);
 
-          if (textData.length === 0) {
-            console.log('No valid data to analyze');
+          if (numericalData.length === 0) {
+            console.log('No valid numerical data to analyze');
             return;
           }
 
-          const inputText = textData.join('. ');
-          console.log('Prepared text for analysis:', inputText);
+          const inputText = numericalData.join(' ');
+          console.log('Prepared data for analysis:', inputText);
 
-          const features = await featureExtractor(inputText, {
-            pooling: "mean",
-            normalize: true
-          });
+          const features = featureExtractor(inputText);
+          console.log('Extracted features:', features);
 
-          if (!features) {
-            console.error('Feature extraction returned no results');
-            throw new Error('Feature extraction failed - no features returned');
-          }
+          // Generate insight based on statistical analysis
+          const generateInsight = (features: any) => {
+            const { mean, variance, range } = features;
+            let message = '';
+            let severity: 'info' | 'warning' | 'critical' = 'info';
+            let confidence = 0.8;
 
-          console.log('Feature extraction successful:', features);
-
-          const { data, error } = await supabase.functions.invoke('analyze-plc-data', {
-            body: {
-              deviceId: selectedDeviceId,
-              data: simulatedData,
-              features: features.tolist()
+            if (variance > 1000) {
+              message = `High data variability detected (variance: ${variance.toFixed(2)})`;
+              severity = 'warning';
+            } else if (range > 100) {
+              message = `Large value range detected (${range.toFixed(2)} units)`;
+              severity = 'warning';
+            } else if (Math.abs(mean) > 50) {
+              message = `Unusual average value detected (${mean.toFixed(2)})`;
+              severity = 'info';
+            } else {
+              message = `System operating within normal parameters`;
+              confidence = 0.95;
             }
-          });
+
+            return { message, severity, confidence };
+          };
+
+          const insight = generateInsight(features);
+          console.log('Generated insight:', insight);
+
+          const { data, error } = await supabase.from('ai_insights').insert([{
+            device_id: selectedDeviceId,
+            insight_type: 'statistical_analysis',
+            message: insight.message,
+            confidence: insight.confidence,
+            severity: insight.severity,
+            metadata: {
+              mean: features.mean,
+              variance: features.variance,
+              range: features.range
+            }
+          }]);
 
           if (error) {
-            console.error('Error in data analysis:', error);
+            console.error('Error storing insight:', error);
             throw error;
           }
 
