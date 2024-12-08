@@ -10,11 +10,10 @@ export const useFeatureExtractor = () => {
       try {
         console.log('Starting AI model initialization...');
         
-        // Using a smaller, more reliable model
+        // Using a smaller, efficient model
         const extractor = await pipeline(
           "feature-extraction",
-          "Xenova/all-MiniLM-L6-v2",
-          { quantized: true } // Use quantized model for better performance
+          "Xenova/all-MiniLM-L6-v2"
         );
         
         if (!extractor) {
