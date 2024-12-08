@@ -12,7 +12,7 @@ export const useAITraining = () => {
   const [isTraining, setIsTraining] = useState(false);
 
   const prepareTrainingData = async (deviceId: string, timeRange: { start: Date; end: Date }) => {
-    console.log('Preparing training data for device:', deviceId);
+    console.log('Preparing training data for device:', deviceId, 'timeRange:', timeRange);
     
     const { data: plcData, error: plcError } = await supabase
       .from('arduino_plc_data')
@@ -30,6 +30,8 @@ export const useAITraining = () => {
       throw plcError;
     }
 
+    console.log('Retrieved PLC data:', plcData?.length || 0, 'records');
+
     // Get corresponding insights for context
     const { data: insights, error: insightError } = await supabase
       .from('ai_insights')
@@ -41,6 +43,12 @@ export const useAITraining = () => {
     if (insightError) {
       console.error('Error fetching insights:', insightError);
       // Continue without insights if there's an error
+    }
+
+    console.log('Retrieved insights:', insights?.length || 0, 'records');
+
+    if (!plcData || plcData.length === 0) {
+      throw new Error('No PLC data found for the selected time range');
     }
 
     // Format data for training
@@ -64,9 +72,21 @@ Value: ${record.value}`,
       setIsTraining(true);
       console.log('Starting AI model training...');
 
+      // Test LM Studio connection first
+      const isConnected = await lmStudio.testConnection();
+      if (!isConnected) {
+        throw new Error('Cannot connect to LM Studio. Please ensure the server is running at http://localhost:1234');
+      }
+      console.log('LM Studio connection successful');
+
       const trainingData = await prepareTrainingData(deviceId, timeRange);
       
+      if (trainingData.length === 0) {
+        throw new Error('No training data available for the selected time range');
+      }
+      
       // Train the model using LM Studio's fine-tuning endpoint
+      console.log('Starting training with', trainingData.length, 'examples');
       for (const example of trainingData) {
         await lmStudio.analyze(
           `Training example:
@@ -77,7 +97,7 @@ Please learn from this example.`
       }
 
       console.log('Training completed successfully');
-      toast.success('AI model training completed');
+      toast.success(`AI model training completed with ${trainingData.length} examples`);
       
       // Store training metadata - Convert dates to ISO strings for JSON compatibility
       const { error: metadataError } = await supabase
@@ -103,7 +123,7 @@ Please learn from this example.`
 
     } catch (error) {
       console.error('Error training AI model:', error);
-      toast.error('Failed to train AI model');
+      toast.error(error instanceof Error ? error.message : 'Failed to train AI model');
       throw error;
     } finally {
       setIsTraining(false);

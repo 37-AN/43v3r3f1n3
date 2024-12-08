@@ -7,27 +7,40 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { useAITraining } from "@/hooks/useAITraining";
 import { useDeviceSelection } from "@/hooks/useDeviceSelection";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ModelTraining() {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const { trainModel, isTraining } = useAITraining();
   const selectedDeviceId = useDeviceSelection();
+  const [error, setError] = useState<string>();
 
   const handleTraining = async () => {
     if (!selectedDeviceId || !startDate || !endDate) {
       return;
     }
 
-    await trainModel(selectedDeviceId, {
-      start: startDate,
-      end: endDate
-    });
+    try {
+      setError(undefined);
+      await trainModel(selectedDeviceId, {
+        start: startDate,
+        end: endDate
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to train model');
+    }
   };
 
   return (
     <Card className="p-4 space-y-4">
       <h3 className="text-lg font-semibold">Train AI Model</h3>
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       <div className="flex gap-4">
         <div className="space-y-2">
@@ -78,6 +91,10 @@ export function ModelTraining() {
       >
         {isTraining ? 'Training in Progress...' : 'Start Training'}
       </Button>
+
+      <p className="text-sm text-gray-500">
+        Make sure LM Studio is running locally at http://localhost:1234 before starting the training.
+      </p>
     </Card>
   );
 }
