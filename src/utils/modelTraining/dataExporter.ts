@@ -16,9 +16,9 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
   try {
     console.log('Starting training data export...');
     
-    // Set default date range if not provided (last 30 days)
+    // Set default date range if not provided (last 7 days for more likely data capture)
     const defaultStartDate = new Date();
-    defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+    defaultStartDate.setDate(defaultStartDate.getDate() - 7);
     
     // Ensure we have the full day range
     const queryStartDate = startDate ? new Date(startDate.setHours(0, 0, 0, 0)) : defaultStartDate;
@@ -46,7 +46,26 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
       throw plcError;
     }
 
+    // Log the raw query response
+    console.log('PLC data query response:', {
+      hasData: !!plcData,
+      length: plcData?.length || 0,
+      firstRecord: plcData?.[0],
+      lastRecord: plcData?.[plcData?.length - 1]
+    });
+
     if (!plcData || plcData.length === 0) {
+      // Try fetching any record to verify table access
+      const { data: sampleData } = await supabase
+        .from('arduino_plc_data')
+        .select('timestamp')
+        .limit(1);
+      
+      console.log('Sample data check:', {
+        hasSampleData: !!sampleData,
+        sampleLength: sampleData?.length || 0
+      });
+
       console.log('No PLC data found for the date range:', {
         start: queryStartDate.toISOString(),
         end: queryEndDate.toISOString()
