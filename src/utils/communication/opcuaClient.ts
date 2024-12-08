@@ -48,29 +48,25 @@ export class CustomOPCUAClient {
       clearInterval(this.connectionCheckInterval);
     }
 
-    this.connectionCheckInterval = setInterval(async () => {
-      try {
-        // Simulate a connection check by trying to reach the endpoint
-        const response = await fetch(this.endpointUrl.replace('opc.tcp', 'http'))
-          .catch(() => null);
-        
-        const wasConnected = this.connected;
-        this.connected = response !== null;
+    this.connectionCheckInterval = setInterval(() => {
+      // Simulate connection check - in a real implementation, 
+      // this would use proper OPC UA connection status checks
+      const isServerRunning = Math.random() > 0.1; // 90% chance of being connected
+      
+      const wasConnected = this.connected;
+      this.connected = isServerRunning;
 
-        if (wasConnected && !this.connected) {
-          console.log(`Lost connection to ${this.endpointUrl}`);
-          // Clear all monitored items when connection is lost
-          this.clearMonitoredItems();
-        }
-      } catch (error) {
-        console.error(`Connection check failed for ${this.endpointUrl}:`, error);
-        this.connected = false;
+      if (wasConnected && !this.connected) {
+        console.log(`Lost connection to ${this.endpointUrl}`);
         this.clearMonitoredItems();
+      } else if (!wasConnected && this.connected) {
+        console.log(`Reconnected to ${this.endpointUrl}`);
       }
     }, 5000); // Check every 5 seconds
   }
 
   private clearMonitoredItems() {
+    console.log('Clearing all monitored items due to connection loss');
     for (const interval of this.monitoredItems.values()) {
       clearInterval(interval);
     }
@@ -94,6 +90,7 @@ export class CustomOPCUAClient {
       // Simulate different data patterns based on node type
       const interval = setInterval(() => {
         if (!this.connected) {
+          console.log(`Stopping data simulation for ${nodeId} - connection lost`);
           clearInterval(interval);
           this.monitoredItems.delete(nodeId);
           return;
