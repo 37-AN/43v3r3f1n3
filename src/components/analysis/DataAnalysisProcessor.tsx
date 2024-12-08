@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface DataAnalysisProcessorProps {
   selectedDeviceId: string;
-  simulatedData: Record<string, number>;
+  simulatedData: Record<string, any>;
   featureExtractor: any;
 }
 
@@ -23,16 +23,19 @@ export const DataAnalysisProcessor = ({
           // Extract and format data
           const textData = Object.entries(simulatedData)
             .map(([key, value]) => {
-              // Skip if value is falsy
               if (!value) return null;
               
-              // Extract value from nested structure if present
-              const finalValue = typeof value === 'object' && 'value' in value && 
-                typeof value.value === 'object' && 'value' in value.value ? 
-                value.value.value : value;
+              let finalValue: number | undefined;
               
-              // Only return string if we have a valid number
-              return typeof finalValue === 'number' ? `${key}: ${finalValue}` : null;
+              if (typeof value === 'object' && value !== null) {
+                if ('value' in value && typeof value.value === 'object' && value.value !== null && 'value' in value.value) {
+                  finalValue = Number(value.value.value);
+                }
+              } else if (typeof value === 'number') {
+                finalValue = value;
+              }
+              
+              return !isNaN(finalValue as number) ? `${key}: ${finalValue}` : null;
             })
             .filter((item): item is string => Boolean(item));
 
