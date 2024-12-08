@@ -28,7 +28,7 @@ const App = () => {
               path="/"
               element={
                 isAuthenticated ? (
-                  <Index plcData={plcData} connectionStatus={connectionStatus} />
+                  <Index />
                 ) : (
                   <Navigate to="/login" replace />
                 )
