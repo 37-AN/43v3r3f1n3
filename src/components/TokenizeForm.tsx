@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TokenizeFormData } from "@/types/tokenize";
+import { initializeBlockchainConnection } from "@/utils/blockchain/tokenization";
 
 interface TokenizeFormProps {
   formData: TokenizeFormData;
@@ -18,6 +20,13 @@ export function TokenizeForm({
   isSubmitting, 
   onCancel 
 }: TokenizeFormProps) {
+  const handleConnectWallet = async () => {
+    const connection = await initializeBlockchainConnection();
+    if (connection) {
+      toast.success('Wallet connected successfully');
+    }
+  };
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
@@ -40,12 +49,28 @@ export function TokenizeForm({
         />
       </div>
       <div className="space-y-2">
+        <Label htmlFor="assetType">Asset Type</Label>
+        <Select 
+          value={formData.assetType} 
+          onValueChange={(value) => setFormData({ ...formData, assetType: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select asset type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="machine">Machine</SelectItem>
+            <SelectItem value="product">Product</SelectItem>
+            <SelectItem value="workflow">Workflow</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="tokenSymbol">Token Symbol</Label>
         <Input
           id="tokenSymbol"
           value={formData.tokenSymbol}
           onChange={(e) => setFormData({ ...formData, tokenSymbol: e.target.value })}
-          placeholder="e.g., PLCA1"
+          placeholder="e.g., MACH1"
           required
         />
       </div>
@@ -74,6 +99,14 @@ export function TokenizeForm({
           />
         </div>
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={handleConnectWallet}
+      >
+        Connect Wallet
+      </Button>
       <div className="flex justify-end gap-3 pt-4">
         <Button variant="outline" type="button" onClick={onCancel}>
           Cancel
