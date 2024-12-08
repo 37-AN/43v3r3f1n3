@@ -62,7 +62,7 @@ export const useMESData = (deviceId: string) => {
       const { data, error } = await supabase
         .from('tokenized_assets')
         .select('*')
-        .eq('metadata->source_metric->device_id', deviceId)
+        .filter('metadata->source_metric->device_id', 'eq', deviceId)
         .order('created_at', { ascending: false });
 
       if (error) {

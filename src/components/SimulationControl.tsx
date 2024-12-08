@@ -27,23 +27,24 @@ export function SimulationControl() {
         const values = simulationEngine.generateNextValues();
         
         try {
-          // First, send data to industrial-data-refinery
-          console.log('Sending simulation data to refinery:', values);
+          // Format data for industrial-data-refinery
+          const rawData = {
+            deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
+            values: Object.values(values),
+            dataType: 'simulation',
+            timestamp: new Date().toISOString(),
+            metadata: {
+              simulation: true,
+              metrics: Object.keys(values),
+              source: 'simulation_engine'
+            }
+          };
+
+          console.log('Sending simulation data to refinery:', rawData);
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
-              body: {
-                rawData: {
-                  deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
-                  values: Object.values(values),
-                  dataType: 'simulation',
-                  timestamp: new Date().toISOString(),
-                  metadata: {
-                    simulation: true,
-                    metrics: Object.keys(values)
-                  }
-                }
-              }
+              body: { rawData }
             }
           );
 
@@ -54,18 +55,24 @@ export function SimulationControl() {
 
           console.log('Received refined data:', refinedData);
 
-          // Then send refined data to MES tokenization engine
-          const { error: mesError } = await supabase.functions.invoke(
-            'mes-tokenization-engine',
-            {
-              body: {
-                refinedData: {
-                  ...refinedData,
-                  deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
-                  timestamp: new Date().toISOString()
-                }
+          // Format data for MES tokenization engine
+          const mesData = {
+            refinedData: {
+              deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
+              values: refinedData.values || Object.values(values),
+              dataType: refinedData.dataType || 'simulation',
+              timestamp: new Date().toISOString(),
+              metadata: {
+                ...refinedData.metadata,
+                source: 'industrial_refinery'
               }
             }
+          };
+
+          console.log('Sending data to MES engine:', mesData);
+          const { error: mesError } = await supabase.functions.invoke(
+            'mes-tokenization-engine',
+            { body: mesData }
           );
 
           if (mesError) {
