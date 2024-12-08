@@ -15,6 +15,8 @@ serve(async (req) => {
   try {
     const { deviceId, metrics, timeRange } = await req.json();
     console.log('Processing AI insights for device:', deviceId);
+    console.log('Metrics:', metrics);
+    console.log('Time Range:', timeRange);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -35,6 +37,8 @@ Provide analysis focusing on:
 4. Resource optimization suggestions
 5. Quality control insights`;
 
+    console.log('Sending request to OpenAI...');
+    
     // Get AI analysis using GPT
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -51,11 +55,27 @@ Provide analysis focusing on:
           },
           { role: 'user', content: prompt }
         ],
+        temperature: 0.7,
+        max_tokens: 1000,
       }),
     });
 
+    if (!aiResponse.ok) {
+      const errorData = await aiResponse.json();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
+    }
+
     const aiData = await aiResponse.json();
+    console.log('Received OpenAI response:', aiData);
+
+    if (!aiData.choices || !aiData.choices[0] || !aiData.choices[0].message) {
+      console.error('Invalid OpenAI response format:', aiData);
+      throw new Error('Invalid response format from OpenAI');
+    }
+
     const analysis = aiData.choices[0].message.content;
+    console.log('Generated analysis:', analysis);
 
     // Store the insight in the database
     const { error: insightError } = await supabase
@@ -86,8 +106,14 @@ Provide analysis focusing on:
   } catch (error) {
     console.error('Error in industrial-ai-insights function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ 
+        error: error.message,
+        details: error instanceof Error ? error.stack : 'Unknown error'
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+        status: 500 
+      }
     );
   }
 });
