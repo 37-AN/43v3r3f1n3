@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PLCData } from '@/utils/plcData';
-import { CustomOPCUAClient } from '@/utils/communication/opcuaClient';
+import { CustomOPCUAClient, OPCUAClientOptions } from '@/utils/communication/opcuaClient';
 import { supabase } from '@/integrations/supabase/client';
 import { OPCUAMetrics } from '@/components/opcua/OPCUAMetrics';
 import { AIInsights } from '@/components/AIInsights';
@@ -64,7 +64,7 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     // Create and connect clients
     Object.entries(OPC_UA_ENDPOINTS).forEach(([name, endpoint]) => {
       console.log(`Creating client for ${name} at ${endpoint}`);
-      const clientOptions = {
+      const clientOptions: OPCUAClientOptions = {
         applicationName: "Industrial IoT Client",
         connectionStrategy: {
           initialDelay: 1000,
