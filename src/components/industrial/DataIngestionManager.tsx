@@ -6,6 +6,7 @@ import { initializeDevices } from './sources/SourceInitializer';
 import { simulateDataIngestion } from './sources/DataSimulator';
 import { SimulationConfig } from '../simulation/SimulationConfig';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface Source {
   id: string;
@@ -15,10 +16,18 @@ interface Source {
   deviceId: string;
 }
 
+interface RealTimeData {
+  deviceId: string;
+  dataType: string;
+  value: number;
+  timestamp: string;
+}
+
 export const DataIngestionManager = () => {
   const [sources, setSources] = useState<Source[]>([]);
   const [selectedSource, setSelectedSource] = useState<Source | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [realTimeData, setRealTimeData] = useState<RealTimeData[]>([]);
 
   useEffect(() => {
     const setupSources = async () => {
@@ -35,6 +44,41 @@ export const DataIngestionManager = () => {
     };
 
     setupSources();
+  }, []);
+
+  useEffect(() => {
+    // Subscribe to real-time updates
+    console.log('Setting up real-time subscription...');
+    const subscription = supabase
+      .channel('arduino_plc_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'arduino_plc_data'
+        },
+        (payload) => {
+          console.log('Received real-time data:', payload);
+          const newData = {
+            deviceId: payload.new.device_id,
+            dataType: payload.new.data_type,
+            value: payload.new.value,
+            timestamp: payload.new.timestamp
+          };
+          
+          setRealTimeData(prev => [...prev.slice(-9), newData]);
+          toast.success(`New data received: ${payload.new.data_type}`);
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
+
+    return () => {
+      console.log('Cleaning up subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -72,6 +116,30 @@ export const DataIngestionManager = () => {
           />
         ))}
       </div>
+
+      {realTimeData.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-md font-medium mb-2">Real-time Updates</h3>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {realTimeData.map((data, index) => (
+              <div 
+                key={index}
+                className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg flex justify-between items-center"
+              >
+                <span className="text-sm font-medium">{data.dataType}</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    {data.value.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(data.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Dialog open={showConfig} onOpenChange={setShowConfig}>
         <DialogContent className="sm:max-w-[425px]">
