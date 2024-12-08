@@ -27,15 +27,21 @@ export function SimulationControl() {
         const values = simulationEngine.generateNextValues();
         
         try {
+          // Format metrics array for processing
+          const metricsArray = Object.entries(values).map(([key, value]) => ({
+            metric_type: key,
+            value: value,
+            timestamp: new Date().toISOString()
+          }));
+          
           // Format data for industrial-data-refinery
           const rawData = {
             deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
-            values: Object.values(values),
             dataType: 'simulation',
+            values: metricsArray,
             timestamp: new Date().toISOString(),
             metadata: {
               simulation: true,
-              metrics: Object.keys(values),
               source: 'simulation_engine'
             }
           };
@@ -59,12 +65,13 @@ export function SimulationControl() {
           const mesData = {
             refinedData: {
               deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
-              values: refinedData.values || Object.values(values),
+              metrics: refinedData.metrics || metricsArray,
               dataType: refinedData.dataType || 'simulation',
               timestamp: new Date().toISOString(),
               metadata: {
-                ...refinedData.metadata,
-                source: 'industrial_refinery'
+                quality_score: refinedData.quality_score || 1.0,
+                source: 'industrial_refinery',
+                simulation: true
               }
             }
           };
