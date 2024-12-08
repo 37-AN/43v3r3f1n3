@@ -136,29 +136,24 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     if (selectedDeviceId && Object.keys(simulatedData).length > 0) {
       const analyzeData = async () => {
         try {
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-plc-data`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-              },
-              body: JSON.stringify({
-                deviceId: selectedDeviceId,
-                data: simulatedData
-              })
+          console.log('Analyzing data for device:', selectedDeviceId, 'Data:', simulatedData);
+          
+          const { data, error } = await supabase.functions.invoke('analyze-plc-data', {
+            body: {
+              deviceId: selectedDeviceId,
+              data: simulatedData
             }
-          );
+          });
 
-          if (!response.ok) {
-            throw new Error('Failed to analyze data');
+          if (error) {
+            console.error('Error analyzing data:', error);
+            throw error;
           }
 
-          const result = await response.json();
-          console.log('Analysis result:', result);
+          console.log('Analysis result:', data);
         } catch (error) {
           console.error('Error analyzing data:', error);
+          toast.error('Failed to analyze PLC data');
         }
       };
 
