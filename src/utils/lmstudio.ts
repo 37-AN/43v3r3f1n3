@@ -71,21 +71,8 @@ class LMStudioAPI {
     try {
       console.log('Testing LM Studio connection...');
       
-      // First try a simple GET request to check if the server is running
-      const healthCheck = await fetch(this.baseUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-      });
-
-      if (!healthCheck.ok) {
-        console.error('LM Studio health check failed:', healthCheck.statusText);
-        toast.error('LM Studio server is not responding. Please ensure it is running at http://localhost:1234');
-        return false;
-      }
-
-      // If health check passes, try a simple completion to verify API functionality
+      // Use the chat completions endpoint directly for the health check
+      // as the root endpoint doesn't support OPTIONS requests properly
       const testResponse = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -108,9 +95,17 @@ class LMStudioAPI {
         return false;
       }
 
-      console.log('LM Studio connection test successful');
-      toast.success('Successfully connected to LM Studio');
-      return true;
+      const data = await testResponse.json();
+      console.log('LM Studio connection test response:', data);
+      
+      if (data && data.choices && data.choices[0]?.message?.content) {
+        console.log('LM Studio connection test successful');
+        toast.success('Successfully connected to LM Studio');
+        return true;
+      }
+
+      console.error('LM Studio response format unexpected:', data);
+      return false;
     } catch (error) {
       console.error('Error testing LM Studio connection:', error);
       toast.error('Failed to connect to LM Studio. Is the server running at http://localhost:1234?');
