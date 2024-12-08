@@ -56,11 +56,29 @@ export const storeRefinedData = async (processedData: ProcessedData) => {
       return false;
     }
 
-    console.log('Refined data stored successfully');
+    // After storing refined data, send it to MES engine for tokenization
+    const { error: mesError } = await supabase.functions.invoke(
+      'mes-tokenization-engine',
+      {
+        body: {
+          refinedData: processedData,
+          timestamp: new Date().toISOString()
+        }
+      }
+    );
+
+    if (mesError) {
+      console.error('Error sending data to MES engine:', mesError);
+      toast.error('Failed to process in MES engine');
+      return false;
+    }
+
+    console.log('Data successfully processed and tokenized');
+    toast.success('Data processed and tokenized successfully');
     return true;
   } catch (error) {
-    console.error('Error in data storage:', error);
-    toast.error('Failed to save processed data');
+    console.error('Error in data processing pipeline:', error);
+    toast.error('Failed to process data');
     return false;
   }
 };
