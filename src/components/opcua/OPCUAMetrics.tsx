@@ -11,12 +11,15 @@ interface OPCUAMetricsProps {
 }
 
 export function OPCUAMetrics({ simulatedData, connectionStatus }: OPCUAMetricsProps) {
-  const chartData: ModbusRegisterData[] = Object.entries(simulatedData).map(([key, value]) => ({
-    timestamp: new Date().toLocaleTimeString(),
-    value,
-    registerType: 'input',
-    address: 1
-  }));
+  // Convert simulatedData to chart format
+  const getChartData = (key: string): ModbusRegisterData[] => {
+    return [{
+      timestamp: new Date().toLocaleTimeString(),
+      value: simulatedData[key] || 0,
+      registerType: 'input',
+      address: 1
+    }];
+  };
 
   return (
     <div className="space-y-8">
@@ -26,7 +29,7 @@ export function OPCUAMetrics({ simulatedData, connectionStatus }: OPCUAMetricsPr
           {Object.entries(connectionStatus).map(([server, status]) => (
             <Badge 
               key={server}
-              variant={status ? "success" : "destructive"}
+              variant={status ? "default" : "destructive"}
               className="capitalize"
             >
               {server}: {status ? 'Connected' : 'Disconnected'}
@@ -44,19 +47,19 @@ export function OPCUAMetrics({ simulatedData, connectionStatus }: OPCUAMetricsPr
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {Object.entries(simulatedData).map(([key, value]) => (
           <Card key={key} className="p-6">
-            <div className="mb-2">
+            <div className="mb-4">
               <h3 className="text-lg font-semibold capitalize">{key}</h3>
               <p className="text-2xl font-bold">{typeof value === 'number' ? value.toFixed(2) : 'N/A'}</p>
             </div>
-            <div className="h-[300px]">
+            <div className="h-[200px]">
               <MetricsChart
                 title={`${key} History`}
-                data={chartData}
+                data={getChartData(key)}
                 registerType="input"
-                className="h-full transition-transform hover:scale-[1.01]"
+                className="h-full"
               />
             </div>
           </Card>

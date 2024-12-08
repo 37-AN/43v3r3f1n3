@@ -44,7 +44,7 @@ export const useOPCUAClients = () => {
             console.log(`Received data for ${name}.${nodeKey}:`, dataValue);
             setSimulatedData(prev => ({
               ...prev,
-              [`${name}.${nodeKey}`]: dataValue.value.value as number
+              [`${nodeKey}`]: dataValue.value.value as number
             }));
           });
         }
