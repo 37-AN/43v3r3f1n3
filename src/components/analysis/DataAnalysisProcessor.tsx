@@ -28,12 +28,20 @@ export const DataAnalysisProcessor = ({
         const features = featureExtractor(preparedData);
         console.log('Extracted features:', features);
 
+        // Format raw data for the edge function
+        const formattedData = {
+          deviceId: selectedDeviceId,
+          dataType: 'measurement',
+          values: preparedData.split(' ').map(Number),
+          timestamp: new Date().toISOString()
+        };
+
+        console.log('Sending formatted data to edge function:', formattedData);
+
         // Get AI analysis from our edge function
-        const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-analysis', {
+        const { data: aiData, error: aiError } = await supabase.functions.invoke('industrial-data-refinery', {
           body: { 
-            features,
-            deviceId: selectedDeviceId,
-            rawData: preparedData
+            rawData: formattedData
           }
         });
 

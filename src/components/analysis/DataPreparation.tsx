@@ -7,6 +7,11 @@ interface DataPreparationProps {
 
 export const DataPreparation = ({ simulatedData, onPreparedData }: DataPreparationProps) => {
   const prepareData = () => {
+    if (!simulatedData || Object.keys(simulatedData).length === 0) {
+      console.log('No data to prepare');
+      return;
+    }
+
     const numericalData = Object.entries(simulatedData)
       .map(([key, value]) => {
         if (!value) return null;
