@@ -1,5 +1,5 @@
 export const LM_STUDIO_CONFIG = {
-  baseUrl: 'http://localhost:1234/v1',
+  baseUrl: 'http://localhost:3030/v1',
   defaultApiKey: '',
   endpoints: {
     chat: '/chat/completions',
