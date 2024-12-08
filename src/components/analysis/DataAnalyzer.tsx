@@ -15,14 +15,15 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
     const initializeAI = async () => {
       try {
         console.log('Initializing AI models...');
+        // Initialize pipeline with minimal configuration
         const extractor = await pipeline(
           "feature-extraction",
-          "Xenova/all-MiniLM-L6-v2",
-          { 
-            revision: "main",
-            quantized: false // Use full precision model
-          }
+          "Xenova/all-MiniLM-L6-v2"
         );
+        
+        // Test the model with a simple input to ensure it's working
+        await extractor("Test initialization");
+        
         setFeatureExtractor(extractor);
         console.log('AI models initialized successfully');
         toast.success('AI models loaded successfully');
@@ -55,7 +56,7 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
           console.log('Processing text data:', textData);
 
           // Extract features using the AI model
-          const features = await featureExtractor(textData, {
+          const features = await featureExtractor(textData.join('. '), {
             pooling: "mean",
             normalize: true
           });
