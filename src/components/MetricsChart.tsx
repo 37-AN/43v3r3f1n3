@@ -35,7 +35,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
       "shadow-lg",
       className
     )}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <div className="space-y-1">
           <h3 className="text-lg font-semibold text-system-gray-900 dark:text-system-gray-100">
             {title}
@@ -48,11 +48,11 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
           Last updated: {data.length > 0 ? data[data.length - 1].timestamp : 'N/A'}
         </div>
       </div>
-      <div className="relative h-[300px] w-full">
+      <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={data} 
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
           >
             <CartesianGrid 
               strokeDasharray="3 3" 
@@ -65,6 +65,9 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
               fontSize={12}
               tickLine={false}
               dy={10}
+              angle={-45}
+              textAnchor="end"
+              height={60}
             />
             <YAxis 
               stroke="#8E8E93" 

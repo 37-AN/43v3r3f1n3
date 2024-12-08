@@ -8,8 +8,8 @@ interface ChartsGridProps {
 
 export function ChartsGrid({ performanceData, resourceData }: ChartsGridProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-4">
-      <div className="h-[400px] w-full">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="w-full min-h-[400px] p-4">
         <MetricsChart
           title="System Performance"
           data={performanceData.map(data => ({
@@ -18,10 +18,10 @@ export function ChartsGrid({ performanceData, resourceData }: ChartsGridProps) {
             address: 1
           }))}
           registerType="holding"
-          className="transition-transform hover:scale-[1.01]"
+          className="h-full transition-transform hover:scale-[1.01]"
         />
       </div>
-      <div className="h-[400px] w-full">
+      <div className="w-full min-h-[400px] p-4">
         <MetricsChart
           title="Resource Utilization"
           data={resourceData.map(data => ({
@@ -30,7 +30,7 @@ export function ChartsGrid({ performanceData, resourceData }: ChartsGridProps) {
             address: 2
           }))}
           registerType="input"
-          className="transition-transform hover:scale-[1.01]"
+          className="h-full transition-transform hover:scale-[1.01]"
         />
       </div>
     </div>
