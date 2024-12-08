@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { SourceCard } from './sources/SourceCard';
 import { initializeDevices } from './sources/SourceInitializer';
 import { simulateDataIngestion } from './sources/DataSimulator';
+import { SimulationConfig } from '../simulation/SimulationConfig';
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface Source {
   id: string;
@@ -15,6 +17,8 @@ interface Source {
 
 export const DataIngestionManager = () => {
   const [sources, setSources] = useState<Source[]>([]);
+  const [selectedSource, setSelectedSource] = useState<Source | null>(null);
+  const [showConfig, setShowConfig] = useState(false);
 
   useEffect(() => {
     const setupSources = async () => {
@@ -26,6 +30,7 @@ export const DataIngestionManager = () => {
       }
 
       const initializedSources = await initializeDevices(user.id);
+      console.log('Initialized sources:', initializedSources);
       setSources(initializedSources);
     };
 
@@ -38,7 +43,7 @@ export const DataIngestionManager = () => {
       
       setSources(prev => prev.map(source => ({
         ...source,
-        connected: Math.random() > 0.3, // Simulate connection status
+        connected: Math.random() > 0.3,
         lastUpdate: new Date()
       })));
     }, 5000);
@@ -46,10 +51,16 @@ export const DataIngestionManager = () => {
     return () => clearInterval(interval);
   }, [sources]);
 
+  const handleConfigureSource = (source: Source) => {
+    console.log('Configuring source:', source);
+    setSelectedSource(source);
+    setShowConfig(true);
+  };
+
   return (
-    <Card className="p-6">
-      <h2 className="text-2xl font-semibold mb-6">Industrial Data Sources</h2>
-      <div className="space-y-4">
+    <Card className="p-4">
+      <h2 className="text-lg font-semibold mb-4">Industrial Data Sources</h2>
+      <div className="space-y-3">
         {sources.map(source => (
           <SourceCard
             key={source.id}
@@ -57,9 +68,21 @@ export const DataIngestionManager = () => {
             name={source.name}
             connected={source.connected}
             lastUpdate={source.lastUpdate}
+            onConfigure={() => handleConfigureSource(source)}
           />
         ))}
       </div>
+
+      <Dialog open={showConfig} onOpenChange={setShowConfig}>
+        <DialogContent className="sm:max-w-[425px]">
+          {selectedSource && (
+            <SimulationConfig
+              deviceId={selectedSource.deviceId}
+              onClose={() => setShowConfig(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

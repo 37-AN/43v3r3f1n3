@@ -1,39 +1,28 @@
-import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { SimulationControls } from "./SimulationControls";
-import { SimulationParameterRange } from "./SimulationParameterRange";
-import { SimulationParameters, defaultParameters } from "@/types/simulation";
 import { Json } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
+import { defaultParameters } from "@/types/simulation";
 
-interface SimulationConfig {
+interface SimulationConfigProps {
   deviceId: string;
-  updateInterval: number;
-  simulationType: 'normal' | 'anomaly';
-  parameters: SimulationParameters;
+  onClose?: () => void;
 }
 
-export function SimulationConfig() {
-  const [config, setConfig] = useState<SimulationConfig>({
-    deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
-    updateInterval: 2000,
-    simulationType: 'normal',
-    parameters: defaultParameters
-  });
-
-  const [isRunning, setIsRunning] = useState(false);
+export function SimulationConfig({ deviceId, onClose }: SimulationConfigProps) {
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSimulation = async (start: boolean) => {
+    setIsLoading(true);
     try {
-      console.log(`${start ? 'Starting' : 'Stopping'} simulation with config:`, config);
+      console.log(`${start ? 'Starting' : 'Stopping'} simulation for device:`, deviceId);
       
       // First, stop any existing simulations for this device
       const { error: stopError } = await supabase
         .from('device_simulations')
         .update({ is_running: false })
-        .eq('device_id', config.deviceId);
+        .eq('device_id', deviceId);
 
       if (stopError) {
         console.error('Error stopping existing simulations:', stopError);
@@ -43,16 +32,16 @@ export function SimulationConfig() {
       if (start) {
         // Create a new simulation record
         const simulationParameters: Record<string, unknown> = {
-          updateInterval: config.updateInterval,
-          simulationType: config.simulationType,
-          parameters: Object.entries(config.parameters).reduce((acc, [key, value]) => ({
+          updateInterval: 2000,
+          simulationType: 'normal',
+          parameters: Object.entries(defaultParameters).reduce((acc, [key, value]) => ({
             ...acc,
             [key]: { min: value.min, max: value.max }
           }), {})
         };
 
         const simulationData = {
-          device_id: config.deviceId,
+          device_id: deviceId,
           simulation_type: 'industrial',
           parameters: simulationParameters as Json,
           is_running: true
@@ -65,53 +54,32 @@ export function SimulationConfig() {
         if (startError) throw startError;
       }
       
-      setIsRunning(start);
       toast.success(`Simulation ${start ? 'started' : 'stopped'} successfully`);
+      if (onClose) onClose();
     } catch (error) {
-      console.error(`Error ${start ? 'starting' : 'stopping'} simulation:`, error);
+      console.error('Error managing simulation:', error);
       toast.error(`Failed to ${start ? 'start' : 'stop'} simulation`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleParameterChange = (key: string, min: number, max: number) => {
-    setConfig(prev => ({
-      ...prev,
-      parameters: {
-        ...prev.parameters,
-        [key]: { min, max }
-      }
-    }));
-  };
-
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">Simulation Configuration</h2>
-      
-      <SimulationControls
-        updateInterval={config.updateInterval}
-        simulationType={config.simulationType}
-        onUpdateIntervalChange={(interval) => setConfig(prev => ({ ...prev, updateInterval: interval }))}
-        onSimulationTypeChange={(type) => setConfig(prev => ({ ...prev, simulationType: type }))}
-      />
-
-      <div className="grid grid-cols-2 gap-2">
-        {Object.entries(config.parameters).map(([key, value]) => (
-          <SimulationParameterRange
-            key={key}
-            parameterKey={key}
-            value={value}
-            onChange={handleParameterChange}
-          />
-        ))}
-      </div>
-
-      <div className="flex justify-end pt-2">
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Simulation Configuration</h3>
+      <div className="flex justify-end space-x-2">
         <Button
-          variant={isRunning ? "destructive" : "default"}
-          size="sm"
-          onClick={() => handleSimulation(!isRunning)}
+          variant="outline"
+          onClick={() => handleSimulation(false)}
+          disabled={isLoading}
         >
-          {isRunning ? 'Stop Simulation' : 'Start Simulation'}
+          Stop Simulation
+        </Button>
+        <Button
+          onClick={() => handleSimulation(true)}
+          disabled={isLoading}
+        >
+          Start Simulation
         </Button>
       </div>
     </div>
