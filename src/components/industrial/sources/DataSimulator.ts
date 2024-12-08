@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { MESConnector } from "@/utils/industrial/connectors/MESConnector";
+import { SCADAConnector } from "@/utils/industrial/connectors/SCADAConnector";
+import { IoTConnector } from "@/utils/industrial/connectors/IoTConnector";
 
 interface Source {
   id: string;
@@ -18,33 +21,18 @@ export const simulateDataIngestion = async (sources: Source[]) => {
       }
 
       if (Math.random() > 0.3) { // 70% chance of receiving data
-        const mockData = {
-          source: source.id,
-          deviceId: source.deviceId,
-          timestamp: new Date().toISOString(),
-          values: {
-            temperature: Math.random() * 100,
-            pressure: Math.random() * 50,
-            flow_rate: Math.random() * 200
-          },
-          metadata: {
-            unit: 'production-line-1',
-            batch: 'BATCH-' + Math.floor(Math.random() * 1000)
-          }
-        };
-
-        console.log('Sending data to edge function:', mockData);
-        const { error } = await supabase.functions.invoke('industrial-data-ingest', {
-          body: mockData
-        });
-
-        if (error) {
-          console.error(`Error ingesting data from ${source.name}:`, error);
-          toast.error(`Failed to ingest data from ${source.name}`);
-          continue;
+        let connector;
+        
+        // Create appropriate connector based on source type
+        if (source.name.toLowerCase().includes('mes')) {
+          connector = new MESConnector(source.deviceId);
+        } else if (source.name.toLowerCase().includes('scada')) {
+          connector = new SCADAConnector(source.deviceId);
+        } else {
+          connector = new IoTConnector(source.deviceId);
         }
 
-        console.log(`Successfully ingested data for ${source.name}`);
+        await connector.sendData();
       }
     }
   } catch (error) {
