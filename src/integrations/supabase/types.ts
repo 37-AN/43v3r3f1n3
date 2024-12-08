@@ -289,6 +289,44 @@ export type Database = {
         }
         Relationships: []
       }
+      mes_metrics: {
+        Row: {
+          device_id: string | null
+          id: string
+          metadata: Json | null
+          metric_type: string
+          timestamp: string | null
+          unit: string | null
+          value: number
+        }
+        Insert: {
+          device_id?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_type: string
+          timestamp?: string | null
+          unit?: string | null
+          value: number
+        }
+        Update: {
+          device_id?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_type?: string
+          timestamp?: string | null
+          unit?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mes_metrics_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "plc_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plc_devices: {
         Row: {
           created_at: string | null
@@ -439,6 +477,44 @@ export type Database = {
             columns: ["annotation_id"]
             isOneToOne: false
             referencedRelation: "annotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refined_industrial_data: {
+        Row: {
+          data_type: string
+          device_id: string | null
+          id: string
+          metadata: Json | null
+          quality_score: number | null
+          timestamp: string | null
+          value: number
+        }
+        Insert: {
+          data_type: string
+          device_id?: string | null
+          id?: string
+          metadata?: Json | null
+          quality_score?: number | null
+          timestamp?: string | null
+          value: number
+        }
+        Update: {
+          data_type?: string
+          device_id?: string | null
+          id?: string
+          metadata?: Json | null
+          quality_score?: number | null
+          timestamp?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refined_industrial_data_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "plc_devices"
             referencedColumns: ["id"]
           },
         ]
