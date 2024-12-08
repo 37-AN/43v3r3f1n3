@@ -62,7 +62,8 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        const formattedData = {
+        // Format data for industrial-data-refinery
+        const rawData = {
           deviceId: selectedDeviceId,
           dataType: 'measurement',
           values: values,
@@ -74,13 +75,11 @@ export const DataAnalysisProcessor = ({
           }
         };
 
-        console.log('Sending formatted data to edge function:', formattedData);
+        console.log('Sending formatted data to edge function:', rawData);
 
         // Get AI analysis from our edge function
-        const { data: aiData, error: aiError } = await supabase.functions.invoke('industrial-data-refinery', {
-          body: { 
-            rawData: formattedData
-          }
+        const { data: refinedData, error: aiError } = await supabase.functions.invoke('industrial-data-refinery', {
+          body: { rawData }
         });
 
         if (aiError) {
@@ -89,17 +88,33 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        console.log('AI analysis response:', aiData);
+        console.log('AI analysis response:', refinedData);
 
-        if (!aiData || !aiData.deviceId) {
+        if (!refinedData || !refinedData.deviceId) {
           console.error('Invalid AI analysis response');
           return null;
         }
 
-        const insight = aiData?.analysis ? {
-          message: aiData.analysis,
-          severity: aiData.severity || 'info',
-          confidence: aiData.confidence || 0.85
+        // Send refined data to MES tokenization engine
+        const { data: mesData, error: mesError } = await supabase.functions.invoke('mes-tokenization-engine', {
+          body: { 
+            refinedData,
+            timestamp: new Date().toISOString()
+          }
+        });
+
+        if (mesError) {
+          console.error('Error in MES tokenization:', mesError);
+          toast.error('Failed to process in MES engine');
+          return null;
+        }
+
+        console.log('MES tokenization response:', mesData);
+
+        const insight = refinedData?.analysis ? {
+          message: refinedData.analysis,
+          severity: refinedData.severity || 'info',
+          confidence: refinedData.confidence || 0.85
         } : generateInsight(features);
 
         console.log('Generated insight:', insight);
