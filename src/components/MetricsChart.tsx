@@ -28,7 +28,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
       "w-full p-3",
       "bg-white/80 dark:bg-system-gray-800/80 backdrop-blur-lg",
       "border border-white/20 dark:border-system-gray-700/20",
-      "shadow-lg",
+      "shadow-lg hover:shadow-xl transition-shadow duration-200",
       className
     )}>
       <ChartHeader 

@@ -11,7 +11,7 @@ interface MetricCardProps {
 
 export function MetricCard({ title, value, change, status, showTrend = true }: MetricCardProps) {
   return (
-    <Card className="p-4 glass-panel">
+    <Card className="p-4 glass-panel hover:shadow-lg transition-shadow duration-200">
       <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
       <div className="mt-2 flex items-center justify-between">
         <span className="text-2xl font-bold">{value}</span>
@@ -24,6 +24,18 @@ export function MetricCard({ title, value, change, status, showTrend = true }: M
           </div>
         )}
       </div>
+      {status && (
+        <div className="mt-2">
+          <span className={`text-xs px-2 py-1 rounded-full ${
+            status === 'Optimal' ? 'bg-green-100 text-green-800' :
+            status === 'Good' ? 'bg-blue-100 text-blue-800' :
+            status === 'Fair' ? 'bg-yellow-100 text-yellow-800' :
+            'bg-red-100 text-red-800'
+          }`}>
+            {status}
+          </span>
+        </div>
+      )}
     </Card>
   );
 }

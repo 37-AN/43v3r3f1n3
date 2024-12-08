@@ -14,36 +14,43 @@ export function MetricsGrid({ performanceData, resourceData }: MetricsGridProps)
     return ((latest - previous) / previous) * 100;
   };
 
+  const getEfficiencyStatus = (value: number) => {
+    if (value >= 90) return "Optimal";
+    if (value >= 75) return "Good";
+    if (value >= 60) return "Fair";
+    return "Needs Attention";
+  };
+
   const performanceChange = calculateChange(performanceData);
   const resourceChange = calculateChange(resourceData);
+  const currentPerformance = performanceData[performanceData.length - 1]?.value || 0;
+  const currentResource = resourceData[resourceData.length - 1]?.value || 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <MetricCard
-        title="Average Performance"
-        value={`${performanceData.length > 0
-          ? Math.round(performanceData[performanceData.length - 1].value)
-          : 0}%`}
+        title="Production Efficiency"
+        value={`${currentPerformance.toFixed(1)}%`}
         change={performanceChange}
+        status={getEfficiencyStatus(currentPerformance)}
       />
       <MetricCard
         title="Resource Utilization"
-        value={`${resourceData.length > 0
-          ? Math.round(resourceData[resourceData.length - 1].value)
-          : 0}%`}
+        value={`${currentResource.toFixed(1)}%`}
         change={resourceChange}
+        status={getEfficiencyStatus(currentResource)}
       />
       <MetricCard
-        title="Active Devices"
-        value="3"
-        change={0}
-        status="Active"
-      />
-      <MetricCard
-        title="System Health"
-        value="98%"
-        change={0}
+        title="Equipment Health"
+        value="98.5%"
+        change={0.5}
         status="Optimal"
+      />
+      <MetricCard
+        title="Energy Consumption"
+        value={`${(currentResource * 1.5).toFixed(1)} kW`}
+        change={resourceChange * 1.2}
+        status={resourceChange > 0 ? "Increasing" : "Stable"}
       />
     </div>
   );
