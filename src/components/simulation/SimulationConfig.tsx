@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SimulationControls } from "./SimulationControls";
 import { SimulationParameterRange } from "./SimulationParameterRange";
+import { Json } from "@/integrations/supabase/types";
 
 interface SimulationParameters {
   temperature: { min: number; max: number; };
@@ -32,7 +33,7 @@ export function SimulationConfig() {
   const [config, setConfig] = useState({
     deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
     updateInterval: 2000,
-    simulationType: 'normal',
+    simulationType: 'normal' as 'normal' | 'anomaly',
     parameters: defaultParameters
   });
 
@@ -42,19 +43,37 @@ export function SimulationConfig() {
     try {
       console.log(`${start ? 'Starting' : 'Stopping'} simulation with config:`, config);
       
+      // First, check if there's an existing simulation for this device
+      const { data: existingSimulation } = await supabase
+        .from('device_simulations')
+        .select('id')
+        .eq('device_id', config.deviceId)
+        .single();
+
       const simulationData = {
         device_id: config.deviceId,
         simulation_type: 'industrial',
         parameters: {
-          ...config,
-          timestamp: new Date().toISOString()
-        },
+          updateInterval: config.updateInterval,
+          simulationType: config.simulationType,
+          parameters: config.parameters
+        } as Json,
         is_running: start
       };
 
-      const { error } = await supabase
-        .from('device_simulations')
-        .upsert(simulationData);
+      let error;
+      if (existingSimulation) {
+        // Update existing simulation
+        ({ error } = await supabase
+          .from('device_simulations')
+          .update(simulationData)
+          .eq('id', existingSimulation.id));
+      } else {
+        // Create new simulation
+        ({ error } = await supabase
+          .from('device_simulations')
+          .insert(simulationData));
+      }
 
       if (error) throw error;
       
