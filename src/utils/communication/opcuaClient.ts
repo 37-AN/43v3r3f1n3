@@ -10,7 +10,7 @@ export interface AttributeIds {
   Value: number;
 }
 
-interface OPCUAClientOptions {
+export interface OPCUAClientOptions {
   applicationName: string;
   serverUri?: string;  // Added this optional property
   connectionStrategy: {
