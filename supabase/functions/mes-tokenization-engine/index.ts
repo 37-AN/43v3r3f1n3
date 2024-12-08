@@ -35,13 +35,13 @@ serve(async (req) => {
       unit: refinedData.metadata?.unit || 'unit',
       timestamp: timestamp || new Date().toISOString(),
       metadata: {
-        quality_score: refinedData.qualityScore || 1.0,
+        quality_score: refinedData.quality_score || 1.0,
         source: 'ai_refinery',
         ...refinedData.metadata
       }
     };
 
-    console.log('Generated MES metrics:', mesMetrics);
+    console.log('Storing MES metrics:', mesMetrics);
 
     // Store MES metrics
     const { error: metricsError } = await supabaseClient
@@ -50,21 +50,23 @@ serve(async (req) => {
 
     if (metricsError) {
       console.error('Error storing MES metrics:', metricsError);
-      throw new Error('Failed to store MES metrics');
+      throw metricsError;
     }
 
+    console.log('Successfully stored MES metrics');
+
     // Create tokenization record if quality score is above threshold
-    if ((refinedData.qualityScore || 0) >= 0.8) {
+    if ((refinedData.quality_score || 0) >= 0.8) {
       const tokenData = {
         asset_type: 'industrial_data',
-        name: `${refinedData.dataType || 'measurement'}_${timestamp || new Date().toISOString()}`,
-        description: `Tokenized industrial data for ${refinedData.dataType || 'measurement'}`,
+        name: `${refinedData.data_type || 'measurement'}_${timestamp || new Date().toISOString()}`,
+        description: `Tokenized industrial data for ${refinedData.data_type || 'measurement'}`,
         token_symbol: 'IND',
         owner_id: refinedData.metadata?.owner_id,
         metadata: {
           source_data: refinedData,
           timestamp: timestamp || new Date().toISOString(),
-          quality_score: refinedData.qualityScore || 1.0
+          quality_score: refinedData.quality_score || 1.0
         }
       };
 
@@ -76,7 +78,7 @@ serve(async (req) => {
 
       if (tokenError) {
         console.error('Error creating token:', tokenError);
-        throw new Error('Failed to create token');
+        throw tokenError;
       }
     }
 

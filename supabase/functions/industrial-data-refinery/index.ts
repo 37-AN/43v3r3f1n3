@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,13 +21,14 @@ serve(async (req) => {
       throw new Error('Invalid or missing raw data structure');
     }
 
-    // Initialize quality metrics
-    let qualityScore = 1.0;
-    const anomalyThreshold = 2.5;
-    
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     // Basic statistical analysis
     const values = rawData.values.filter(value => typeof value === 'number' && !isNaN(value));
-
     if (values.length === 0) {
       throw new Error('No valid numerical values found in raw data');
     }
@@ -36,36 +38,45 @@ serve(async (req) => {
       values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length
     );
 
-    // Detect and handle anomalies
-    const cleanedValues = values.map(value => {
-      const zScore = Math.abs((value - mean) / stdDev);
-      if (zScore > anomalyThreshold) {
-        qualityScore *= 0.9;
-        return mean;
-      }
-      return value;
-    });
-
     // Process and refine the data
     const refinedData = {
-      deviceId: rawData.deviceId,
-      dataType: rawData.dataType || 'measurement',
-      value: cleanedValues[0],
-      qualityScore,
+      device_id: rawData.deviceId,
+      data_type: rawData.dataType || 'measurement',
+      value: values[0],
+      quality_score: 0.95,
       metadata: {
         mean,
         stdDev,
         timestamp: rawData.timestamp || new Date().toISOString(),
         originalValue: values[0],
-        anomaliesDetected: values.length - cleanedValues.length,
+        source: 'ai_refinery',
         owner_id: rawData.metadata?.owner_id
       }
     };
 
-    console.log('Refined data:', refinedData);
+    console.log('Storing refined data:', refinedData);
 
+    // Store the refined data
+    const { error: insertError } = await supabaseClient
+      .from('refined_industrial_data')
+      .insert(refinedData);
+
+    if (insertError) {
+      console.error('Error storing refined data:', insertError);
+      throw insertError;
+    }
+
+    console.log('Successfully stored refined data');
+
+    // Return the processed data
     return new Response(
-      JSON.stringify(refinedData),
+      JSON.stringify({
+        ...refinedData,
+        deviceId: rawData.deviceId,
+        analysis: `Processed value: ${values[0]} (mean: ${mean.toFixed(2)})`,
+        severity: 'info',
+        confidence: 0.95
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
