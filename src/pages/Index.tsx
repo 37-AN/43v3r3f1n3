@@ -1,31 +1,32 @@
-import { Header } from "@/components/Header";
-import { PLCDeviceGrid } from "@/components/PLCDeviceGrid";
-import { DeviceConfigManager } from "@/components/DeviceConfigManager";
-import { ArduinoPLCDataGrid } from "@/components/ArduinoPLCDataGrid";
-import { useUserEmail } from "@/hooks/useUserEmail";
-import { useState } from "react";
+import React from 'react';
+import { PLCData } from '@/utils/plcData';
 
-const Index = () => {
-  const userEmail = useUserEmail();
-  const [isProcessing, setIsProcessing] = useState(false);
+interface IndexProps {
+  plcData: PLCData | null;
+  connectionStatus: { [key: string]: boolean };
+}
 
-  const handleTokenize = () => {
-    // Implement tokenization logic here
-    console.log("Tokenize clicked");
-  };
-
+const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <Header 
-        userEmail={userEmail}
-        isProcessing={isProcessing}
-        onTokenizeClick={handleTokenize}
-      />
-      <DeviceConfigManager />
-      <PLCDeviceGrid />
-      <ArduinoPLCDataGrid />
+    <div>
+      <h1>Dashboard</h1>
+      <h2>Connection Status:</h2>
+      <ul>
+        {Object.entries(connectionStatus).map(([deviceId, status]) => (
+          <li key={deviceId}>
+            Device {deviceId}: {status ? 'Connected' : 'Disconnected'}
+          </li>
+        ))}
+      </ul>
+      <h2>PLC Data:</h2>
+      {plcData ? (
+        <pre>{JSON.stringify(plcData, null, 2)}</pre>
+      ) : (
+        <p>Loading PLC data...</p>
+      )}
     </div>
   );
 };
 
 export default Index;
+
