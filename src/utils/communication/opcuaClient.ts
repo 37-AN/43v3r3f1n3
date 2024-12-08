@@ -20,21 +20,22 @@ export class CustomOPCUAClient {
     private endpointUrl: string,
     private options = {
       applicationName: "Industrial IoT Client",
+      serverUri?: string,
       connectionStrategy: {
         initialDelay: 1000,
         maxRetry: 3
       }
     }
   ) {
-    console.log(`Creating OPC UA Client for ${endpointUrl}`);
+    console.log(`Creating OPC UA Client for ${endpointUrl} with options:`, options);
     this.initializeSimulatedValues();
   }
 
   private initializeSimulatedValues() {
-    // Initialize with realistic starting values
-    this.simulatedValues.set("Temperature", 25 + Math.random() * 5); // Around room temperature
-    this.simulatedValues.set("Pressure", 1000 + Math.random() * 50); // Around atmospheric pressure
-    this.simulatedValues.set("Speed", 1500 + Math.random() * 100); // RPM for a motor
+    // Initialize with realistic starting values for common OPC UA variables
+    this.simulatedValues.set("Counter1", 0);
+    this.simulatedValues.set("Random1", Math.random() * 100);
+    this.simulatedValues.set("Sinusoid1", Math.sin(Date.now() / 1000) * 100);
   }
 
   async connect(): Promise<void> {
@@ -58,27 +59,18 @@ export class CustomOPCUAClient {
 
     this.updateInterval = setInterval(() => {
       if (this.connected) {
+        // Update simulated values
+        const time = Date.now() / 1000;
+        this.simulatedValues.set("Counter1", (this.simulatedValues.get("Counter1") || 0) + 1);
+        this.simulatedValues.set("Random1", Math.random() * 100);
+        this.simulatedValues.set("Sinusoid1", Math.sin(time) * 100);
+        
+        // Notify subscribers
         this.simulatedValues.forEach((value, key) => {
-          // Add some random variation to the values
-          let newValue = value;
-          switch (key) {
-            case "Temperature":
-              newValue += (Math.random() - 0.5) * 0.5; // Small temperature changes
-              break;
-            case "Pressure":
-              newValue += (Math.random() - 0.5) * 10; // Larger pressure variations
-              break;
-            case "Speed":
-              newValue += (Math.random() - 0.5) * 50; // Speed variations
-              break;
-          }
-          this.simulatedValues.set(key, newValue);
-          
-          // Notify subscribers
           const callbacks = this.subscriptionCallbacks.get(key) || [];
           callbacks.forEach(callback => {
             callback({
-              value: { value: newValue }
+              value: { value }
             });
           });
         });
@@ -89,12 +81,13 @@ export class CustomOPCUAClient {
   async subscribe(nodeId: string, callback: (dataValue: DataValue) => void): Promise<void> {
     try {
       console.log(`Subscribing to node ${nodeId}`);
-      const callbacks = this.subscriptionCallbacks.get(nodeId) || [];
+      const variableName = nodeId.split(';').pop()?.split('=').pop() || '';
+      const callbacks = this.subscriptionCallbacks.get(variableName) || [];
       callbacks.push(callback);
-      this.subscriptionCallbacks.set(nodeId, callbacks);
+      this.subscriptionCallbacks.set(variableName, callbacks);
       
       // Immediately send initial value
-      const initialValue = this.simulatedValues.get(nodeId.split(';').pop() || '') || 0;
+      const initialValue = this.simulatedValues.get(variableName) || 0;
       callback({ value: { value: initialValue } });
     } catch (error) {
       console.error(`Error subscribing to node ${nodeId}:`, error);

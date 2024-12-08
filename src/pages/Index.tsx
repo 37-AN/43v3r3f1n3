@@ -11,19 +11,17 @@ interface IndexProps {
   connectionStatus: { [key: string]: boolean };
 }
 
-// Define OPC UA server endpoints - using standard OPC UA simulation server port
+// Define OPC UA server endpoints
 const OPC_UA_ENDPOINTS = {
-  temperature: "opc.tcp://localhost:53530/OPCUA/SimulationServer",
-  pressure: "opc.tcp://localhost:53530/OPCUA/SimulationServer",
-  speed: "opc.tcp://localhost:53530/OPCUA/SimulationServer",
-  // Add more endpoints as needed
+  prosys: "opc.tcp://uademo.prosysopc.com:53530/OPCUA/SimulationServer",
+  local: "opc.tcp://DESKTOP-3RVJI44.mshome.net:53530/OPCUA/SimulationServer"
 };
 
 // Define the node IDs for the variables we want to monitor
 const NODE_IDS = {
-  temperature: "ns=3;s=Temperature",
-  pressure: "ns=3;s=Pressure",
-  speed: "ns=3;s=Speed",
+  counter: "ns=3;s=Counter1",
+  random: "ns=3;s=Random1",
+  sinusoid: "ns=3;s=Sinusoid1"
 };
 
 const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
@@ -45,7 +43,12 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     // Create and connect clients
     Object.entries(OPC_UA_ENDPOINTS).forEach(([name, endpoint]) => {
       console.log(`Creating client for ${name} at ${endpoint}`);
-      clients[name] = new CustomOPCUAClient(endpoint);
+      clients[name] = new CustomOPCUAClient(endpoint, {
+        applicationName: "Industrial IoT Client",
+        serverUri: name === 'prosys' ? 
+          "urn:UADEMO.prosysopc.com:OPCUA:SimulationServer" : 
+          undefined
+      });
     });
     
     setOpcuaClients(clients);
@@ -56,15 +59,17 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
         console.log(`Attempting to connect to ${name}...`);
         await client.connect();
         
-        // Subscribe to the specific node for this device
-        const nodeId = NODE_IDS[name as keyof typeof NODE_IDS];
-        await client.subscribe(nodeId, (dataValue) => {
-          console.log(`Received data for ${name}:`, dataValue);
-          setSimulatedData(prev => ({
-            ...prev,
-            [name]: dataValue.value.value as number
-          }));
-        });
+        // Subscribe to all nodes for this server
+        for (const [nodeKey, nodeId] of Object.entries(NODE_IDS)) {
+          console.log(`Subscribing to ${nodeKey} (${nodeId}) on ${name}`);
+          await client.subscribe(nodeId, (dataValue) => {
+            console.log(`Received data for ${name}.${nodeKey}:`, dataValue);
+            setSimulatedData(prev => ({
+              ...prev,
+              [`${name}.${nodeKey}`]: dataValue.value.value as number
+            }));
+          });
+        }
 
         // Update connection status
         setDeviceStatus(prev => ({
