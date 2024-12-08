@@ -11,27 +11,28 @@ export function useArduinoData() {
     queryKey: ["arduino-plc-data"],
     queryFn: async () => {
       console.log("Fetching Arduino PLC data...");
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError) {
-        console.error("Authentication error:", authError);
-        toast.error("Authentication error. Please try logging in again.");
-        throw authError;
-      }
-
-      if (!user) {
-        console.log("No user found");
-        addMessage('error', 'Authentication required');
-        toast.error("Please log in to view PLC data");
-        throw new Error("Authentication required");
-      }
-
-      console.log("Authenticated user:", user.email);
-
-      const endDate = new Date();
-      const startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
-
       try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError) {
+          console.error("Authentication error:", authError);
+          addMessage('error', 'Authentication error. Please try logging in again.');
+          toast.error("Authentication error. Please try logging in again.");
+          throw authError;
+        }
+
+        if (!user) {
+          console.log("No user found - authentication required");
+          addMessage('error', 'Please log in to view PLC data');
+          toast.error("Please log in to view PLC data");
+          throw new Error("Authentication required");
+        }
+
+        console.log("Authenticated user:", user.email);
+
+        const endDate = new Date();
+        const startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
+
         const { data, error } = await supabase
           .from("arduino_plc_data")
           .select("*, plc_devices(name)")
@@ -41,9 +42,16 @@ export function useArduinoData() {
 
         if (error) {
           console.error("Error fetching Arduino PLC data:", error);
-          if (error.message.includes('JWT') || error.message.includes('network')) {
-            addMessage('error', 'Failed to fetch PLC data. Please check your connection.');
-            toast.error("Connection error. Please try again.");
+          if (error.message.includes('Failed to fetch')) {
+            console.error("Connection error - unable to reach Supabase");
+            addMessage('error', 'Connection error. Please check your internet connection.');
+            toast.error("Unable to connect to the server. Please check your connection.");
+          } else if (error.message.includes('JWT')) {
+            addMessage('error', 'Session expired. Please log in again.');
+            toast.error("Session expired. Please log in again.");
+          } else {
+            addMessage('error', `Error: ${error.message}`);
+            toast.error("Failed to fetch PLC data. Please try again.");
           }
           throw error;
         }
@@ -59,7 +67,13 @@ export function useArduinoData() {
         return data as ArduinoPLCData[];
       } catch (error) {
         console.error("Error in data fetch:", error);
-        toast.error("Failed to fetch data. Please try again later.");
+        if (error instanceof Error) {
+          if (error.message.includes('Failed to fetch')) {
+            toast.error("Connection error. Please check your internet connection.");
+          } else {
+            toast.error(error.message);
+          }
+        }
         throw error;
       }
     },

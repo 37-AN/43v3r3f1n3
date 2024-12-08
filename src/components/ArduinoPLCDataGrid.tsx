@@ -9,8 +9,14 @@ export function ArduinoPLCDataGrid() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error checking auth session:", error);
+        toast.error("Error checking authentication status");
+        return;
+      }
       if (!session) {
+        console.log("No active session found");
         toast.error("Please log in to view PLC data");
       }
     };
