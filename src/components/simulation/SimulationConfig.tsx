@@ -6,17 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
+
+interface SimulationParameters {
+  temperature: { min: number; max: number; };
+  pressure: { min: number; max: number; };
+  vibration: { min: number; max: number; };
+  production_rate: { min: number; max: number; };
+}
 
 interface SimulationConfig {
   deviceId: string;
   updateInterval: number;
   simulationType: 'normal' | 'anomaly';
-  parameters: {
-    temperature: { min: number; max: number; };
-    pressure: { min: number; max: number; };
-    vibration: { min: number; max: number; };
-    production_rate: { min: number; max: number; };
-  };
+  parameters: SimulationParameters;
 }
 
 export function SimulationConfig() {
@@ -36,14 +39,16 @@ export function SimulationConfig() {
 
   const startSimulation = async () => {
     try {
+      const simulationData = {
+        device_id: config.deviceId,
+        simulation_type: 'industrial',
+        parameters: config as unknown as Json,
+        is_running: true
+      };
+
       const { error } = await supabase
         .from('device_simulations')
-        .upsert({
-          device_id: config.deviceId,
-          simulation_type: 'industrial',
-          parameters: config,
-          is_running: true
-        });
+        .upsert(simulationData);
 
       if (error) throw error;
       
