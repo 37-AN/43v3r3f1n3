@@ -27,18 +27,22 @@ export function SimulationDashboard() {
   useEffect(() => {
     const checkSimulationState = async () => {
       console.log('Checking initial simulation state');
+      
+      // Get the first active simulation
       const { data, error } = await supabase
         .from('device_simulations')
         .select('is_running')
-        .single();
+        .eq('is_running', true)
+        .maybeSingle();
 
       if (error) {
         console.error('Error checking simulation state:', error);
         return;
       }
 
-      console.log('Initial simulation state:', data?.is_running);
-      setIsSimulationRunning(data?.is_running || false);
+      const isRunning = data?.is_running || false;
+      console.log('Initial simulation state:', isRunning);
+      setIsSimulationRunning(isRunning);
     };
 
     checkSimulationState();
