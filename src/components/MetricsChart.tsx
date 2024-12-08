@@ -29,13 +29,13 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
 
   return (
     <Card className={cn(
-      "absolute inset-0 p-6 animate-fade-up",
+      "w-full h-full p-6",
       "bg-white/80 dark:bg-system-gray-800/80 backdrop-blur-lg",
       "border border-white/20 dark:border-system-gray-700/20",
-      "shadow-lg",
+      "shadow-lg animate-fade-up",
       className
     )}>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div className="space-y-1">
           <h3 className="text-lg font-semibold text-system-gray-900 dark:text-system-gray-100">
             {title}
@@ -48,11 +48,11 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
           Last updated: {data.length > 0 ? data[data.length - 1].timestamp : 'N/A'}
         </div>
       </div>
-      <div className="h-[350px] w-full">
+      <div className="h-[380px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={data} 
-            margin={{ top: 20, right: 30, left: 20, bottom: 65 }}
+            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
           >
             <CartesianGrid 
               strokeDasharray="3 3" 
@@ -64,10 +64,10 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
               stroke="#8E8E93"
               fontSize={12}
               tickLine={false}
-              dy={30}
               angle={-45}
               textAnchor="end"
               height={60}
+              dy={20}
             />
             <YAxis 
               stroke="#8E8E93" 
