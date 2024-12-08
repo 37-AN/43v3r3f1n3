@@ -6,15 +6,20 @@ import { SimulationControls } from "./SimulationControls";
 import { SimulationParameterRange } from "./SimulationParameterRange";
 import { Json } from "@/integrations/supabase/types";
 
+interface ParameterRange {
+  min: number;
+  max: number;
+}
+
 interface SimulationParameters {
-  temperature: { min: number; max: number; };
-  pressure: { min: number; max: number; };
-  vibration: { min: number; max: number; };
-  production_rate: { min: number; max: number; };
-  downtime_minutes: { min: number; max: number; };
-  defect_rate: { min: number; max: number; };
-  energy_consumption: { min: number; max: number; };
-  machine_efficiency: { min: number; max: number; };
+  temperature: ParameterRange;
+  pressure: ParameterRange;
+  vibration: ParameterRange;
+  production_rate: ParameterRange;
+  downtime_minutes: ParameterRange;
+  defect_rate: ParameterRange;
+  energy_consumption: ParameterRange;
+  machine_efficiency: ParameterRange;
 }
 
 const defaultParameters: SimulationParameters = {
@@ -52,21 +57,24 @@ export function SimulationConfig() {
       // First, check if there's an existing simulation for this device
       const { data: existingSimulation } = await supabase
         .from('device_simulations')
-        .select('id')
+        .select('*')
         .eq('device_id', config.deviceId)
         .single();
 
-      // Create a properly typed simulation parameters object
-      const simulationParameters: Json = {
+      // Convert parameters to a format compatible with Json type
+      const simulationParameters: Record<string, unknown> = {
         updateInterval: config.updateInterval,
         simulationType: config.simulationType,
-        parameters: config.parameters
+        parameters: Object.entries(config.parameters).reduce((acc, [key, value]) => ({
+          ...acc,
+          [key]: { min: value.min, max: value.max }
+        }), {})
       };
 
       const simulationData = {
         device_id: config.deviceId,
         simulation_type: 'industrial',
-        parameters: simulationParameters,
+        parameters: simulationParameters as Json,
         is_running: start
       };
 
