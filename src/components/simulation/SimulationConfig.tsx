@@ -6,6 +6,7 @@ import { SimulationControls } from "./SimulationControls";
 import { SimulationParameterRange } from "./SimulationParameterRange";
 import { SimulationParameters, defaultParameters } from "@/types/simulation";
 import { Json } from "@/integrations/supabase/types";
+import { Button } from "@/components/ui/button";
 
 interface SimulationConfig {
   deviceId: string;
@@ -83,46 +84,36 @@ export function SimulationConfig() {
   };
 
   return (
-    <Card className="p-4 glass-panel">
-      <h2 className="text-lg font-semibold mb-3">Industrial Process Simulator</h2>
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold">Simulation Configuration</h2>
       
-      <div className="space-y-3">
-        <SimulationControls
-          updateInterval={config.updateInterval}
-          simulationType={config.simulationType}
-          onUpdateIntervalChange={(interval) => setConfig(prev => ({ ...prev, updateInterval: interval }))}
-          onSimulationTypeChange={(type) => setConfig(prev => ({ ...prev, simulationType: type }))}
-        />
+      <SimulationControls
+        updateInterval={config.updateInterval}
+        simulationType={config.simulationType}
+        onUpdateIntervalChange={(interval) => setConfig(prev => ({ ...prev, updateInterval: interval }))}
+        onSimulationTypeChange={(type) => setConfig(prev => ({ ...prev, simulationType: type }))}
+      />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {Object.entries(config.parameters).map(([key, value]) => (
-            <SimulationParameterRange
-              key={key}
-              parameterKey={key}
-              value={value}
-              onChange={handleParameterChange}
-            />
-          ))}
-        </div>
-
-        <div className="flex justify-end">
-          {!isRunning ? (
-            <button 
-              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm"
-              onClick={() => handleSimulation(true)}
-            >
-              Start Simulation
-            </button>
-          ) : (
-            <button 
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-sm"
-              onClick={() => handleSimulation(false)}
-            >
-              Stop Simulation
-            </button>
-          )}
-        </div>
+      <div className="grid grid-cols-2 gap-2">
+        {Object.entries(config.parameters).map(([key, value]) => (
+          <SimulationParameterRange
+            key={key}
+            parameterKey={key}
+            value={value}
+            onChange={handleParameterChange}
+          />
+        ))}
       </div>
-    </Card>
+
+      <div className="flex justify-end pt-2">
+        <Button
+          variant={isRunning ? "destructive" : "default"}
+          size="sm"
+          onClick={() => handleSimulation(!isRunning)}
+        >
+          {isRunning ? 'Stop Simulation' : 'Start Simulation'}
+        </Button>
+      </div>
+    </div>
   );
 }

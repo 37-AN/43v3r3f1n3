@@ -1,7 +1,6 @@
 import React from 'react';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DataIngestionManager } from '@/components/industrial/DataIngestionManager';
-import { SimulationConfig } from '@/components/simulation/SimulationConfig';
 import { SimulationDashboard } from '@/components/simulation/SimulationDashboard';
 
 const Index = () => {
@@ -11,7 +10,6 @@ const Index = () => {
         <DashboardHeader title="Industrial Data Dashboard" />
         
         <div className="grid grid-cols-1 gap-4">
-          <SimulationConfig />
           <SimulationDashboard />
           <DataIngestionManager />
         </div>
