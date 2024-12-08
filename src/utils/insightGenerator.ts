@@ -1,28 +1,33 @@
-interface InsightResult {
-  message: string;
-  severity: 'info' | 'warning' | 'critical';
-  confidence: number;
+interface Features {
+  mean: number;
+  variance: number;
+  range: number;
 }
 
-export const generateInsight = (features: { mean: number; variance: number; range: number }): InsightResult => {
+export const generateInsight = (features: Features) => {
   const { mean, variance, range } = features;
-  let message = '';
+  
+  // Determine severity based on variance and range
   let severity: 'info' | 'warning' | 'critical' = 'info';
-  let confidence = 0.8;
-
   if (variance > 1000) {
-    message = `High data variability detected (variance: ${variance.toFixed(2)})`;
+    severity = 'critical';
+  } else if (variance > 500) {
     severity = 'warning';
-  } else if (range > 100) {
-    message = `Large value range detected (${range.toFixed(2)} units)`;
-    severity = 'warning';
-  } else if (Math.abs(mean) > 50) {
-    message = `Unusual average value detected (${mean.toFixed(2)})`;
-    severity = 'info';
-  } else {
-    message = `System operating within normal parameters`;
-    confidence = 0.95;
   }
 
-  return { message, severity, confidence };
+  // Generate message based on features
+  let message = '';
+  if (variance > 1000) {
+    message = `High variability detected in measurements (variance: ${variance.toFixed(2)})`;
+  } else if (range > 100) {
+    message = `Significant range in measurements detected (range: ${range.toFixed(2)})`;
+  } else {
+    message = `Stable operation with average value of ${mean.toFixed(2)}`;
+  }
+
+  return {
+    message,
+    severity,
+    confidence: 0.85
+  };
 };

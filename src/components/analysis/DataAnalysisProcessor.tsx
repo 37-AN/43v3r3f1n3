@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { DataPreparation } from './DataPreparation';
 import { InsightStorage } from './InsightStorage';
 import { generateInsight } from '@/utils/insightGenerator';
+import { supabase } from "@/integrations/supabase/client";
 
 interface DataAnalysisProcessorProps {
   selectedDeviceId: string;
@@ -27,9 +28,29 @@ export const DataAnalysisProcessor = ({
         const features = featureExtractor(preparedData);
         console.log('Extracted features:', features);
 
-        const insight = generateInsight(features);
-        console.log('Generated insight:', insight);
+        // Get AI analysis from our edge function
+        const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-analysis', {
+          body: { 
+            features,
+            deviceId: selectedDeviceId,
+            rawData: preparedData
+          }
+        });
 
+        if (aiError) {
+          console.error('Error in AI analysis:', aiError);
+          throw aiError;
+        }
+
+        console.log('AI analysis response:', aiData);
+
+        const insight = aiData?.analysis ? {
+          message: aiData.analysis,
+          severity: aiData.severity || 'info',
+          confidence: aiData.confidence || 0.85
+        } : generateInsight(features);
+
+        console.log('Generated insight:', insight);
         return { features, insight };
       } catch (error) {
         console.error('Error in data analysis:', error);

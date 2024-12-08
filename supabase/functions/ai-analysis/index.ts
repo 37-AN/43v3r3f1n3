@@ -14,7 +14,11 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { features, deviceId, rawData } = await req.json();
+
+    console.log('Analyzing data for device:', deviceId);
+    console.log('Features:', features);
+    console.log('Raw data:', rawData);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -27,9 +31,24 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'You are an industrial IoT analysis expert specialized in analyzing PLC and sensor data. You provide clear, concise insights about device performance, anomalies, and optimization opportunities.'
+            content: 'You are an industrial IoT analysis expert specialized in analyzing PLC and sensor data. Provide clear, concise insights about device performance, anomalies, and optimization opportunities.'
           },
-          { role: 'user', content: prompt }
+          { 
+            role: 'user', 
+            content: `Analyze this industrial IoT data:
+            Device ID: ${deviceId}
+            Statistical Features:
+            - Mean: ${features.mean}
+            - Variance: ${features.variance}
+            - Range: ${features.range}
+            
+            Raw Data: ${rawData}
+            
+            Provide a brief analysis focusing on:
+            1. Performance patterns
+            2. Anomalies
+            3. Optimization recommendations`
+          }
         ],
       }),
     });
@@ -37,9 +56,22 @@ serve(async (req) => {
     const data = await response.json();
     const analysis = data.choices[0].message.content;
 
-    return new Response(JSON.stringify({ analysis }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // Determine severity based on content
+    let severity = 'info';
+    if (analysis.toLowerCase().includes('critical') || analysis.toLowerCase().includes('urgent')) {
+      severity = 'critical';
+    } else if (analysis.toLowerCase().includes('warning') || analysis.toLowerCase().includes('attention')) {
+      severity = 'warning';
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        analysis, 
+        severity,
+        confidence: 0.95
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Error:', error);
     return new Response(
