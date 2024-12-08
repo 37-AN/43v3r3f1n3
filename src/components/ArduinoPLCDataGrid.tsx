@@ -1,8 +1,22 @@
 import { useArduinoData } from "./arduino/useArduinoData";
 import { DataGridContent } from "./arduino/DataGridContent";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function ArduinoPLCDataGrid() {
   const { data: arduinoData, isLoading, error } = useArduinoData();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Please log in to view PLC data");
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
   return (
     <div className="space-y-6">
