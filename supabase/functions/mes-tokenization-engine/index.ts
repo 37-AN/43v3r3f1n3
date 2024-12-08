@@ -32,12 +32,12 @@ serve(async (req) => {
         device_id: refinedData.deviceId,
         metric_type: metric.metric_type,
         value: metric.value,
-        unit: metric.unit || 'unit',
+        unit: metric.unit,
         timestamp: metric.timestamp || refinedData.timestamp,
         metadata: {
-          quality_score: refinedData.metadata?.quality_score || 0.95,
+          quality_score: refinedData.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
-          simulation: refinedData.metadata?.simulation || false
+          category: metric.category || 'measurement'
         }
       })
     );

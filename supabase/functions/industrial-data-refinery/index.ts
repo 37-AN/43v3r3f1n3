@@ -27,20 +27,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Process each metric
-    const refinedMetrics = rawData.values.map(metric => {
-      if (!metric.metric_type || typeof metric.value !== 'number') {
-        console.error('Invalid metric:', metric);
-        throw new Error('Invalid metric structure');
-      }
-
-      return {
-        metric_type: metric.metric_type,
-        value: metric.value,
-        timestamp: metric.timestamp || rawData.timestamp,
-        quality_score: 0.95
-      };
-    });
+    // Process metrics
+    const refinedMetrics = rawData.values.map(value => ({
+      metric_type: value.metric_type || 'measurement',
+      value: typeof value === 'number' ? value : value.value,
+      timestamp: value.timestamp || rawData.timestamp,
+      quality_score: 0.95,
+      unit: value.unit || 'unit'
+    }));
 
     console.log('Processed metrics:', refinedMetrics);
 

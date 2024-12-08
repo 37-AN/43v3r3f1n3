@@ -66,7 +66,7 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
                   <p>Supply: {asset.total_supply.toLocaleString()}</p>
                   <p>Price: ${asset.price_per_token}</p>
                   <p className="mt-1 text-xs">
-                    Created: {new Date(asset.metadata.timestamp).toLocaleString()}
+                    Created: {new Date(asset.created_at).toLocaleString()}
                   </p>
                 </div>
               </div>

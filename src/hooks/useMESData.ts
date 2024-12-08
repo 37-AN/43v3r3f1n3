@@ -1,35 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
-
-export interface MESMetric {
-  id: string;
-  device_id: string;
-  metric_type: string;
-  value: number;
-  unit: string;
-  timestamp: string;
-  metadata: {
-    quality_score: number;
-    source: string;
-    category: string;
-  };
-}
-
-export interface TokenizedAsset {
-  id: string;
-  asset_type: string;
-  name: string;
-  description: string | null;
-  token_symbol: string;
-  total_supply: number;
-  price_per_token: number;
-  metadata: {
-    source_metric: MESMetric;
-    timestamp: string;
-    quality_score: number;
-  } | null;
-}
+import { MESMetric, TokenizedAsset } from '@/types/tokenize';
 
 export const useMESData = (deviceId: string) => {
   const { data: mesMetrics, isLoading: metricsLoading } = useQuery({

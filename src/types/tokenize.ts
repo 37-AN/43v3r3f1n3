@@ -7,21 +7,35 @@ export interface TokenizeFormData {
   assetType: string;
 }
 
+export interface MESMetric {
+  id: string;
+  device_id: string;
+  metric_type: string;
+  value: number;
+  unit: string;
+  timestamp: string;
+  metadata: {
+    quality_score: number;
+    source: string;
+    category: string;
+  };
+}
+
 export interface TokenizedAsset {
   id: string;
+  asset_type: string;
   name: string;
-  description?: string;
-  tokenSymbol: string;
-  totalSupply: number;
-  pricePerToken: number;
-  assetType: string;
-  metadata?: {
-    contract_address?: string;
-    transaction_hash?: string;
-    blockchain?: string;
-    network?: string;
-  } | null;
+  description: string | null;
+  token_symbol: string;
+  total_supply: number;
+  price_per_token: number;
+  owner_id: string;
   created_at: string;
+  metadata: {
+    source_metric?: MESMetric;
+    timestamp?: string;
+    quality_score?: number;
+  } | null;
 }
 
 export interface ComplianceStatus {
