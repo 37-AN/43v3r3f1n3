@@ -16,7 +16,7 @@ export class CustomOPCUAClient {
   private endpointUrl: string;
   private options: OPCUAClientOptions;
   private connected: boolean = false;
-  private monitoredItems: Map<string, NodeJS.Timer> = new Map();
+  private monitoredItems: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(endpointUrl: string, options: OPCUAClientOptions) {
     console.log(`Creating OPC UA Client for ${endpointUrl}`);
