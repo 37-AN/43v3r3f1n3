@@ -13,29 +13,49 @@ class LMStudioAPI {
     this.model = config?.model || LM_STUDIO_CONFIG.defaultModel;
   }
 
-  private async makeRequest<T>(endpoint: string, body: unknown): Promise<T> {
-    console.log(`Making request to LM Studio endpoint: ${endpoint}`, { body });
-    
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+  private isHostedEnvironment(): boolean {
+    return !window.location.hostname.includes('localhost');
+  }
 
-    if (!response.ok) {
-      console.error('LM Studio API error:', response.statusText);
-      throw new Error(`LM Studio API error: ${response.statusText}`);
+  private async makeRequest<T>(endpoint: string, body: unknown): Promise<T> {
+    if (this.isHostedEnvironment()) {
+      throw new Error('LM Studio can only be accessed when running the application locally');
     }
 
-    const data = await response.json();
-    console.log('Received response from LM Studio:', data);
-    return data;
+    console.log(`Making request to LM Studio endpoint: ${endpoint}`, { body });
+    
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        console.error('LM Studio API error:', response.statusText);
+        throw new Error(`LM Studio API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Received response from LM Studio:', data);
+      return data;
+    } catch (error) {
+      console.error('Error making request to LM Studio:', error);
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Cannot connect to LM Studio. Please ensure the server is running locally at http://localhost:3030');
+      }
+      throw error;
+    }
   }
 
   async getModels() {
+    if (this.isHostedEnvironment()) {
+      throw new Error('LM Studio can only be accessed when running the application locally');
+    }
+
     try {
       console.log('Fetching available models from LM Studio');
       const response = await fetch(`${this.baseUrl}${LM_STUDIO_CONFIG.endpoints.models}`);
@@ -44,6 +64,9 @@ class LMStudioAPI {
       return data.data;
     } catch (error) {
       console.error('Error fetching models:', error);
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Cannot connect to LM Studio. Please ensure the server is running locally at http://localhost:3030');
+      }
       throw error;
     }
   }
@@ -73,12 +96,18 @@ class LMStudioAPI {
       return data.choices[0].message.content;
     } catch (error) {
       console.error('Error analyzing with LM Studio:', error);
-      toast.error('Failed to analyze data with LM Studio');
+      toast.error(error instanceof Error ? error.message : 'Failed to analyze data with LM Studio');
       throw error;
     }
   }
 
   async testConnection(): Promise<boolean> {
+    if (this.isHostedEnvironment()) {
+      console.log('Running in hosted environment, LM Studio connection not available');
+      toast.error('LM Studio is only available when running the application locally');
+      return false;
+    }
+
     try {
       console.log('Testing LM Studio connection...');
       
@@ -108,7 +137,7 @@ class LMStudioAPI {
       return false;
     } catch (error) {
       console.error('Error testing LM Studio connection:', error);
-      toast.error('Failed to connect to LM Studio. Is the server running at http://localhost:3030?');
+      toast.error(error instanceof Error ? error.message : 'Failed to connect to LM Studio');
       return false;
     }
   }
