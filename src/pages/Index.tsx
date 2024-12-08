@@ -93,7 +93,7 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
                 <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium">{key}</span>
                   <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                    {value?.toString() ?? 'N/A'}
+                    {value !== undefined && value !== null ? String(value) : 'N/A'}
                   </span>
                 </div>
               ))}
