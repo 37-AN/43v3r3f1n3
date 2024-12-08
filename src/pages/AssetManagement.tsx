@@ -29,13 +29,25 @@ export default function AssetManagement() {
         .eq('owner_id', session.session.user.id);
 
       if (error) throw error;
-      return data;
+
+      // Convert snake_case to camelCase
+      return data.map((asset): TokenizedAsset => ({
+        id: asset.id,
+        name: asset.name,
+        description: asset.description || '',
+        tokenSymbol: asset.token_symbol,
+        totalSupply: asset.total_supply,
+        pricePerToken: asset.price_per_token,
+        assetType: asset.asset_type,
+        metadata: asset.metadata,
+        created_at: asset.created_at
+      }));
     },
   });
 
   const handleAllocateResources = async (asset: TokenizedAsset) => {
     try {
-      const isCompliant = await checkCompliance(asset.token_symbol);
+      const isCompliant = await checkCompliance(asset.tokenSymbol);
       if (!isCompliant) {
         toast.error('Asset is not compliant. Cannot allocate resources.');
         return;
@@ -78,15 +90,15 @@ export default function AssetManagement() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Symbol:</span>
-                      <span className="font-mono">{asset.token_symbol}</span>
+                      <span className="font-mono">{asset.tokenSymbol}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Total Supply:</span>
-                      <span>{asset.total_supply.toLocaleString()}</span>
+                      <span>{asset.totalSupply.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Price per Token:</span>
-                      <span>${asset.price_per_token}</span>
+                      <span>${asset.pricePerToken}</span>
                     </div>
                   </div>
                   <Button 
