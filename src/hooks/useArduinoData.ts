@@ -14,7 +14,7 @@ export function useArduinoData() {
       
       try {
         // First check authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const { data: { session }, error: authError } = await supabase.auth.getSession();
         
         if (authError) {
           console.error("Authentication error:", authError);
@@ -23,14 +23,14 @@ export function useArduinoData() {
           throw authError;
         }
 
-        if (!user) {
-          console.log("No authenticated user found");
+        if (!session) {
+          console.log("No active session found");
           addMessage('error', 'Please log in to view PLC data');
           toast.error("Please log in to view PLC data");
           throw new Error("Authentication required");
         }
 
-        console.log("Authenticated user:", user.email);
+        console.log("Authenticated user:", session.user.email);
         console.log("Attempting to fetch PLC data from Supabase...");
 
         const endDate = new Date();
