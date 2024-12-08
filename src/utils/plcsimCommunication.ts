@@ -8,34 +8,57 @@ export type { PLCDevice };
 export class PLCConnector {
   private modbusClients: Map<string, ModbusClient> = new Map();
   private s7Clients: Map<string, S7Client> = new Map();
+  private connectionStatus: { [key: string]: boolean } = {};
 
   constructor(private devices: PLCDevice[]) {
     console.log('Initializing PLCConnector with devices:', devices);
+    // Initialize connection status for all devices as false
+    devices.forEach(device => {
+      this.connectionStatus[device.id] = false;
+    });
   }
 
   async connect(): Promise<void> {
+    console.log('Starting connection process for all devices...');
+    
     for (const device of this.devices) {
       try {
         if (!device.ip_address) {
           console.warn(`Device ${device.name} (${device.id}) has no IP address`);
+          this.connectionStatus[device.id] = false;
           continue;
         }
 
         if (device.protocol === 'modbus') {
-          console.log(`Attempting to connect to Modbus device ${device.name} at ${device.ip_address}:${device.port}`);
-          const client = new ModbusClient(device.ip_address, device.port || 502, device.slave_id || 1);
+          console.log(`Connecting to Modbus device ${device.name} at ${device.ip_address}:${device.port}`);
+          const client = new ModbusClient(
+            device.ip_address, 
+            device.port || 502, 
+            device.slave_id || 1
+          );
           await client.connect();
           this.modbusClients.set(device.id, client);
+          this.connectionStatus[device.id] = true;
+          console.log(`Successfully connected to Modbus device ${device.name}`);
         } else if (device.protocol === 's7') {
-          console.log(`Attempting to connect to S7 device ${device.name} at ${device.ip_address}`);
-          const client = new S7Client(device.ip_address, device.rack || 0, device.slot || 1);
+          console.log(`Connecting to S7 device ${device.name} at ${device.ip_address}`);
+          const client = new S7Client(
+            device.ip_address, 
+            device.rack || 0, 
+            device.slot || 1
+          );
           await client.connect();
           this.s7Clients.set(device.id, client);
+          this.connectionStatus[device.id] = true;
+          console.log(`Successfully connected to S7 device ${device.name}`);
         }
       } catch (error) {
         console.error(`Error connecting to device ${device.name} (${device.id}):`, error);
+        this.connectionStatus[device.id] = false;
       }
     }
+    
+    console.log('Final connection status:', this.connectionStatus);
   }
 
   async readData(dataBlocks: {
@@ -54,7 +77,12 @@ export class PLCConnector {
         if (block.type === 's7') {
           const client = this.s7Clients.get(block.deviceId);
           if (!client) {
-            console.error(`No S7 client found for device ${block.deviceId}`);
+            console.warn(`No S7 client found for device ${block.deviceId}`);
+            continue;
+          }
+
+          if (!this.connectionStatus[block.deviceId]) {
+            console.warn(`Device ${block.deviceId} is not connected`);
             continue;
           }
 
@@ -70,7 +98,12 @@ export class PLCConnector {
         } else {
           const client = this.modbusClients.get(block.deviceId);
           if (!client) {
-            console.error(`No Modbus client found for device ${block.deviceId}`);
+            console.warn(`No Modbus client found for device ${block.deviceId}`);
+            continue;
+          }
+
+          if (!this.connectionStatus[block.deviceId]) {
+            console.warn(`Device ${block.deviceId} is not connected`);
             continue;
           }
 
@@ -103,23 +136,28 @@ export class PLCConnector {
   }
 
   disconnect(): void {
-    this.modbusClients.forEach(client => client.disconnect());
-    this.s7Clients.forEach(client => client.disconnect());
+    console.log('Disconnecting from all devices...');
+    this.modbusClients.forEach((client, deviceId) => {
+      try {
+        client.disconnect();
+        this.connectionStatus[deviceId] = false;
+      } catch (error) {
+        console.error(`Error disconnecting Modbus client ${deviceId}:`, error);
+      }
+    });
+    this.s7Clients.forEach((client, deviceId) => {
+      try {
+        client.disconnect();
+        this.connectionStatus[deviceId] = false;
+      } catch (error) {
+        console.error(`Error disconnecting S7 client ${deviceId}:`, error);
+      }
+    });
     this.modbusClients.clear();
     this.s7Clients.clear();
   }
 
   getConnectionStatus(): { [key: string]: boolean } {
-    const status: { [key: string]: boolean } = {};
-    for (const device of this.devices) {
-      if (device.protocol === 'modbus') {
-        status[device.id] = this.modbusClients.get(device.id)?.isConnected() || false;
-      } else if (device.protocol === 's7') {
-        status[device.id] = this.s7Clients.get(device.id)?.isConnected() || false;
-      } else {
-        status[device.id] = false;
-      }
-    }
-    return status;
+    return { ...this.connectionStatus };
   }
 }

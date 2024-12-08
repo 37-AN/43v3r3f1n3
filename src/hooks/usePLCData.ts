@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PLCConnector, PLCDevice } from "@/utils/plcsimCommunication";
 import { PLCData } from "@/utils/plcData";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export const usePLCData = (isAuthenticated: boolean) => {
   const [plcData, setPlcData] = useState<PLCData | null>(null);
@@ -14,7 +14,7 @@ export const usePLCData = (isAuthenticated: boolean) => {
     const initializePLCConnector = async () => {
       if (isAuthenticated) {
         try {
-          console.log('Fetching PLC devices...');
+          console.log('Fetching PLC devices from database...');
           const { data: devices, error } = await supabase
             .from('plc_devices')
             .select('*')
@@ -22,24 +22,39 @@ export const usePLCData = (isAuthenticated: boolean) => {
 
           if (error) {
             console.error('Error fetching PLC devices:', error);
+            toast.error("Failed to fetch PLC devices");
             throw error;
           }
 
-          console.log('Retrieved devices:', devices);
+          if (!devices || devices.length === 0) {
+            console.log('No active PLC devices found in database');
+            toast.warning("No active PLC devices found");
+            return;
+          }
+
+          console.log('Retrieved PLC devices:', devices);
+          
+          // Initialize connector with devices
           const connector = new PLCConnector(devices as PLCDevice[]);
-          await connector.connect();
-          setPlcConnector(connector);
+          console.log('Attempting to connect to PLC devices...');
+          
+          try {
+            await connector.connect();
+            console.log('Successfully connected to PLC devices');
+            toast.success("Connected to PLC devices");
+            setPlcConnector(connector);
+          } catch (connError) {
+            console.error('Error connecting to PLC devices:', connError);
+            toast.error("Failed to connect to PLC devices");
+            return;
+          }
           
           const status = connector.getConnectionStatus();
-          console.log('Connection status:', status);
+          console.log('PLC Connection status:', status);
           setConnectionStatus(status);
         } catch (error) {
-          console.error('Error initializing PLC connector:', error);
-          toast({
-            title: "Error",
-            description: "Failed to initialize PLC connection",
-            variant: "destructive",
-          });
+          console.error('Error in PLC initialization:', error);
+          toast.error("Failed to initialize PLC connection");
         }
       }
     };
@@ -48,6 +63,7 @@ export const usePLCData = (isAuthenticated: boolean) => {
 
     return () => {
       if (plcConnector) {
+        console.log('Disconnecting from PLC devices...');
         plcConnector.disconnect();
       }
     };
@@ -56,71 +72,75 @@ export const usePLCData = (isAuthenticated: boolean) => {
   // Fetch PLC Data
   useEffect(() => {
     const fetchPLCData = async () => {
-      if (plcConnector && isAuthenticated) {
-        try {
-          const dataBlocks = [
-            { deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5', address: 0, quantity: 1, type: 'holding' as const },
-            { deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5', address: 1, quantity: 1, type: 'holding' as const },
-            { deviceId: '7f8d6e5a-9c4b-3a2d-1f0e-8b7a6c5d4e3f', address: 0, quantity: 1, type: 'holding' as const },
-            { deviceId: '7f8d6e5a-9c4b-3a2d-1f0e-8b7a6c5d4e3f', address: 1, quantity: 1, type: 'holding' as const },
-            { 
-              deviceId: 'plcsim-v17', 
-              address: 0, 
-              quantity: 1, 
-              type: 's7' as const,
-              dbNumber: 1,
-              area: 'DB',
-              s7Type: 'INT'
-            },
-            { 
-              deviceId: 'plcsim-v17', 
-              address: 2, 
-              quantity: 1, 
-              type: 's7' as const,
-              dbNumber: 1,
-              area: 'DB',
-              s7Type: 'REAL'
-            }
-          ];
+      if (!plcConnector || !isAuthenticated) {
+        console.log('No PLC connector available or user not authenticated');
+        return;
+      }
 
-          const data = await plcConnector.readData(dataBlocks);
-          console.log('Read PLC data:', data);
-          setPlcData(data);
-
-          // Store PLC data in Supabase with authentication
-          const { data: session } = await supabase.auth.getSession();
-          if (!session?.session?.access_token) {
-            console.error('No access token available');
-            return;
+      try {
+        console.log('Reading PLC data...');
+        const dataBlocks = [
+          { deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5', address: 0, quantity: 1, type: 'holding' as const },
+          { deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5', address: 1, quantity: 1, type: 'holding' as const },
+          { deviceId: '7f8d6e5a-9c4b-3a2d-1f0e-8b7a6c5d4e3f', address: 0, quantity: 1, type: 'holding' as const },
+          { deviceId: '7f8d6e5a-9c4b-3a2d-1f0e-8b7a6c5d4e3f', address: 1, quantity: 1, type: 'holding' as const },
+          { 
+            deviceId: 'plcsim-v17', 
+            address: 0, 
+            quantity: 1, 
+            type: 's7' as const,
+            dbNumber: 1,
+            area: 'DB',
+            s7Type: 'INT'
+          },
+          { 
+            deviceId: 'plcsim-v17', 
+            address: 2, 
+            quantity: 1, 
+            type: 's7' as const,
+            dbNumber: 1,
+            area: 'DB',
+            s7Type: 'REAL'
           }
+        ];
 
-          const entries = Object.entries(data).map(([key, value]) => {
-            const [deviceId, address] = key.split('.');
-            return {
-              device_id: deviceId,
-              data_type: typeof value,
-              value: Number(value),
-              metadata: { address }
-            };
-          });
+        const data = await plcConnector.readData(dataBlocks);
+        console.log('Successfully read PLC data:', data);
+        setPlcData(data);
 
-          console.log('Storing PLC data:', entries);
+        // Store PLC data in Supabase
+        const { data: session } = await supabase.auth.getSession();
+        if (!session?.session?.access_token) {
+          console.error('No access token available');
+          return;
+        }
+
+        const entries = Object.entries(data).map(([key, value]) => {
+          const [deviceId, address] = key.split('.');
+          return {
+            device_id: deviceId,
+            data_type: typeof value,
+            value: Number(value),
+            metadata: { address }
+          };
+        });
+
+        if (entries.length > 0) {
+          console.log('Storing PLC data in database:', entries);
           const { error } = await supabase
             .from('arduino_plc_data')
             .insert(entries);
 
           if (error) {
             console.error('Error storing PLC data:', error);
-            throw error;
+            toast.error("Failed to store PLC data");
           }
-        } catch (error) {
-          console.error('Error fetching PLC data:', error);
-          toast({
-            title: "Error",
-            description: "Failed to fetch PLC data",
-            variant: "destructive",
-          });
+        } else {
+          console.log('No PLC data to store');
         }
+      } catch (error) {
+        console.error('Error fetching PLC data:', error);
+        toast.error("Failed to fetch PLC data");
       }
     };
 
