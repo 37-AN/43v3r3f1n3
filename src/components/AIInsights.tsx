@@ -22,6 +22,20 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
     const fetchInsights = async () => {
       console.log('Fetching insights for device:', deviceId);
       
+      // First check if the device exists and is owned by the current user
+      const { data: deviceData, error: deviceError } = await supabase
+        .from('plc_devices')
+        .select('id, owner_id')
+        .eq('id', deviceId)
+        .single();
+
+      if (deviceError) {
+        console.error('Error checking device:', deviceError);
+        return;
+      }
+
+      console.log('Device data:', deviceData);
+      
       const { data, error } = await supabase
         .from('ai_insights')
         .select('*')
