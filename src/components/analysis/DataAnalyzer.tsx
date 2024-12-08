@@ -15,14 +15,19 @@ export const DataAnalyzer = ({ selectedDeviceId, simulatedData }: DataAnalyzerPr
     const initializeAI = async () => {
       try {
         console.log('Initializing AI models...');
-        // Initialize pipeline with minimal configuration
         const extractor = await pipeline(
           "feature-extraction",
-          "Xenova/all-MiniLM-L6-v2"
+          "Xenova/all-MiniLM-L6-v2",
+          {
+            revision: "main"
+          }
         );
         
-        // Test the model with a simple input to ensure it's working
-        await extractor("Test initialization");
+        // Initialize with a simple text to validate the model
+        const testInput = "Initializing model with test input";
+        console.log('Testing model with input:', testInput);
+        const testFeatures = await extractor(testInput);
+        console.log('Model test successful:', testFeatures !== null);
         
         setFeatureExtractor(extractor);
         console.log('AI models initialized successfully');
