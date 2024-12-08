@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { MetricsChart } from "@/components/MetricsChart";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -10,11 +10,21 @@ interface SimulationData {
   value: number;
 }
 
+interface ChartData {
+  [key: string]: {
+    timestamp: string;
+    value: number;
+    registerType: 'input';
+    address: number;
+  }[];
+}
+
 export function SimulationDashboard() {
-  const [data, setData] = useState<Record<string, SimulationData[]>>({});
+  const [chartData, setChartData] = useState<ChartData>({});
 
   useEffect(() => {
-    // Subscribe to real-time updates
+    console.log('Setting up real-time subscription for simulation data');
+    
     const channel = supabase
       .channel('simulation_data')
       .on(
@@ -22,29 +32,25 @@ export function SimulationDashboard() {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'arduino_plc_data',
-          filter: 'device_id=eq.e2fae487-1ee2-4ea2-b87f-decedb7d12a5'
+          table: 'arduino_plc_data'
         },
         (payload) => {
           console.log('Received new simulation data:', payload);
-          const newData = payload.new as any;
+          const newData = payload.new as SimulationData;
           
-          setData(prev => {
-            const updatedData = { ...prev };
+          setChartData(prev => {
             const dataType = newData.data_type;
+            const newPoint = {
+              timestamp: new Date().toLocaleTimeString(),
+              value: newData.value,
+              registerType: 'input' as const,
+              address: 1
+            };
             
-            if (!updatedData[dataType]) {
-              updatedData[dataType] = [];
-            }
-            
-            updatedData[dataType] = [
-              ...updatedData[dataType],
-              {
-                timestamp: new Date().toLocaleTimeString(),
-                data_type: dataType,
-                value: newData.value
-              }
-            ].slice(-50); // Keep last 50 points
+            const updatedData = {
+              ...prev,
+              [dataType]: [...(prev[dataType] || []), newPoint].slice(-50) // Keep last 50 points
+            };
             
             return updatedData;
           });
@@ -58,6 +64,7 @@ export function SimulationDashboard() {
       });
 
     return () => {
+      console.log('Cleaning up subscription');
       channel.unsubscribe();
     };
   }, []);
@@ -66,16 +73,11 @@ export function SimulationDashboard() {
     <Card className="p-6">
       <h2 className="text-2xl font-bold mb-6">Real-time Simulation Data</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {Object.entries(data).map(([dataType, values]) => (
+        {Object.entries(chartData).map(([dataType, values]) => (
           <MetricsChart
             key={dataType}
             title={`${dataType.replace('_', ' ').toUpperCase()}`}
-            data={values.map(d => ({
-              timestamp: d.timestamp,
-              value: d.value,
-              registerType: 'input',
-              address: 1
-            }))}
+            data={values}
             registerType="input"
             className="transition-transform hover:scale-[1.01]"
           />
