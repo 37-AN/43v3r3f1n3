@@ -42,6 +42,24 @@ export function SimulationControl() {
         timestamp
       });
       
+      // Store simulation data in arduino_plc_data
+      const { error: dbError } = await supabase
+        .from('arduino_plc_data')
+        .insert({
+          device_id: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5', // Using the existing device
+          data_type: 'register',
+          value: parseInt(value),
+          metadata: {
+            address: parseInt(address),
+            simulation: true
+          }
+        });
+
+      if (dbError) {
+        console.error('Error storing simulation data:', dbError);
+        throw dbError;
+      }
+      
       // Add to history
       setWriteHistory(prev => [{
         timestamp,
@@ -49,7 +67,8 @@ export function SimulationControl() {
         value: parseInt(value)
       }, ...prev].slice(0, 50)); // Keep last 50 entries
 
-      toast.success('Register updated successfully');
+      console.log('Simulation data stored successfully');
+      toast.success('Register updated and data stored successfully');
     } catch (error) {
       console.error('Error writing register:', error);
       toast.error('Failed to update register');
