@@ -46,22 +46,7 @@ export function ModelTrainingExport() {
         end: queryEndDate.toISOString() 
       });
 
-      // First verify we can access the table
-      console.log('Verifying table access...');
-      const { data: testData, error: testError } = await supabase
-        .from('arduino_plc_data')
-        .select('id')
-        .limit(1)
-        .single();
-
-      if (testError) {
-        console.error('Table access test failed:', testError);
-        throw new Error('Failed to access PLC data table');
-      }
-
-      console.log('Table access verified');
-
-      // Fetch PLC data with detailed logging
+      // Fetch PLC data directly without verification since RLS will handle access control
       console.log('Fetching PLC data...');
       const { data: plcData, error: plcError } = await supabase
         .from('arduino_plc_data')
