@@ -72,7 +72,7 @@ export const useMESData = (deviceId: string) => {
       }
 
       console.log('Retrieved tokenized assets:', data);
-      return (data as unknown) as TokenizedAsset[];
+      return data as TokenizedAsset[];
     },
     refetchInterval: 5000
   });

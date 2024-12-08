@@ -16,14 +16,9 @@ serve(async (req) => {
     console.log('Received raw data:', rawData);
 
     // Validate required fields
-    if (!rawData || typeof rawData !== 'object') {
-      console.error('Raw data is missing or not an object');
+    if (!rawData || !rawData.deviceId || !rawData.values || !Array.isArray(rawData.values)) {
+      console.error('Invalid raw data structure:', rawData);
       throw new Error('Invalid or missing raw data structure');
-    }
-
-    if (!rawData.deviceId || !rawData.values || !Array.isArray(rawData.values)) {
-      console.error('Missing required fields in raw data:', rawData);
-      throw new Error('Missing required fields in raw data');
     }
 
     // Initialize Supabase client
@@ -32,78 +27,48 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Calculate basic statistics
-    const values = rawData.values.filter(value => typeof value === 'number' && !isNaN(value));
-    if (values.length === 0) {
-      throw new Error('No valid numerical values found');
-    }
+    // Process each metric
+    const refinedMetrics = rawData.values.map(metric => {
+      if (!metric.metric_type || typeof metric.value !== 'number') {
+        console.error('Invalid metric:', metric);
+        throw new Error('Invalid metric structure');
+      }
 
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const stdDev = Math.sqrt(
-      values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length
-    );
+      return {
+        metric_type: metric.metric_type,
+        value: metric.value,
+        timestamp: metric.timestamp || rawData.timestamp,
+        quality_score: 0.95
+      };
+    });
 
-    // Prepare refined data
-    const refinedData = {
-      device_id: rawData.deviceId,
-      data_type: rawData.dataType || 'measurement',
-      value: values[0],
+    console.log('Processed metrics:', refinedMetrics);
+
+    // Return refined data
+    const response = {
+      deviceId: rawData.deviceId,
+      dataType: rawData.dataType,
+      metrics: refinedMetrics,
       quality_score: 0.95,
-      timestamp: rawData.timestamp || new Date().toISOString(),
+      timestamp: rawData.timestamp,
       metadata: {
-        mean,
-        stdDev,
-        originalValue: values[0],
-        source: 'ai_refinery',
-        owner_id: rawData.metadata?.owner_id
+        ...rawData.metadata,
+        processed_at: new Date().toISOString()
       }
     };
-
-    console.log('Storing refined data:', refinedData);
-
-    // Store refined data
-    const { error: insertError } = await supabaseClient
-      .from('refined_industrial_data')
-      .insert(refinedData);
-
-    if (insertError) {
-      console.error('Error storing refined data:', insertError);
-      throw insertError;
-    }
-
-    // Generate analysis based on the refined data
-    const analysis = {
-      deviceId: rawData.deviceId,
-      analysis: `Processed value: ${values[0].toFixed(2)} (mean: ${mean.toFixed(2)})`,
-      severity: Math.abs(values[0] - mean) > stdDev * 2 ? 'warning' : 'info',
-      confidence: 0.95,
-      timestamp: refinedData.timestamp
-    };
-
-    console.log('Returning analysis:', analysis);
 
     return new Response(
-      JSON.stringify(analysis),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
+      JSON.stringify(response),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error in data refinement:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Error processing data'
-      }),
+      JSON.stringify({ error: error.message }),
       { 
         status: 500,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

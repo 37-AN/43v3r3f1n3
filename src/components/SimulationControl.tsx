@@ -34,6 +34,8 @@ export function SimulationControl() {
             timestamp: new Date().toISOString()
           }));
           
+          console.log('Sending metrics to refinery:', metricsArray);
+          
           // Format data for industrial-data-refinery
           const rawData = {
             deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
@@ -46,7 +48,6 @@ export function SimulationControl() {
             }
           };
 
-          console.log('Sending simulation data to refinery:', rawData);
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
@@ -64,7 +65,7 @@ export function SimulationControl() {
           // Format data for MES tokenization engine
           const mesData = {
             refinedData: {
-              deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
+              deviceId: refinedData.deviceId || 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
               metrics: refinedData.metrics || metricsArray,
               dataType: refinedData.dataType || 'simulation',
               timestamp: new Date().toISOString(),
@@ -77,6 +78,7 @@ export function SimulationControl() {
           };
 
           console.log('Sending data to MES engine:', mesData);
+          
           const { error: mesError } = await supabase.functions.invoke(
             'mes-tokenization-engine',
             { body: mesData }
@@ -89,10 +91,10 @@ export function SimulationControl() {
 
           // Update history with latest values
           setWriteHistory(prev => [
-            ...Object.entries(values).map(([metric, value]) => ({
-              timestamp: new Date().toISOString(),
-              metric,
-              value
+            ...metricsArray.map(metric => ({
+              timestamp: metric.timestamp,
+              metric: metric.metric_type,
+              value: metric.value
             })),
             ...prev
           ].slice(0, 50));
