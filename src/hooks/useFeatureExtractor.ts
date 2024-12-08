@@ -36,7 +36,10 @@ export const useFeatureExtractor = () => {
           throw new Error('Model test failed - no features returned');
         }
 
-        console.log('Model test successful, features shape:', testFeatures.shape);
+        // Convert tensor to array and log its dimensions
+        const featuresList = testFeatures.tolist();
+        console.log('Model test successful, features dimensions:', Array.isArray(featuresList) ? featuresList.length : 'unknown');
+        
         setFeatureExtractor(extractor);
         console.log('AI model initialization completed successfully');
         toast.success('AI models loaded successfully');
