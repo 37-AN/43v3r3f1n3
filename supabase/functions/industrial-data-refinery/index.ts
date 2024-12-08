@@ -58,7 +58,7 @@ serve(async (req) => {
         timestamp: rawData.timestamp || new Date().toISOString(),
         originalValue: values[0],
         anomaliesDetected: values.length - cleanedValues.length,
-        ...rawData.metadata
+        owner_id: rawData.metadata?.owner_id
       }
     };
 

@@ -7,6 +7,7 @@ import { InsightMetrics } from "./ai/InsightMetrics";
 import { InsightMessage } from "./ai/InsightMessage";
 import { useInsightCalculations } from "./ai/useInsightCalculations";
 import { AIInsight } from "@/types/ai";
+import { toast } from "sonner";
 
 export function AIInsights({ deviceId }: { deviceId: string }) {
   const [insights, setInsights] = useState<AIInsight[]>([]);
@@ -21,8 +22,14 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
   useEffect(() => {
     const fetchInsights = async () => {
       try {
+        if (!deviceId) {
+          console.log('No device ID provided');
+          return;
+        }
+
         console.log('Fetching insights for device:', deviceId);
         
+        // First verify device exists and user has access
         const { data: deviceData, error: deviceError } = await supabase
           .from('plc_devices')
           .select('id, owner_id')
@@ -31,6 +38,17 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
 
         if (deviceError) {
           console.error('Error checking device:', deviceError);
+          if (deviceError.message.includes('JWT')) {
+            toast.error('Session expired. Please log in again.');
+          } else {
+            toast.error('Error checking device access');
+          }
+          return;
+        }
+
+        if (!deviceData) {
+          console.error('Device not found or no access');
+          toast.error('Device not found or no access');
           return;
         }
 
@@ -47,6 +65,9 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
           console.error('Error fetching insights:', error);
           if (error.message.includes('JWT')) {
             addMessage('error', 'Session expired. Please log in again.');
+            toast.error('Session expired. Please log in again.');
+          } else {
+            toast.error('Failed to fetch insights');
           }
           return;
         }
@@ -67,6 +88,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
 
       } catch (error) {
         console.error('Unexpected error:', error);
+        toast.error('Failed to process insights');
       }
     };
 
@@ -90,6 +112,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
           
           if (payload.new.severity === 'critical') {
             addMessage('error', payload.new.message);
+            toast.error(payload.new.message);
           }
         }
       )
