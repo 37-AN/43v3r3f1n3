@@ -15,6 +15,7 @@ interface TrainingDataPoint {
 export async function exportTrainingData(startDate?: Date, endDate?: Date) {
   try {
     console.log('Starting training data export...');
+    console.log('Date range:', { startDate, endDate });
     
     // Fetch PLC data with corresponding insights
     const { data: plcData, error: plcError } = await supabase
@@ -22,7 +23,7 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
       .select(`
         *,
         plc_devices!inner(name),
-        ai_insights!inner(
+        ai_insights(
           message,
           confidence,
           severity
@@ -38,12 +39,19 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
       throw plcError;
     }
 
-    console.log('Raw data fetched:', plcData?.length, 'records');
+    if (!plcData || plcData.length === 0) {
+      console.log('No data found for the specified date range');
+      toast.error('No data found for the specified date range');
+      return;
+    }
+
+    console.log('Raw data fetched:', plcData.length, 'records');
+    console.log('Sample record:', plcData[0]);
 
     // Group data by timestamp and device
     const groupedData = new Map<string, TrainingDataPoint>();
     
-    plcData?.forEach(record => {
+    plcData.forEach(record => {
       const key = `${record.timestamp}_${record.device_id}`;
       
       if (!groupedData.has(key)) {
@@ -58,13 +66,17 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
       const dataPoint = groupedData.get(key)!;
       dataPoint.values[record.data_type] = record.value;
       
-      if (record.ai_insights) {
-        const insight = {
-          message: record.ai_insights.message,
-          confidence: record.ai_insights.confidence,
-          severity: record.ai_insights.severity
-        };
-        dataPoint.insights.push(insight);
+      // Handle insights if they exist
+      if (record.ai_insights && Array.isArray(record.ai_insights)) {
+        record.ai_insights.forEach(insight => {
+          if (insight && typeof insight === 'object') {
+            dataPoint.insights.push({
+              message: insight.message || '',
+              confidence: insight.confidence || 0,
+              severity: insight.severity || 'info'
+            });
+          }
+        });
       }
     });
 
@@ -83,6 +95,15 @@ Device Measurements: ${Object.entries(point.values)
         .map(i => i.message)
         .join('\n')
     }));
+
+    if (formattedData.length === 0) {
+      console.log('No training data generated after processing');
+      toast.error('No valid training data found');
+      return;
+    }
+
+    console.log('Formatted training examples:', formattedData.length);
+    console.log('Sample formatted data:', formattedData[0]);
 
     // Export as JSONL (one JSON object per line, common format for LLM training)
     const jsonlContent = formattedData
