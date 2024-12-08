@@ -65,6 +65,7 @@ export const defaultSimulationConfig: IndustrialSimulationConfig = {
     scrap_percentage: { min: 0, max: 3 }
   },
   inventory: {
+    
     raw_material_level: { min: 40, max: 100 },
     stock_level: { min: 50, max: 100 },
     reorder_point: { min: 20, max: 40 }
