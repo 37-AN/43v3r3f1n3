@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { PLCData } from '@/utils/plcData';
 import { CustomOPCUAClient } from '@/utils/communication/opcuaClient';
-import { toast } from 'sonner';
-import { ConnectionStatus } from '@/components/dashboard/ConnectionStatus';
-import { RealTimeData } from '@/components/dashboard/RealTimeData';
+import { supabase } from '@/integrations/supabase/client';
 import { OPCUAMetrics } from '@/components/opcua/OPCUAMetrics';
 import { AIInsights } from '@/components/AIInsights';
-import { supabase } from '@/integrations/supabase/client';
+import { DataAnalyzer } from '@/components/analysis/DataAnalyzer';
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { DashboardGrid } from '@/components/dashboard/DashboardGrid';
 
 interface IndexProps {
   plcData: PLCData | null;
@@ -64,14 +64,7 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     // Create and connect clients
     Object.entries(OPC_UA_ENDPOINTS).forEach(([name, endpoint]) => {
       console.log(`Creating client for ${name} at ${endpoint}`);
-      const options: {
-        applicationName: string;
-        serverUri?: string;
-        connectionStrategy: {
-          initialDelay: number;
-          maxRetry: number;
-        }
-      } = {
+      const options = {
         applicationName: "Industrial IoT Client",
         connectionStrategy: {
           initialDelay: 1000,
@@ -106,13 +99,11 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
           });
         }
 
-        // Update connection status
         setDeviceStatus(prev => ({
           ...prev,
           [name]: true
         }));
 
-        toast.success(`Connected to ${name} endpoint`);
         console.log(`Successfully connected to ${name}`);
       } catch (error) {
         console.error(`Failed to connect to ${name} endpoint:`, error);
@@ -120,7 +111,6 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
           ...prev,
           [name]: false
         }));
-        toast.error(`Failed to connect to ${name} endpoint`);
       }
     });
 
@@ -132,53 +122,24 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (selectedDeviceId && Object.keys(simulatedData).length > 0) {
-      const analyzeData = async () => {
-        try {
-          console.log('Analyzing data for device:', selectedDeviceId, 'Data:', simulatedData);
-          
-          const { data, error } = await supabase.functions.invoke('analyze-plc-data', {
-            body: {
-              deviceId: selectedDeviceId,
-              data: simulatedData
-            }
-          });
-
-          if (error) {
-            console.error('Error analyzing data:', error);
-            throw error;
-          }
-
-          console.log('Analysis result:', data);
-        } catch (error) {
-          console.error('Error analyzing data:', error);
-          toast.error('Failed to analyze PLC data');
-        }
-      };
-
-      // Analyze data every 30 seconds
-      const analysisInterval = setInterval(analyzeData, 30000);
-      return () => clearInterval(analysisInterval);
-    }
-  }, [selectedDeviceId, simulatedData]);
-
   return (
     <div className="container mx-auto p-6 space-y-8 animate-fade-up">
-      <h1 className="text-3xl font-bold mb-6">Manufacturing Dashboard</h1>
+      <DashboardHeader title="Manufacturing Dashboard" />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ConnectionStatus connectionStatus={deviceStatus} />
-        <RealTimeData 
-          simulatedData={simulatedData} 
-          plcData={plcData} 
-        />
-      </div>
+      <DashboardGrid 
+        deviceStatus={deviceStatus}
+        simulatedData={simulatedData}
+        plcData={plcData}
+      />
 
       {selectedDeviceId && (
-        <div className="mt-6">
+        <>
           <AIInsights deviceId={selectedDeviceId} />
-        </div>
+          <DataAnalyzer 
+            selectedDeviceId={selectedDeviceId}
+            simulatedData={simulatedData}
+          />
+        </>
       )}
 
       <OPCUAMetrics simulatedData={simulatedData} />
