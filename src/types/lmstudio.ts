@@ -12,9 +12,17 @@ export interface LLMStudioResponse {
 export interface LLMStudioConfig {
   baseUrl?: string;
   apiKey?: string;
+  model?: string;
 }
 
 export interface LLMStudioMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
+}
+
+export interface LLMStudioModel {
+  id: string;
+  object: string;
+  owned_by: string;
+  permission: Array<Record<string, unknown>>;
 }
