@@ -15,6 +15,7 @@ const generateSineWaveValue = (
 // Generate performance data with sine wave pattern
 export const generatePerformanceData = (): ModbusRegisterData[] => {
   const basePerformance = 85; // Target performance around 85%
+  console.log('Generating new performance data');
   return Array.from({ length: 24 }, (_, i) => {
     const timestamp = new Date(Date.now() - (23 - i) * 3600000).toLocaleTimeString();
     return {
@@ -29,6 +30,7 @@ export const generatePerformanceData = (): ModbusRegisterData[] => {
 // Generate resource utilization data with different sine wave pattern
 export const generateResourceData = (): ModbusRegisterData[] => {
   const baseUtilization = 65; // Target utilization around 65%
+  console.log('Generating new resource data');
   return Array.from({ length: 24 }, (_, i) => {
     const timestamp = new Date(Date.now() - (23 - i) * 3600000).toLocaleTimeString();
     return {

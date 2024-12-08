@@ -29,6 +29,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
       "bg-white/80 dark:bg-system-gray-800/80 backdrop-blur-lg",
       "border border-white/20 dark:border-system-gray-700/20",
       "shadow-lg hover:shadow-xl transition-shadow duration-200",
+      "animate-fade-in",
       className
     )}>
       <ChartHeader 
@@ -89,6 +90,7 @@ export function MetricsChart({ title, data, className, registerType }: MetricsCh
               activeDot={{ r: 3 }}
               isAnimationActive={true}
               animationDuration={500}
+              animationEasing="ease-in-out"
             />
           </LineChart>
         </ResponsiveContainer>
