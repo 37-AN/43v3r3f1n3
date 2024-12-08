@@ -64,7 +64,7 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
     // Create and connect clients
     Object.entries(OPC_UA_ENDPOINTS).forEach(([name, endpoint]) => {
       console.log(`Creating client for ${name} at ${endpoint}`);
-      const options = {
+      const clientOptions = {
         applicationName: "Industrial IoT Client",
         connectionStrategy: {
           initialDelay: 1000,
@@ -73,10 +73,10 @@ const Index: React.FC<IndexProps> = ({ plcData, connectionStatus }) => {
       };
       
       if (name === 'prosys') {
-        options.serverUri = "urn:UADEMO.prosysopc.com:OPCUA:SimulationServer";
+        clientOptions.serverUri = "urn:UADEMO.prosysopc.com:OPCUA:SimulationServer";
       }
       
-      clients[name] = new CustomOPCUAClient(endpoint, options);
+      clients[name] = new CustomOPCUAClient(endpoint, clientOptions);
     });
     
     setOpcuaClients(clients);
