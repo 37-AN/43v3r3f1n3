@@ -13,12 +13,17 @@ serve(async (req) => {
 
   try {
     const { rawData } = await req.json();
-    console.log('Received raw data for refinement:', rawData);
+    console.log('Received raw data:', rawData);
 
-    // Validate input data
-    if (!rawData || !rawData.deviceId || !rawData.values || !Array.isArray(rawData.values)) {
-      console.error('Invalid or missing raw data structure:', rawData);
+    // Validate required fields
+    if (!rawData || typeof rawData !== 'object') {
+      console.error('Raw data is missing or not an object');
       throw new Error('Invalid or missing raw data structure');
+    }
+
+    if (!rawData.deviceId || !rawData.values || !Array.isArray(rawData.values)) {
+      console.error('Missing required fields in raw data:', rawData);
+      throw new Error('Missing required fields in raw data');
     }
 
     // Initialize Supabase client
@@ -27,10 +32,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Basic statistical analysis
+    // Calculate basic statistics
     const values = rawData.values.filter(value => typeof value === 'number' && !isNaN(value));
     if (values.length === 0) {
-      throw new Error('No valid numerical values found in raw data');
+      throw new Error('No valid numerical values found');
     }
 
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -38,7 +43,7 @@ serve(async (req) => {
       values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length
     );
 
-    // Process and refine the data
+    // Prepare refined data
     const refinedData = {
       device_id: rawData.deviceId,
       data_type: rawData.dataType || 'measurement',
@@ -56,7 +61,7 @@ serve(async (req) => {
 
     console.log('Storing refined data:', refinedData);
 
-    // Store the refined data
+    // Store refined data
     const { error: insertError } = await supabaseClient
       .from('refined_industrial_data')
       .insert(refinedData);
@@ -66,26 +71,39 @@ serve(async (req) => {
       throw insertError;
     }
 
-    console.log('Successfully stored refined data');
+    // Generate analysis based on the refined data
+    const analysis = {
+      deviceId: rawData.deviceId,
+      analysis: `Processed value: ${values[0].toFixed(2)} (mean: ${mean.toFixed(2)})`,
+      severity: Math.abs(values[0] - mean) > stdDev * 2 ? 'warning' : 'info',
+      confidence: 0.95,
+      timestamp: refinedData.timestamp
+    };
 
-    // Return the processed data
+    console.log('Returning analysis:', analysis);
+
     return new Response(
-      JSON.stringify({
-        ...refinedData,
-        deviceId: rawData.deviceId,
-        analysis: `Processed value: ${values[0]} (mean: ${mean.toFixed(2)})`,
-        severity: 'info',
-        confidence: 0.95
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify(analysis),
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
     );
+
   } catch (error) {
     console.error('Error in data refinement:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'Error processing data'
+      }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
     );
   }
