@@ -82,7 +82,7 @@ export const DataIngestionManager = () => {
                 description: `Data source for ${source.name}`,
                 owner_id: user.id,
                 is_active: true,
-                protocol: 'industrial'
+                protocol: 'modbus'  // Changed from 'industrial' to 'modbus'
               })
               .select()
               .single();
