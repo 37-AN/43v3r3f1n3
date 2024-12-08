@@ -29,41 +29,41 @@ export function SimulationConfig() {
     try {
       console.log(`${start ? 'Starting' : 'Stopping'} simulation with config:`, config);
       
-      const { data: existingSimulation } = await supabase
+      // First, stop any existing simulations for this device
+      const { error: stopError } = await supabase
         .from('device_simulations')
-        .select('*')
-        .eq('device_id', config.deviceId)
-        .single();
+        .update({ is_running: false })
+        .eq('device_id', config.deviceId);
 
-      const simulationParameters: Record<string, unknown> = {
-        updateInterval: config.updateInterval,
-        simulationType: config.simulationType,
-        parameters: Object.entries(config.parameters).reduce((acc, [key, value]) => ({
-          ...acc,
-          [key]: { min: value.min, max: value.max }
-        }), {})
-      };
-
-      const simulationData = {
-        device_id: config.deviceId,
-        simulation_type: 'industrial',
-        parameters: simulationParameters as Json,
-        is_running: start
-      };
-
-      let error;
-      if (existingSimulation) {
-        ({ error } = await supabase
-          .from('device_simulations')
-          .update(simulationData)
-          .eq('id', existingSimulation.id));
-      } else {
-        ({ error } = await supabase
-          .from('device_simulations')
-          .insert(simulationData));
+      if (stopError) {
+        console.error('Error stopping existing simulations:', stopError);
+        throw stopError;
       }
 
-      if (error) throw error;
+      if (start) {
+        // Create a new simulation record
+        const simulationParameters: Record<string, unknown> = {
+          updateInterval: config.updateInterval,
+          simulationType: config.simulationType,
+          parameters: Object.entries(config.parameters).reduce((acc, [key, value]) => ({
+            ...acc,
+            [key]: { min: value.min, max: value.max }
+          }), {})
+        };
+
+        const simulationData = {
+          device_id: config.deviceId,
+          simulation_type: 'industrial',
+          parameters: simulationParameters as Json,
+          is_running: true
+        };
+
+        const { error: startError } = await supabase
+          .from('device_simulations')
+          .insert(simulationData);
+
+        if (startError) throw startError;
+      }
       
       setIsRunning(start);
       toast.success(`Simulation ${start ? 'started' : 'stopped'} successfully`);
