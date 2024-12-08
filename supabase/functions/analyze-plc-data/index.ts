@@ -20,8 +20,8 @@ serve(async (req) => {
     const { deviceId, data } = await req.json()
     console.log('Analyzing data for device:', deviceId, 'Data:', data)
 
-    // Analyze the data using patterns and thresholds
-    const insights = analyzeData(data)
+    // Enhanced analysis with multiple insight types
+    const insights = await analyzeData(data, deviceId)
     console.log('Generated insights:', insights)
 
     // Store insights in the database
@@ -56,7 +56,7 @@ serve(async (req) => {
   }
 })
 
-function analyzeData(data: Record<string, number>) {
+async function analyzeData(data: Record<string, number>, deviceId: string) {
   const insights: Array<{
     type: string;
     message: string;
@@ -65,35 +65,63 @@ function analyzeData(data: Record<string, number>) {
     metadata: Record<string, any>;
   }> = [];
 
-  // Analyze performance metrics
+  // 1. Performance Analysis
   const performanceValues = Object.values(data);
   const avgPerformance = performanceValues.reduce((a, b) => a + b, 0) / performanceValues.length;
+  const stdDev = calculateStandardDeviation(performanceValues);
 
+  // Performance trend analysis
   if (avgPerformance < 50) {
     insights.push({
       type: 'performance_alert',
-      message: `Low average performance detected: ${avgPerformance.toFixed(2)}%`,
+      message: `Low average performance detected: ${avgPerformance.toFixed(2)}%. Consider maintenance check.`,
       confidence: 0.85,
       severity: 'warning',
-      metadata: { avgPerformance }
+      metadata: { avgPerformance, threshold: 50 }
     });
   }
 
-  // Detect anomalies using standard deviation
-  const stdDev = calculateStandardDeviation(performanceValues);
-  const threshold = 2; // Number of standard deviations for anomaly detection
-
+  // 2. Anomaly Detection (using Z-score)
+  const zScoreThreshold = 2;
   performanceValues.forEach((value, index) => {
-    if (Math.abs(value - avgPerformance) > threshold * stdDev) {
+    const zScore = Math.abs((value - avgPerformance) / stdDev);
+    if (zScore > zScoreThreshold) {
       insights.push({
         type: 'anomaly_detection',
-        message: `Anomaly detected: Value ${value.toFixed(2)} deviates significantly from average`,
-        confidence: 0.9,
-        severity: 'critical',
-        metadata: { value, average: avgPerformance, standardDeviation: stdDev }
+        message: `Anomaly detected: Value ${value.toFixed(2)} deviates significantly (${zScore.toFixed(2)} standard deviations) from average`,
+        confidence: Math.min(0.95, 0.7 + (zScore - zScoreThreshold) * 0.1),
+        severity: zScore > 3 ? 'critical' : 'warning',
+        metadata: { value, average: avgPerformance, zScore, threshold: zScoreThreshold }
       });
     }
   });
+
+  // 3. Trend Analysis
+  const trendWindow = Math.min(10, performanceValues.length);
+  const recentValues = performanceValues.slice(-trendWindow);
+  const trendSlope = calculateTrendSlope(recentValues);
+
+  if (Math.abs(trendSlope) > 0.1) {
+    insights.push({
+      type: 'trend_analysis',
+      message: `${trendSlope > 0 ? 'Upward' : 'Downward'} trend detected: Performance is ${trendSlope > 0 ? 'improving' : 'declining'} at ${Math.abs(trendSlope * 100).toFixed(1)}% per interval`,
+      confidence: 0.8,
+      severity: trendSlope < -0.2 ? 'warning' : 'info',
+      metadata: { trendSlope, windowSize: trendWindow }
+    });
+  }
+
+  // 4. Pattern Recognition
+  const patterns = detectPatterns(performanceValues);
+  if (patterns.length > 0) {
+    insights.push({
+      type: 'pattern_recognition',
+      message: `Detected ${patterns.join(', ')} in performance data`,
+      confidence: 0.75,
+      severity: 'info',
+      metadata: { patterns }
+    });
+  }
 
   return insights;
 }
@@ -103,4 +131,58 @@ function calculateStandardDeviation(values: number[]): number {
   const squareDiffs = values.map(value => Math.pow(value - avg, 2));
   const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / squareDiffs.length;
   return Math.sqrt(avgSquareDiff);
+}
+
+function calculateTrendSlope(values: number[]): number {
+  if (values.length < 2) return 0;
+  
+  const xMean = (values.length - 1) / 2;
+  const yMean = values.reduce((a, b) => a + b, 0) / values.length;
+  
+  let numerator = 0;
+  let denominator = 0;
+  
+  values.forEach((y, x) => {
+    numerator += (x - xMean) * (y - yMean);
+    denominator += Math.pow(x - xMean, 2);
+  });
+  
+  return denominator ? numerator / denominator : 0;
+}
+
+function detectPatterns(values: number[]): string[] {
+  const patterns: string[] = [];
+  
+  // Detect oscillation
+  let oscillations = 0;
+  let increasing = true;
+  for (let i = 1; i < values.length; i++) {
+    if (increasing && values[i] < values[i-1]) {
+      oscillations++;
+      increasing = false;
+    } else if (!increasing && values[i] > values[i-1]) {
+      oscillations++;
+      increasing = true;
+    }
+  }
+  if (oscillations > values.length / 3) {
+    patterns.push('oscillating behavior');
+  }
+
+  // Detect plateaus
+  let plateauCount = 0;
+  let plateauLength = 1;
+  for (let i = 1; i < values.length; i++) {
+    if (Math.abs(values[i] - values[i-1]) < 0.1) {
+      plateauLength++;
+    } else {
+      if (plateauLength > 3) plateauCount++;
+      plateauLength = 1;
+    }
+  }
+  if (plateauCount > 0) {
+    patterns.push('stable periods');
+  }
+
+  return patterns;
 }
