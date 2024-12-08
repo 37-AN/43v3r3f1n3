@@ -1,6 +1,6 @@
 export const OPC_UA_ENDPOINTS = {
   local: "opc.tcp://localhost:4334/UA/SimpleServer",
-  prosys: "opc.tcp://localhost:53530/OPCUA/SimulationServer"
+  prosys: "opc.tcp://DESKTOP-3RVJI44:53530/OPCUA/SimulationServer"
 };
 
 export const NODE_IDS = {

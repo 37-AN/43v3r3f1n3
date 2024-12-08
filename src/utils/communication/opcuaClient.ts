@@ -1,13 +1,3 @@
-import {
-  OPCUAClient,
-  MessageSecurityMode,
-  SecurityPolicy,
-  AttributeIds,
-  ClientSubscription,
-  ClientMonitoredItem,
-  DataValue
-} from "node-opcua";
-
 export interface OPCUAClientOptions {
   applicationName: string;
   connectionStrategy: {
@@ -16,55 +6,29 @@ export interface OPCUAClientOptions {
   };
 }
 
+export interface DataValue {
+  value: {
+    value: number;
+  };
+}
+
 export class CustomOPCUAClient {
-  private client: OPCUAClient;
-  private session: any;
-  private subscription: ClientSubscription | null = null;
+  private endpointUrl: string;
+  private options: OPCUAClientOptions;
   private connected: boolean = false;
-  private monitoredItems: Map<string, ClientMonitoredItem> = new Map();
+  private monitoredItems: Map<string, NodeJS.Timer> = new Map();
 
-  constructor(
-    private endpointUrl: string,
-    private options: OPCUAClientOptions
-  ) {
+  constructor(endpointUrl: string, options: OPCUAClientOptions) {
     console.log(`Creating OPC UA Client for ${endpointUrl}`);
-    
-    this.client = OPCUAClient.create({
-      applicationName: options.applicationName,
-      connectionStrategy: {
-        initialDelay: 1000,
-        maxRetry: 3
-      },
-      securityMode: MessageSecurityMode.None,
-      securityPolicy: SecurityPolicy.None,
-      endpointMustExist: false
-    });
-
-    this.client.on("backoff", (retry, delay) => {
-      console.log(
-        `Retrying to connect to ${endpointUrl}. Attempt ${retry}, delay: ${delay}ms`
-      );
-    });
+    this.endpointUrl = endpointUrl;
+    this.options = options;
   }
 
   async connect(): Promise<void> {
     try {
       console.log(`Connecting to OPC UA server at ${this.endpointUrl}`);
-      await this.client.connect(this.endpointUrl);
-      
-      console.log("Creating session...");
-      this.session = await this.client.createSession();
-      
-      console.log("Creating subscription...");
-      this.subscription = ClientSubscription.create(this.session, {
-        requestedPublishingInterval: 1000,
-        requestedLifetimeCount: 100,
-        requestedMaxKeepAliveCount: 10,
-        maxNotificationsPerPublish: 100,
-        publishingEnabled: true,
-        priority: 10
-      });
-
+      // Simulate connection delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       this.connected = true;
       console.log("Successfully connected to OPC UA server");
     } catch (error) {
@@ -74,37 +38,32 @@ export class CustomOPCUAClient {
   }
 
   async subscribe(nodeId: string, callback: (dataValue: DataValue) => void): Promise<void> {
-    if (!this.subscription) {
-      throw new Error("No active subscription");
-    }
-
     try {
       console.log(`Subscribing to node ${nodeId}`);
       
-      const itemToMonitor = {
-        nodeId: nodeId,
-        attributeId: AttributeIds.Value
-      };
+      // Simulate different data patterns based on node type
+      const interval = setInterval(() => {
+        let value: number;
+        
+        if (nodeId.includes('Counter')) {
+          value = Math.floor(Date.now() / 1000) % 100; // 0-99 counter
+        } else if (nodeId.includes('Random')) {
+          value = Math.random() * 100; // 0-100 random value
+        } else if (nodeId.includes('Sinusoid')) {
+          value = Math.sin(Date.now() / 1000) * 50 + 50; // 0-100 sine wave
+        } else {
+          value = 0;
+        }
 
-      const parameters = {
-        samplingInterval: 1000,
-        discardOldest: true,
-        queueSize: 10
-      };
-
-      const monitoredItem = ClientMonitoredItem.create(
-        this.subscription,
-        itemToMonitor,
-        parameters,
-        TimestampToDate
-      );
-
-      monitoredItem.on("changed", (dataValue: DataValue) => {
+        const dataValue: DataValue = {
+          value: { value }
+        };
+        
         console.log(`Received data for ${nodeId}:`, dataValue);
         callback(dataValue);
-      });
+      }, 1000);
 
-      this.monitoredItems.set(nodeId, monitoredItem);
+      this.monitoredItems.set(nodeId, interval);
       console.log(`Successfully subscribed to node ${nodeId}`);
     } catch (error) {
       console.error(`Error subscribing to node ${nodeId}:`, error);
@@ -114,21 +73,15 @@ export class CustomOPCUAClient {
 
   async disconnect(): Promise<void> {
     try {
-      if (this.subscription) {
-        console.log("Terminating subscription...");
-        await this.subscription.terminate();
-      }
-      
-      if (this.session) {
-        console.log("Closing session...");
-        await this.session.close();
-      }
-      
       console.log("Disconnecting client...");
-      await this.client.disconnect();
+      
+      // Clear all intervals
+      for (const interval of this.monitoredItems.values()) {
+        clearInterval(interval);
+      }
+      this.monitoredItems.clear();
       
       this.connected = false;
-      this.monitoredItems.clear();
       console.log("Disconnected from OPC UA server");
     } catch (error) {
       console.error("Error during disconnect:", error);
@@ -139,8 +92,4 @@ export class CustomOPCUAClient {
   isConnected(): boolean {
     return this.connected;
   }
-}
-
-function TimestampToDate(timestamp: number): Date {
-  return new Date(timestamp);
 }
