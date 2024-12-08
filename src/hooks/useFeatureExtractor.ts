@@ -23,7 +23,12 @@ export const useFeatureExtractor = () => {
         console.log('Feature extractor created successfully');
 
         // Test the model with a simple string
-        const testInput = "Test initialization";
+        const testInput = "Test initialization string";
+        if (!testInput || typeof testInput !== 'string') {
+          console.error('Invalid test input:', testInput);
+          throw new Error('Invalid test input format');
+        }
+
         console.log('Testing model with input:', testInput);
 
         const testFeatures = await extractor(testInput, {

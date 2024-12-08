@@ -32,9 +32,9 @@ export const DataAnalysisProcessor = ({
           const inputText = textData.join('. ');
           console.log('Prepared text for analysis:', inputText);
 
-          if (!inputText || typeof inputText !== 'string') {
+          if (!inputText || typeof inputText !== 'string' || inputText.trim() === '') {
             console.error('Invalid input text:', inputText);
-            throw new Error('Invalid input text format');
+            return;
           }
 
           console.log('Starting feature extraction...');
