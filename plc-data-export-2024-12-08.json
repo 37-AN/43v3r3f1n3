@@ -1,0 +1,50 @@
+[
+  {
+    "id": "67b86a77-f899-49a7-b31a-33a72cc90edc",
+    "timestamp": "2024-12-08T13:26:48.951372+00:00",
+    "device": "Siemens PLC 1",
+    "device_id": "e2fae487-1ee2-4ea2-b87f-decedb7d12a5",
+    "type": "temperature",
+    "value": 25.5
+  },
+  {
+    "id": "aaade107-db98-411e-99fe-73a6f9daf542",
+    "timestamp": "2024-12-08T13:26:48.951372+00:00",
+    "device": "Siemens PLC 1",
+    "device_id": "e2fae487-1ee2-4ea2-b87f-decedb7d12a5",
+    "type": "humidity",
+    "value": 60.2
+  },
+  {
+    "id": "7396f34c-f465-4707-9b75-3eab14f6460e",
+    "timestamp": "2024-12-08T13:56:48.951372+00:00",
+    "device": "Siemens PLC 1",
+    "device_id": "e2fae487-1ee2-4ea2-b87f-decedb7d12a5",
+    "type": "temperature",
+    "value": 26.1
+  },
+  {
+    "id": "87b60517-d3bb-4370-b653-386380e67196",
+    "timestamp": "2024-12-08T13:56:48.951372+00:00",
+    "device": "Siemens PLC 1",
+    "device_id": "e2fae487-1ee2-4ea2-b87f-decedb7d12a5",
+    "type": "humidity",
+    "value": 61
+  },
+  {
+    "id": "788a4d5c-dcd4-4f89-a29a-c250e03b61ad",
+    "timestamp": "2024-12-08T14:26:48.951372+00:00",
+    "device": "Siemens PLC 1",
+    "device_id": "e2fae487-1ee2-4ea2-b87f-decedb7d12a5",
+    "type": "temperature",
+    "value": 26.8
+  },
+  {
+    "id": "2f481ec3-b3ed-46f3-9c8a-4d342383b9e2",
+    "timestamp": "2024-12-08T14:26:48.951372+00:00",
+    "device": "Siemens PLC 1",
+    "device_id": "e2fae487-1ee2-4ea2-b87f-decedb7d12a5",
+    "type": "humidity",
+    "value": 62.5
+  }
+]
