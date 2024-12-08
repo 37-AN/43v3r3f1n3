@@ -71,21 +71,49 @@ class LMStudioAPI {
     try {
       console.log('Testing LM Studio connection...');
       
-      const response = await fetch(`${this.baseUrl}/models`, {
+      // First try a simple GET request to check if the server is running
+      const healthCheck = await fetch(this.baseUrl, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
         },
       });
 
-      if (!response.ok) {
-        console.error('LM Studio connection test failed:', response.statusText);
+      if (!healthCheck.ok) {
+        console.error('LM Studio health check failed:', healthCheck.statusText);
+        toast.error('LM Studio server is not responding. Please ensure it is running at http://localhost:1234');
+        return false;
+      }
+
+      // If health check passes, try a simple completion to verify API functionality
+      const testResponse = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are a test assistant.' },
+            { role: 'user', content: 'Respond with "OK" if you can hear me.' }
+          ],
+          temperature: 0.1,
+          max_tokens: 10,
+        }),
+      });
+
+      if (!testResponse.ok) {
+        console.error('LM Studio API test failed:', testResponse.statusText);
+        toast.error('LM Studio API is not functioning correctly');
         return false;
       }
 
       console.log('LM Studio connection test successful');
+      toast.success('Successfully connected to LM Studio');
       return true;
     } catch (error) {
       console.error('Error testing LM Studio connection:', error);
+      toast.error('Failed to connect to LM Studio. Is the server running at http://localhost:1234?');
       return false;
     }
   }
