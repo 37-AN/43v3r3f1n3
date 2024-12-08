@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { initializeAIModels, refineData } from "@/utils/dataRefinement";
+import { initializeAIPipelines, processIndustrialData } from "@/utils/aiPipeline";
 import { ModbusRegisterData } from "@/types/modbus";
-import { toast } from "sonner";
 import { performanceData, resourceData } from "@/utils/sampleDataGenerator";
 
 export const useDataProcessing = () => {
@@ -11,34 +10,37 @@ export const useDataProcessing = () => {
 
   const processData = async () => {
     try {
-      console.log("Initializing AI models and processing data");
-      await initializeAIModels();
+      console.log("Initializing AI pipelines and processing data");
+      await initializeAIPipelines();
       
+      const performanceValues = performanceData.map(d => d.value);
+      const resourceValues = resourceData.map(d => d.value);
+
       const [performanceResults, resourceResults] = await Promise.all([
-        refineData(performanceData),
-        refineData(resourceData),
+        processIndustrialData(performanceValues, { dataType: 'performance' }),
+        processIndustrialData(resourceValues, { dataType: 'resource' }),
       ]);
 
-      setRefinedPerformance(performanceResults.refinedData.map(data => ({
-        ...data,
+      setRefinedPerformance(performanceResults.cleanedData.map((value, index) => ({
+        timestamp: performanceData[index].timestamp,
+        value,
         registerType: 'holding',
         address: 1
       })));
       
-      setRefinedResources(resourceResults.refinedData.map(data => ({
-        ...data,
+      setRefinedResources(resourceResults.cleanedData.map((value, index) => ({
+        timestamp: resourceData[index].timestamp,
+        value,
         registerType: 'input',
         address: 2
       })));
 
-      if (performanceResults.anomalies.length > 0 || resourceResults.anomalies.length > 0) {
-        toast.warning(`Detected ${performanceResults.anomalies.length + resourceResults.anomalies.length} anomalies`);
-      }
-
-      console.log("Data processing completed successfully");
+      console.log("Data processing completed successfully", {
+        performanceAnomalies: performanceResults.anomalies.length,
+        resourceAnomalies: resourceResults.anomalies.length
+      });
     } catch (error) {
       console.error("Error processing data:", error);
-      toast.error("Error processing data");
     } finally {
       setIsProcessing(false);
     }
