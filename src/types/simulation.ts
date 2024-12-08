@@ -1,8 +1,12 @@
-import { Json } from "@/integrations/supabase/types";
+export interface ChartDataPoint {
+  timestamp: string;
+  value: number;
+  registerType: 'input';
+  address: number;
+}
 
-export interface ParameterRange {
-  min: number;
-  max: number;
+export interface ChartData {
+  [key: string]: ChartDataPoint[];
 }
 
 export interface SimulationParameters {
@@ -14,6 +18,11 @@ export interface SimulationParameters {
   defect_rate: ParameterRange;
   energy_consumption: ParameterRange;
   machine_efficiency: ParameterRange;
+}
+
+export interface ParameterRange {
+  min: number;
+  max: number;
 }
 
 export interface DeviceSimulation {
