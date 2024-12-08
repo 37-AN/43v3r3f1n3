@@ -15,7 +15,19 @@ interface TrainingDataPoint {
 export async function exportTrainingData(startDate?: Date, endDate?: Date) {
   try {
     console.log('Starting training data export...');
-    console.log('Date range:', { startDate, endDate });
+    
+    // Set default date range if not provided (last 30 days)
+    const defaultStartDate = new Date();
+    defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+    
+    // Ensure we have the full day range
+    const queryStartDate = startDate ? new Date(startDate.setHours(0, 0, 0, 0)) : defaultStartDate;
+    const queryEndDate = endDate ? new Date(endDate.setHours(23, 59, 59, 999)) : new Date();
+    
+    console.log('Query date range:', { 
+      start: queryStartDate.toISOString(), 
+      end: queryEndDate.toISOString() 
+    });
     
     // First fetch PLC data
     const { data: plcData, error: plcError } = await supabase
@@ -24,8 +36,8 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
         *,
         plc_devices!inner(name)
       `)
-      .gte('timestamp', startDate?.toISOString() || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-      .lte('timestamp', endDate?.toISOString() || new Date().toISOString())
+      .gte('timestamp', queryStartDate.toISOString())
+      .lte('timestamp', queryEndDate.toISOString())
       .order('timestamp', { ascending: true });
 
     if (plcError) {
@@ -35,23 +47,28 @@ export async function exportTrainingData(startDate?: Date, endDate?: Date) {
     }
 
     if (!plcData || plcData.length === 0) {
-      console.log('No PLC data found for the specified date range');
+      console.log('No PLC data found for the date range:', {
+        start: queryStartDate.toISOString(),
+        end: queryEndDate.toISOString()
+      });
       toast.error('No data found for the specified date range');
       return;
     }
 
     console.log('Raw PLC data fetched:', plcData.length, 'records');
+    console.log('Sample PLC data:', plcData[0]);
 
     // Get unique device IDs from PLC data
     const deviceIds = [...new Set(plcData.map(record => record.device_id))];
+    console.log('Unique device IDs:', deviceIds);
 
     // Fetch insights for these devices within the same time range
     const { data: insightsData, error: insightsError } = await supabase
       .from('ai_insights')
       .select('*')
       .in('device_id', deviceIds)
-      .gte('created_at', startDate?.toISOString() || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-      .lte('created_at', endDate?.toISOString() || new Date().toISOString());
+      .gte('created_at', queryStartDate.toISOString())
+      .lte('created_at', queryEndDate.toISOString());
 
     if (insightsError) {
       console.error('Error fetching insights:', insightsError);
