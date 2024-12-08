@@ -17,11 +17,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { deviceId, data } = await req.json()
-    console.log('Analyzing data for device:', deviceId, 'Data:', data)
+    const { deviceId, data, features } = await req.json()
+    console.log('Analyzing data for device:', deviceId, 'Data:', data, 'Features:', features)
 
-    // Enhanced analysis with multiple insight types
-    const insights = await analyzeData(data, deviceId)
+    // Enhanced analysis with AI features
+    const insights = await analyzeDataWithAI(data, features, deviceId)
     console.log('Generated insights:', insights)
 
     // Store insights in the database
@@ -34,7 +34,10 @@ serve(async (req) => {
           message: insight.message,
           confidence: insight.confidence,
           severity: insight.severity,
-          metadata: insight.metadata
+          metadata: {
+            ...insight.metadata,
+            aiFeatures: features ? features.slice(0, 5) : [] // Store first 5 features for reference
+          }
         })
 
       if (error) {
@@ -56,7 +59,7 @@ serve(async (req) => {
   }
 })
 
-async function analyzeData(data: Record<string, number>, deviceId: string) {
+async function analyzeDataWithAI(data: Record<string, number>, features: number[][], deviceId: string) {
   const insights: Array<{
     type: string;
     message: string;
@@ -65,61 +68,50 @@ async function analyzeData(data: Record<string, number>, deviceId: string) {
     metadata: Record<string, any>;
   }> = [];
 
-  // 1. Performance Analysis
+  // 1. Enhanced Performance Analysis using AI features
   const performanceValues = Object.values(data);
   const avgPerformance = performanceValues.reduce((a, b) => a + b, 0) / performanceValues.length;
   const stdDev = calculateStandardDeviation(performanceValues);
 
-  // Performance trend analysis
-  if (avgPerformance < 50) {
-    insights.push({
-      type: 'performance_alert',
-      message: `Low average performance detected: ${avgPerformance.toFixed(2)}%. Consider maintenance check.`,
-      confidence: 0.85,
-      severity: 'warning',
-      metadata: { avgPerformance, threshold: 50 }
-    });
+  // Use AI features for pattern recognition
+  if (features && features.length > 0) {
+    const patternScore = calculatePatternScore(features[0]);
+    if (patternScore > 0.7) {
+      insights.push({
+        type: 'ai_pattern_detection',
+        message: `AI model detected significant pattern in device behavior (confidence: ${(patternScore * 100).toFixed(1)}%)`,
+        confidence: patternScore,
+        severity: 'info',
+        metadata: { patternScore, featuresSummary: features[0].slice(0, 3) }
+      });
+    }
   }
 
-  // 2. Anomaly Detection (using Z-score)
-  const zScoreThreshold = 2;
+  // 2. Advanced Anomaly Detection
+  const anomalyThreshold = 2.5;
   performanceValues.forEach((value, index) => {
     const zScore = Math.abs((value - avgPerformance) / stdDev);
-    if (zScore > zScoreThreshold) {
+    if (zScore > anomalyThreshold) {
+      const confidence = calculateAnomalyConfidence(zScore, features?.[0] || []);
       insights.push({
-        type: 'anomaly_detection',
-        message: `Anomaly detected: Value ${value.toFixed(2)} deviates significantly (${zScore.toFixed(2)} standard deviations) from average`,
-        confidence: Math.min(0.95, 0.7 + (zScore - zScoreThreshold) * 0.1),
+        type: 'advanced_anomaly',
+        message: `Advanced anomaly detected: Value ${value.toFixed(2)} shows unusual behavior (${zScore.toFixed(2)} σ from mean)`,
+        confidence,
         severity: zScore > 3 ? 'critical' : 'warning',
-        metadata: { value, average: avgPerformance, zScore, threshold: zScoreThreshold }
+        metadata: { value, average: avgPerformance, zScore, aiConfidence: confidence }
       });
     }
   });
 
-  // 3. Trend Analysis
-  const trendWindow = Math.min(10, performanceValues.length);
-  const recentValues = performanceValues.slice(-trendWindow);
-  const trendSlope = calculateTrendSlope(recentValues);
-
-  if (Math.abs(trendSlope) > 0.1) {
+  // 3. Predictive Analysis
+  const prediction = predictNextValues(performanceValues, features);
+  if (prediction.confidence > 0.7) {
     insights.push({
-      type: 'trend_analysis',
-      message: `${trendSlope > 0 ? 'Upward' : 'Downward'} trend detected: Performance is ${trendSlope > 0 ? 'improving' : 'declining'} at ${Math.abs(trendSlope * 100).toFixed(1)}% per interval`,
-      confidence: 0.8,
-      severity: trendSlope < -0.2 ? 'warning' : 'info',
-      metadata: { trendSlope, windowSize: trendWindow }
-    });
-  }
-
-  // 4. Pattern Recognition
-  const patterns = detectPatterns(performanceValues);
-  if (patterns.length > 0) {
-    insights.push({
-      type: 'pattern_recognition',
-      message: `Detected ${patterns.join(', ')} in performance data`,
-      confidence: 0.75,
-      severity: 'info',
-      metadata: { patterns }
+      type: 'predictive_insight',
+      message: `Predicted trend: ${prediction.trend} expected in next 30 minutes`,
+      confidence: prediction.confidence,
+      severity: prediction.severity,
+      metadata: { prediction: prediction.values.slice(0, 3), confidence: prediction.confidence }
     });
   }
 
@@ -133,56 +125,42 @@ function calculateStandardDeviation(values: number[]): number {
   return Math.sqrt(avgSquareDiff);
 }
 
-function calculateTrendSlope(values: number[]): number {
-  if (values.length < 2) return 0;
-  
-  const xMean = (values.length - 1) / 2;
-  const yMean = values.reduce((a, b) => a + b, 0) / values.length;
-  
-  let numerator = 0;
-  let denominator = 0;
-  
-  values.forEach((y, x) => {
-    numerator += (x - xMean) * (y - yMean);
-    denominator += Math.pow(x - xMean, 2);
-  });
-  
-  return denominator ? numerator / denominator : 0;
+function calculatePatternScore(features: number[]): number {
+  // Normalize feature values to get a pattern score between 0 and 1
+  const sum = features.reduce((a, b) => a + Math.abs(b), 0);
+  return sum > 0 ? Math.min(Math.max(sum / features.length, 0), 1) : 0;
 }
 
-function detectPatterns(values: number[]): string[] {
-  const patterns: string[] = [];
+function calculateAnomalyConfidence(zScore: number, features: number[]): number {
+  // Combine statistical and AI-based confidence
+  const statisticalConfidence = Math.min(zScore / 4, 1);
+  const aiConfidence = features.length > 0 ? calculatePatternScore(features) : 0.5;
+  return (statisticalConfidence * 0.7 + aiConfidence * 0.3);
+}
+
+function predictNextValues(history: number[], features: number[][]): {
+  trend: string;
+  values: number[];
+  confidence: number;
+  severity: 'info' | 'warning' | 'critical';
+} {
+  const lastValues = history.slice(-5);
+  const trend = lastValues.every((val, i) => i === 0 || val >= lastValues[i - 1]) ? 'increasing' :
+               lastValues.every((val, i) => i === 0 || val <= lastValues[i - 1]) ? 'decreasing' :
+               'stable';
   
-  // Detect oscillation
-  let oscillations = 0;
-  let increasing = true;
-  for (let i = 1; i < values.length; i++) {
-    if (increasing && values[i] < values[i-1]) {
-      oscillations++;
-      increasing = false;
-    } else if (!increasing && values[i] > values[i-1]) {
-      oscillations++;
-      increasing = true;
-    }
-  }
-  if (oscillations > values.length / 3) {
-    patterns.push('oscillating behavior');
-  }
+  const avgChange = lastValues.slice(1).reduce((sum, val, i) => 
+    sum + (val - lastValues[i]), 0) / (lastValues.length - 1);
 
-  // Detect plateaus
-  let plateauCount = 0;
-  let plateauLength = 1;
-  for (let i = 1; i < values.length; i++) {
-    if (Math.abs(values[i] - values[i-1]) < 0.1) {
-      plateauLength++;
-    } else {
-      if (plateauLength > 3) plateauCount++;
-      plateauLength = 1;
-    }
-  }
-  if (plateauCount > 0) {
-    patterns.push('stable periods');
-  }
+  const predictedValues = Array(3).fill(0).map((_, i) => 
+    lastValues[lastValues.length - 1] + avgChange * (i + 1));
 
-  return patterns;
+  const confidence = Math.min(Math.abs(avgChange) / 10 + 0.5, 0.95);
+  
+  return {
+    trend,
+    values: predictedValues,
+    confidence,
+    severity: trend === 'decreasing' && confidence > 0.8 ? 'warning' : 'info'
+  };
 }
