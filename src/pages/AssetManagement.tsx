@@ -18,8 +18,10 @@ export default function AssetManagement() {
   const { data: assets, isLoading } = useQuery({
     queryKey: ['tokenized-assets'],
     queryFn: async () => {
+      console.log('Fetching tokenized assets...');
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) {
+        console.log('No authenticated user found');
         throw new Error('No authenticated user');
       }
 
@@ -28,26 +30,20 @@ export default function AssetManagement() {
         .select('*')
         .eq('owner_id', session.session.user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching tokenized assets:', error);
+        throw error;
+      }
 
-      // Convert snake_case to camelCase and ensure metadata type safety
-      return (data || []).map((asset): TokenizedAsset => ({
-        id: asset.id,
-        name: asset.name,
-        description: asset.description || '',
-        tokenSymbol: asset.token_symbol,
-        totalSupply: asset.total_supply || 0,
-        pricePerToken: asset.price_per_token,
-        assetType: asset.asset_type,
-        metadata: asset.metadata as TokenizedAsset['metadata'],
-        created_at: asset.created_at
-      }));
+      console.log('Successfully fetched tokenized assets:', data);
+      return data as TokenizedAsset[];
     },
   });
 
   const handleAllocateResources = async (asset: TokenizedAsset) => {
     try {
-      const isCompliant = await checkCompliance(asset.tokenSymbol);
+      console.log('Checking compliance for asset:', asset.token_symbol);
+      const isCompliant = await checkCompliance(asset.token_symbol);
       if (!isCompliant) {
         toast.error('Asset is not compliant. Cannot allocate resources.');
         return;
@@ -90,19 +86,19 @@ export default function AssetManagement() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Symbol:</span>
-                      <span className="font-mono">{asset.tokenSymbol}</span>
+                      <span className="font-mono">{asset.token_symbol}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Total Supply:</span>
                       <span>
-                        {typeof asset.totalSupply === 'number' 
-                          ? asset.totalSupply.toLocaleString()
+                        {typeof asset.total_supply === 'number' 
+                          ? asset.total_supply.toLocaleString()
                           : '0'}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Price per Token:</span>
-                      <span>${asset.pricePerToken}</span>
+                      <span>${asset.price_per_token}</span>
                     </div>
                   </div>
                   <Button 
@@ -129,4 +125,4 @@ export default function AssetManagement() {
       )}
     </div>
   );
-};
+}

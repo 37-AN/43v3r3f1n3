@@ -32,7 +32,7 @@ export function ResourceAllocationDialog({
     try {
       setIsAllocating(true);
       await allocateResource(
-        asset.tokenSymbol,
+        asset.token_symbol,
         userAddress,
         parseFloat(amount)
       );
