@@ -2,8 +2,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Device, DeviceMetric } from '@/types/device';
 import { toast } from "sonner";
+import { DeviceSimulation } from '@/types/simulation';
 
-export function useDeviceUpdates() {
+interface UseDeviceUpdatesReturn {
+  devices: Device[];
+  updateRegisterValue: (deviceId: string, address: number, value: number) => Promise<void>;
+}
+
+export function useDeviceUpdates(): UseDeviceUpdatesReturn {
   const [devices, setDevices] = useState<Device[]>([]);
 
   useEffect(() => {
@@ -12,8 +18,7 @@ export function useDeviceUpdates() {
         console.log('Fetching PLC devices...');
         const { data, error } = await supabase
           .from('plc_devices')
-          .select('*')
-          .eq('is_active', true);
+          .select('*');
 
         if (error) {
           console.error('Error fetching devices:', error);
@@ -23,14 +28,14 @@ export function useDeviceUpdates() {
 
         console.log('Fetched devices:', data);
         
-        const initialDevices = data.map(device => ({
+        const initialDevices: Device[] = data.map(device => ({
           id: device.id,
           name: device.name,
-          status: 'active' as const,
+          status: 'active',
           metrics: [
-            { name: 'Temperature', value: 0, unit: '°C' },
-            { name: 'Pressure', value: 0, unit: 'PSI' },
-            { name: 'Flow Rate', value: 0, unit: 'L/min' }
+            { label: 'Temperature', value: 0, unit: '°C' },
+            { label: 'Pressure', value: 0, unit: 'PSI' },
+            { label: 'Flow Rate', value: 0, unit: 'L/min' }
           ]
         }));
 
@@ -43,7 +48,6 @@ export function useDeviceUpdates() {
 
     fetchDevices();
 
-    // Subscribe to device simulation updates
     const subscription = supabase
       .channel('device_simulations')
       .on(
@@ -53,7 +57,7 @@ export function useDeviceUpdates() {
           schema: 'public',
           table: 'device_simulations'
         },
-        (payload) => {
+        (payload: { new: DeviceSimulation }) => {
           console.log('Received simulation update:', payload);
           if (!payload.new) return;
 
@@ -65,7 +69,7 @@ export function useDeviceUpdates() {
                   status: payload.new.is_running ? 'active' : 'warning',
                   metrics: device.metrics.map(metric => ({
                     ...metric,
-                    value: Math.random() * 100 // Simulate new values
+                    value: Math.random() * 100
                   }))
                 };
               }
@@ -81,5 +85,31 @@ export function useDeviceUpdates() {
     };
   }, []);
 
-  return { devices };
+  const updateRegisterValue = async (deviceId: string, address: number, value: number) => {
+    try {
+      console.log(`Updating register value for device ${deviceId}, address ${address} to ${value}`);
+      
+      const { error } = await supabase
+        .from('device_simulations')
+        .update({
+          parameters: {
+            registers: [{ address, value }]
+          }
+        })
+        .eq('device_id', deviceId);
+
+      if (error) {
+        console.error('Error updating register:', error);
+        toast.error('Failed to update register value');
+        return;
+      }
+
+      toast.success('Register value updated');
+    } catch (error) {
+      console.error('Error in register update:', error);
+      toast.error('Failed to update register');
+    }
+  };
+
+  return { devices, updateRegisterValue };
 }

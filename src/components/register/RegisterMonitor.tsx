@@ -22,16 +22,16 @@ export function RegisterMonitor({
   const [value, setValue] = useState(currentValue);
   const { updateRegisterValue } = useDeviceUpdates();
 
-  const handleIncrement = () => {
+  const handleIncrement = async () => {
     const newValue = value + 1;
     setValue(newValue);
-    updateRegisterValue(deviceId, address, newValue);
+    await updateRegisterValue(deviceId, address, newValue);
   };
 
-  const handleDecrement = () => {
+  const handleDecrement = async () => {
     const newValue = value - 1;
     setValue(newValue);
-    updateRegisterValue(deviceId, address, newValue);
+    await updateRegisterValue(deviceId, address, newValue);
   };
 
   return (

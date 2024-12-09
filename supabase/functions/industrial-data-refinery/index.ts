@@ -15,7 +15,7 @@ serve(async (req) => {
     console.log('Received raw data:', rawData);
 
     if (!rawData || typeof rawData !== 'object') {
-      console.error('Invalid raw data format:', rawData);
+      console.error('Invalid data format:', rawData);
       return new Response(
         JSON.stringify({ error: 'Invalid data format' }),
         { 
