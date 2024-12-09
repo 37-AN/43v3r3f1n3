@@ -40,8 +40,10 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
           console.error('Error checking device:', deviceError);
           if (deviceError.message.includes('JWT')) {
             toast.error('Session expired. Please log in again.');
+            addMessage('error', 'Session expired. Please log in again.');
           } else {
             toast.error('Error checking device access');
+            addMessage('error', `Error checking device: ${deviceError.message}`);
           }
           return;
         }
@@ -49,11 +51,22 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
         if (!deviceData) {
           console.error('Device not found or no access');
           toast.error('Device not found or no access');
+          addMessage('error', 'Device not found or no access');
           return;
         }
 
         console.log('Device data:', deviceData);
         
+        // Add auth state check
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.error('No active session');
+          toast.error('Please log in to view insights');
+          addMessage('error', 'Authentication required');
+          return;
+        }
+
+        console.log('Fetching insights with auth token');
         const { data, error } = await supabase
           .from('ai_insights')
           .select('*')
@@ -68,6 +81,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
             toast.error('Session expired. Please log in again.');
           } else {
             toast.error('Failed to fetch insights');
+            addMessage('error', `Failed to fetch insights: ${error.message}`);
           }
           return;
         }
@@ -89,6 +103,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
       } catch (error) {
         console.error('Unexpected error:', error);
         toast.error('Failed to process insights');
+        addMessage('error', `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     };
 
