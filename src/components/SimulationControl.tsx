@@ -1,8 +1,7 @@
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { SimulationControls } from "@/features/simulation/components/SimulationControls";
 import { SimulationHistory } from "@/features/simulation/components/SimulationHistory";
+import { SimulationPanel } from "./simulation/SimulationPanel";
 import { useDeviceId } from "@/features/simulation/hooks/useDeviceId";
 import { useSimulationData } from "@/hooks/useSimulationData";
 import { toast } from "sonner";
@@ -23,12 +22,7 @@ export function SimulationControl() {
     }
   }, [deviceId]);
 
-  const handleInjectAnomaly = async () => {
-    if (!selectedMetric) {
-      toast.error('Please select a metric first');
-      return;
-    }
-
+  const handleInjectAnomaly = () => {
     simulationEngine.injectAnomaly(selectedMetric, 'medium');
     toast.success(`Injected anomaly for ${selectedMetric}`);
   };
@@ -63,36 +57,13 @@ export function SimulationControl() {
 
   return (
     <div className="space-y-4">
-      <Card className="p-6 animate-fade-up glass-panel">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-system-gray-900">
-            Industrial Simulation Control
-          </h3>
-          <SimulationControls 
-            isRunning={isRunning}
-            selectedMetric={selectedMetric}
-            onToggleSimulation={() => setIsRunning(!isRunning)}
-            onInjectAnomaly={handleInjectAnomaly}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <select
-            className="border rounded p-2"
-            value={selectedMetric}
-            onChange={(e) => setSelectedMetric(e.target.value)}
-          >
-            <option value="">Select metric for anomaly</option>
-            {Object.entries(defaultSimulationConfig).map(([category, metrics]) => (
-              Object.keys(metrics).map(metric => (
-                <option key={`${category}.${metric}`} value={`${category}.${metric}`}>
-                  {`${category} - ${metric}`}
-                </option>
-              ))
-            ))}
-          </select>
-        </div>
-      </Card>
+      <SimulationPanel
+        isRunning={isRunning}
+        selectedMetric={selectedMetric}
+        onMetricChange={setSelectedMetric}
+        onToggleSimulation={() => setIsRunning(!isRunning)}
+        onInjectAnomaly={handleInjectAnomaly}
+      />
       
       <SimulationHistory writeHistory={formattedHistory} />
     </div>
