@@ -48,14 +48,16 @@ export function useDeviceUpdates(): UseDeviceUpdatesReturn {
 
     fetchDevices();
 
-    const subscription = supabase
-      .channel('device_simulations')
+    const channel = supabase.channel('device_updates');
+    
+    channel
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'device_simulations'
+          table: 'device_simulations',
+          filter: 'is_running=eq.true'
         },
         (payload: { new: DeviceSimulation }) => {
           console.log('Received simulation update:', payload);
@@ -81,7 +83,7 @@ export function useDeviceUpdates(): UseDeviceUpdatesReturn {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      channel.unsubscribe();
     };
   }, []);
 

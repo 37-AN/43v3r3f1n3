@@ -26,56 +26,19 @@ export const DataAnalysisProcessor = ({
       try {
         console.log('Starting data analysis for device:', selectedDeviceId);
         
-        // First verify device exists and user has access
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          console.error('No active session');
-          toast.error('Please log in to analyze data');
-          return null;
-        }
-
-        const { data: deviceData, error: deviceError } = await supabase
-          .from('plc_devices')
-          .select('id, owner_id')
-          .eq('id', selectedDeviceId)
-          .single();
-
-        if (deviceError) {
-          console.error('Error fetching device:', deviceError);
-          toast.error('Failed to verify device access');
-          return null;
-        }
-
-        if (!deviceData) {
-          console.error('Device not found or no access');
-          toast.error('Device not found or no access');
-          return null;
-        }
-
-        console.log('Device data:', deviceData);
-        
-        // Validate and format raw data
-        if (!preparedData) {
-          console.error('No prepared data available');
-          return null;
-        }
-
-        const values = preparedData.split(' ').map(Number);
-        if (values.length === 0 || values.some(isNaN)) {
-          console.error('Invalid numerical values in prepared data');
-          return null;
-        }
-
         // Format data for industrial-data-refinery
         const rawData = {
           deviceId: selectedDeviceId,
           dataType: 'measurement',
-          values: values,
+          metrics: preparedData.split(' ').map(value => ({
+            metric_type: 'measurement',
+            value: Number(value),
+            timestamp: new Date().toISOString(),
+            unit: 'unit'
+          })),
           timestamp: new Date().toISOString(),
           metadata: {
-            source: 'plc_analysis',
-            owner_id: session.user.id
+            source: 'plc_analysis'
           }
         };
 
@@ -97,8 +60,11 @@ export const DataAnalysisProcessor = ({
         // Send refined data to MES tokenization engine
         const { data: mesData, error: mesError } = await supabase.functions.invoke('mes-tokenization-engine', {
           body: { 
-            refinedData,
-            timestamp: new Date().toISOString()
+            refinedData: {
+              ...refinedData,
+              deviceId: selectedDeviceId,
+              timestamp: new Date().toISOString()
+            }
           }
         });
 
