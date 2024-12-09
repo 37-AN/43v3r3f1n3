@@ -30,8 +30,13 @@ export function SimulationControl() {
           // Format metrics array for processing
           const metricsArray = Object.entries(values).map(([key, value]) => ({
             metric_type: key,
-            value: value,
-            timestamp: new Date().toISOString()
+            value: typeof value === 'number' ? value : 0,
+            timestamp: new Date().toISOString(),
+            unit: 'unit',
+            metadata: {
+              quality_score: 0.95,
+              source: 'simulation_engine'
+            }
           }));
           
           console.log('Sending metrics to refinery:', metricsArray);
@@ -40,11 +45,12 @@ export function SimulationControl() {
           const rawData = {
             deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
             dataType: 'simulation',
-            values: metricsArray,
+            metrics: metricsArray,
             timestamp: new Date().toISOString(),
             metadata: {
               simulation: true,
-              source: 'simulation_engine'
+              source: 'simulation_engine',
+              quality_score: 0.95
             }
           };
 
@@ -65,12 +71,12 @@ export function SimulationControl() {
           // Format data for MES tokenization engine
           const mesData = {
             refinedData: {
-              deviceId: refinedData.deviceId || 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
+              deviceId: refinedData.deviceId,
               metrics: refinedData.metrics || metricsArray,
               dataType: refinedData.dataType || 'simulation',
               timestamp: new Date().toISOString(),
               metadata: {
-                quality_score: refinedData.quality_score || 1.0,
+                quality_score: refinedData.metadata?.quality_score || 0.95,
                 source: 'industrial_refinery',
                 simulation: true
               }
