@@ -47,7 +47,7 @@ export default function Login() {
         <Auth
           supabaseClient={supabase}
           appearance={{
-            theme: 'light',
+            theme: 'default',
             style: {
               button: {
                 background: 'rgb(var(--primary))',
