@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { PlusCircle, LogOut, List } from "lucide-react";
+import { PlusCircle, LogOut, List, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWeb3 } from "@/contexts/Web3Context";
 
 interface HeaderProps {
   userEmail: string | null;
@@ -12,9 +13,11 @@ interface HeaderProps {
 
 export const Header = ({ userEmail, isProcessing, onTokenizeClick }: HeaderProps) => {
   const navigate = useNavigate();
+  const { account, disconnect } = useWeb3();
 
   const handleLogout = async () => {
     try {
+      await disconnect();
       await supabase.auth.signOut();
       console.log("User logged out successfully");
       toast.success("Logged out successfully");
@@ -32,7 +35,9 @@ export const Header = ({ userEmail, isProcessing, onTokenizeClick }: HeaderProps
         {isProcessing && (
           <p className="text-sm text-system-gray-400 mt-1">Processing data with AI models...</p>
         )}
-        {userEmail && (
+        {account ? (
+          <p className="text-sm text-system-gray-400 mt-1">Connected wallet: {account.slice(0, 6)}...{account.slice(-4)}</p>
+        ) : userEmail && (
           <p className="text-sm text-system-gray-400 mt-1">Logged in as: {userEmail}</p>
         )}
       </div>

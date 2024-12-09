@@ -1,12 +1,16 @@
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { Auth } from '@supabase/auth-ui-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { useWeb3 } from '@/contexts/Web3Context';
+import { Wallet } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { connect, isConnecting } = useWeb3();
 
   useEffect(() => {
-    // Check if user is already logged in
     supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         console.log("User is authenticated, redirecting to home");
@@ -17,14 +21,46 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-system-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6 space-y-6">
         <h1 className="text-2xl font-semibold text-center mb-6">Welcome Back</h1>
-        <div className="space-y-4">
-          <p className="text-center text-gray-600">
-            Please sign in to continue
-          </p>
-          {/* Temporarily remove Auth component until dependencies are properly set up */}
+        
+        <Button 
+          className="w-full flex items-center justify-center gap-2" 
+          onClick={connect}
+          disabled={isConnecting}
+        >
+          <Wallet className="w-4 h-4" />
+          {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+        </Button>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
         </div>
+
+        <Auth
+          supabaseClient={supabase}
+          appearance={{
+            theme: 'light',
+            style: {
+              button: {
+                background: 'rgb(var(--primary))',
+                color: 'white',
+                borderRadius: '0.5rem'
+              },
+              anchor: {
+                color: 'rgb(var(--primary))'
+              }
+            }
+          }}
+          providers={[]}
+        />
       </div>
     </div>
   );
