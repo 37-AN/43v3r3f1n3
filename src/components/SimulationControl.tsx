@@ -18,12 +18,52 @@ export function SimulationControl() {
   const [writeHistory, setWriteHistory] = useState<WriteHistoryEntry[]>([]);
   const [simulationEngine] = useState(() => new IndustrialSimulationEngine(defaultSimulationConfig));
   const [selectedMetric, setSelectedMetric] = useState<string>('');
-  const deviceId = 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5';
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+
+  // Fetch first available device
+  useEffect(() => {
+    const fetchFirstDevice = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.error('No active session');
+          return;
+        }
+
+        console.log('Fetching first available PLC device');
+        const { data: devices, error } = await supabase
+          .from('plc_devices')
+          .select('id')
+          .eq('owner_id', session.user.id)
+          .limit(1)
+          .single();
+
+        if (error) {
+          console.error('Error fetching PLC device:', error);
+          toast.error('Error loading device');
+          return;
+        }
+
+        if (devices) {
+          console.log('Found device:', devices.id);
+          setDeviceId(devices.id);
+        } else {
+          console.log('No devices found');
+          toast.error('No devices found. Please add a device first.');
+        }
+      } catch (error) {
+        console.error('Error in device fetch:', error);
+        toast.error('Failed to load device');
+      }
+    };
+
+    fetchFirstDevice();
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (isRunning) {
+    if (isRunning && deviceId) {
       interval = setInterval(async () => {
         const values = simulationEngine.generateNextValues();
         
@@ -146,6 +186,17 @@ export function SimulationControl() {
     simulationEngine.injectAnomaly(selectedMetric, 'medium');
     toast.success(`Injected anomaly for ${selectedMetric}`);
   };
+
+  if (!deviceId) {
+    return (
+      <Card className="p-6">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-2">No Device Available</h3>
+          <p className="text-gray-600">Please add a PLC device to start simulation.</p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
