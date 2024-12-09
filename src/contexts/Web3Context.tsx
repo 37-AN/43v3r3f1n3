@@ -39,7 +39,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       
       // Authenticate with Supabase using the wallet signature
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'ethereum',
+        provider: 'metamask' as any, // Using type assertion as temporary fix
         options: {
           queryParams: {
             wallet_address: account,
@@ -79,7 +79,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     // Check if user was previously connected
     const checkConnection = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.app_metadata?.provider === 'ethereum') {
+      if (session?.user?.app_metadata?.provider === 'metamask') {
         const ethersProvider = new EthersWeb3Provider(window.ethereum);
         const accounts = await ethersProvider.listAccounts();
         if (accounts[0]) {

@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { Wallet } from 'lucide-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ export default function Login() {
         <Auth
           supabaseClient={supabase}
           appearance={{
-            theme: 'default',
+            theme: ThemeSupa,
             style: {
               button: {
                 background: 'rgb(var(--primary))',
