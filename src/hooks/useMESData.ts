@@ -40,12 +40,14 @@ export function useMESData(deviceId: string) {
 
   const { data: mesMetrics, isLoading: mesLoading } = useQuery({
     queryKey: ['mes_metrics', deviceId],
-    queryFn: fetchMESMetrics
+    queryFn: fetchMESMetrics,
+    enabled: !!deviceId
   });
 
   const { data: tokenizedAssets, isLoading: assetsLoading } = useQuery({
     queryKey: ['tokenized_assets', deviceId],
-    queryFn: fetchTokenizedAssets
+    queryFn: fetchTokenizedAssets,
+    enabled: !!deviceId
   });
 
   return {
