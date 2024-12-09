@@ -79,7 +79,6 @@ serve(async (req) => {
       token_symbol: 'MES',
       total_supply: 1000000,
       price_per_token: 0.001,
-      owner_id: refinedData.metadata?.owner_id,
       metadata: {
         source_device_id: refinedData.deviceId,
         last_update: new Date().toISOString(),
