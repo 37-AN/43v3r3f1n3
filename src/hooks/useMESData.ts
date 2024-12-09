@@ -5,6 +5,7 @@ import { toast } from "sonner";
 export function useMESData(deviceId: string) {
   const fetchMESMetrics = async () => {
     try {
+      console.log('Fetching MES metrics for device:', deviceId);
       const { data: metrics, error } = await supabase
         .from('mes_metrics')
         .select('*')
@@ -12,7 +13,12 @@ export function useMESData(deviceId: string) {
         .order('timestamp', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching MES metrics:', error);
+        throw error;
+      }
+      
+      console.log('Fetched MES metrics:', metrics);
       return metrics;
     } catch (error) {
       console.error('Error fetching MES metrics:', error);
@@ -23,13 +29,19 @@ export function useMESData(deviceId: string) {
 
   const fetchTokenizedAssets = async () => {
     try {
+      console.log('Fetching tokenized assets for device:', deviceId);
       const { data: assets, error } = await supabase
         .from('tokenized_assets')
         .select('*')
         .filter('metadata->source_device_id', 'eq', deviceId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching tokenized assets:', error);
+        throw error;
+      }
+
+      console.log('Fetched tokenized assets:', assets);
       return assets;
     } catch (error) {
       console.error('Error fetching tokenized assets:', error);

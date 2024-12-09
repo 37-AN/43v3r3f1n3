@@ -84,7 +84,7 @@ serve(async (req) => {
     await Promise.all(mesMetricsPromises);
     console.log('Successfully stored MES metrics');
 
-    // Create or update tokenized asset with proper metadata format
+    // Create or update tokenized asset
     const assetData = {
       asset_type: 'industrial_metric',
       name: `Device ${refinedData.deviceId} Metrics`,
@@ -92,11 +92,11 @@ serve(async (req) => {
       total_supply: 1000000,
       price_per_token: 0.001,
       owner_id: refinedData.metadata?.owner_id,
-      metadata: JSON.stringify({
+      metadata: {
         source_device_id: refinedData.deviceId,
         last_update: new Date().toISOString(),
         quality_score: refinedData.metadata?.quality_score || 0.95
-      })
+      }
     };
 
     const { error: assetError } = await supabaseClient
