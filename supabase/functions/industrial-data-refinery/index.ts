@@ -16,24 +16,24 @@ serve(async (req) => {
     console.log('Received raw data:', rawData);
 
     // Validate required fields
-    if (!rawData || !rawData.deviceId || !rawData.values || !Array.isArray(rawData.values)) {
+    if (!rawData?.deviceId || !rawData?.metrics || !Array.isArray(rawData.metrics)) {
       console.error('Invalid raw data structure:', rawData);
-      throw new Error('Invalid or missing raw data structure');
+      return new Response(
+        JSON.stringify({ error: 'Invalid or missing raw data structure' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     // Process metrics
-    const refinedMetrics = rawData.values.map(value => ({
-      metric_type: value.metric_type || 'measurement',
-      value: typeof value === 'number' ? value : value.value,
-      timestamp: value.timestamp || rawData.timestamp,
+    const refinedMetrics = rawData.metrics.map(metric => ({
+      metric_type: metric.metric_type,
+      value: typeof metric.value === 'number' ? metric.value : 0,
+      timestamp: metric.timestamp || rawData.timestamp,
       quality_score: 0.95,
-      unit: value.unit || 'unit'
+      unit: metric.unit || 'unit'
     }));
 
     console.log('Processed metrics:', refinedMetrics);

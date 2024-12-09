@@ -72,7 +72,7 @@ export function SimulationControl() {
           const mesData = {
             refinedData: {
               deviceId: refinedData.deviceId,
-              metrics: refinedData.metrics || metricsArray,
+              metrics: refinedData.metrics,
               dataType: refinedData.dataType || 'simulation',
               timestamp: new Date().toISOString(),
               metadata: {

@@ -16,7 +16,7 @@ serve(async (req) => {
     console.log('Received refined data:', refinedData);
 
     // Validate required fields
-    if (!refinedData || !refinedData.deviceId || !refinedData.metrics || !Array.isArray(refinedData.metrics)) {
+    if (!refinedData?.deviceId || !refinedData?.metrics || !Array.isArray(refinedData.metrics)) {
       console.error('Invalid refined data structure:', refinedData);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid or missing refined data' }),
@@ -42,7 +42,7 @@ serve(async (req) => {
         unit: metric.unit || 'unit',
         timestamp: metric.timestamp || refinedData.timestamp || new Date().toISOString(),
         metadata: {
-          quality_score: refinedData.quality_score || 0.95,
+          quality_score: refinedData.metadata?.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
           category: metric.category || 'measurement'
         }
