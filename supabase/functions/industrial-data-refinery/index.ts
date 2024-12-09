@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +32,7 @@ serve(async (req) => {
       metric_type: metric.metric_type,
       value: typeof metric.value === 'number' ? metric.value : 0,
       timestamp: metric.timestamp || rawData.timestamp,
-      quality_score: 0.95,
+      quality_score: metric.metadata?.quality_score || 0.95,
       unit: metric.unit || 'unit'
     }));
 

@@ -69,6 +69,7 @@ export function SimulationControl() {
           console.log('Received refined data:', refinedData);
 
           if (!refinedData || !refinedData.metrics) {
+            console.error('Invalid refined data structure:', refinedData);
             throw new Error('Invalid refined data received from refinery');
           }
 
@@ -82,7 +83,8 @@ export function SimulationControl() {
               metadata: {
                 quality_score: refinedData.metadata?.quality_score || 0.95,
                 source: 'industrial_refinery',
-                simulation: true
+                simulation: true,
+                source_device_id: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5'
               }
             }
           };

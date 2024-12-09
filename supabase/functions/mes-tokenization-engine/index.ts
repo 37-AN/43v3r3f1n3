@@ -42,8 +42,9 @@ serve(async (req) => {
         unit: metric.unit || 'unit',
         timestamp: metric.timestamp || refinedData.timestamp || new Date().toISOString(),
         metadata: {
-          quality_score: refinedData.metadata?.quality_score || 0.95,
+          quality_score: metric.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
+          source_device_id: refinedData.metadata?.source_device_id,
           category: metric.category || 'measurement'
         }
       })
