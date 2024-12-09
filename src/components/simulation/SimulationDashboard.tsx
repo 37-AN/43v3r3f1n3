@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Settings2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SimulationConfig } from "./SimulationConfig";
+import { WriteHistory } from "./WriteHistory";
 
 interface SimulationDashboardProps {
   deviceId: string;
@@ -13,7 +14,7 @@ interface SimulationDashboardProps {
 
 export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
   const isSimulationRunning = useSimulationState();
-  const chartData = useSimulationData(isSimulationRunning);
+  const { writeHistory, chartData } = useSimulationData(isSimulationRunning, deviceId);
 
   if (!deviceId) {
     return (
@@ -49,9 +50,12 @@ export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
       </div>
 
       {isSimulationRunning && (
-        <div className="mt-2">
-          <SimulationCharts chartData={chartData} />
-        </div>
+        <>
+          <div className="mt-2">
+            <SimulationCharts chartData={chartData} />
+          </div>
+          <WriteHistory history={writeHistory} />
+        </>
       )}
     </Card>
   );

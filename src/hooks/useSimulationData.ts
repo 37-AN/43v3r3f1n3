@@ -2,22 +2,26 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine";
+import { ChartData } from "@/types/simulation";
+
+interface WriteHistoryEntry {
+  timestamp: string;
+  metric: string;
+  value: number;
+}
 
 export const useSimulationData = (
   isRunning: boolean,
   deviceId: string | null,
-  simulationEngine: IndustrialSimulationEngine
+  simulationEngine?: IndustrialSimulationEngine
 ) => {
-  const [writeHistory, setWriteHistory] = useState<Array<{
-    timestamp: string;
-    metric: string;
-    value: number;
-  }>>([]);
+  const [writeHistory, setWriteHistory] = useState<WriteHistoryEntry[]>([]);
+  const [chartData, setChartData] = useState<ChartData>({});
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (isRunning && deviceId) {
+    if (isRunning && deviceId && simulationEngine) {
       interval = setInterval(async () => {
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -30,24 +34,36 @@ export const useSimulationData = (
           const values = simulationEngine.generateNextValues();
           console.log('Generated simulation values:', values);
 
-          // Format metrics array with validation
-          const metricsArray = Object.entries(values)
-            .filter(([_, value]) => typeof value === 'number' && !isNaN(value))
-            .map(([key, value]) => ({
-              metric_type: key,
-              value: value,
-              timestamp: new Date().toISOString(),
-              unit: 'unit',
-              metadata: {
-                quality_score: 0.95,
-                source: 'simulation_engine'
-              }
-            }));
+          // Format metrics array
+          const metricsArray = Object.entries(values).map(([key, value]) => ({
+            metric_type: key,
+            value: typeof value === 'number' ? value : 0,
+            timestamp: new Date().toISOString(),
+            unit: 'unit',
+            metadata: {
+              quality_score: 0.95,
+              source: 'simulation_engine'
+            }
+          }));
 
-          if (metricsArray.length === 0) {
-            console.error('No valid metrics generated');
-            return;
-          }
+          // Update chart data
+          const newChartData: ChartData = {};
+          Object.entries(values).forEach(([key, value]) => {
+            const timestamp = new Date().toISOString();
+            if (!newChartData[key]) {
+              newChartData[key] = [];
+            }
+            newChartData[key].push({
+              timestamp,
+              value: typeof value === 'number' ? value : 0,
+              registerType: 'input',
+              address: 0 // Using 0 as default address since we're simulating
+            });
+          });
+          setChartData(prev => ({
+            ...prev,
+            ...newChartData
+          }));
 
           // Send to data refinery
           console.log('Sending metrics to refinery:', { deviceId, metricsArray });
@@ -71,10 +87,7 @@ export const useSimulationData = (
             }
           );
 
-          if (refineryError) {
-            console.error('Refinery error:', refineryError);
-            throw refineryError;
-          }
+          if (refineryError) throw refineryError;
           console.log('Received refined data:', refinedData);
 
           // Send to MES engine
@@ -93,10 +106,7 @@ export const useSimulationData = (
             }
           );
 
-          if (mesError) {
-            console.error('MES error:', mesError);
-            throw mesError;
-          }
+          if (mesError) throw mesError;
 
           // Update history
           setWriteHistory(prev => [
@@ -121,5 +131,5 @@ export const useSimulationData = (
     };
   }, [isRunning, deviceId, simulationEngine]);
 
-  return { writeHistory };
+  return { writeHistory, chartData };
 };

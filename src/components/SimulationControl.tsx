@@ -1,11 +1,11 @@
 import { Card } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { defaultSimulationConfig } from "@/types/industrialSimulation";
 import { SimulationControls } from "@/features/simulation/components/SimulationControls";
 import { SimulationHistory } from "@/features/simulation/components/SimulationHistory";
 import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine";
 import { useDeviceId } from "@/features/simulation/hooks/useDeviceId";
-import { useSimulationData } from "@/features/simulation/hooks/useSimulationData";
+import { useSimulationData } from "@/hooks/useSimulationData";
 import { toast } from "sonner";
 
 export function SimulationControl() {
@@ -14,6 +14,13 @@ export function SimulationControl() {
   const [selectedMetric, setSelectedMetric] = useState<string>('');
   const { deviceId, isLoading } = useDeviceId();
   const { writeHistory } = useSimulationData(isRunning, deviceId, simulationEngine);
+
+  useEffect(() => {
+    // Reset simulation state when device changes
+    if (!deviceId) {
+      setIsRunning(false);
+    }
+  }, [deviceId]);
 
   const handleInjectAnomaly = async () => {
     if (!selectedMetric) {
