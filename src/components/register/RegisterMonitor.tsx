@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Minus, Plus } from "lucide-react";
-import { useRegisterUpdates } from "@/hooks/useDeviceUpdates";
+import { useDeviceUpdates } from "@/hooks/useDeviceUpdates";
 
 interface RegisterMonitorProps {
   deviceId: string;
@@ -20,18 +20,18 @@ export function RegisterMonitor({
   currentValue,
 }: RegisterMonitorProps) {
   const [value, setValue] = useState(currentValue);
-  const { updateRegisterValue } = useRegisterUpdates(deviceId);
+  const { updateRegisterValue } = useDeviceUpdates();
 
   const handleIncrement = () => {
     const newValue = value + 1;
     setValue(newValue);
-    updateRegisterValue(registerId, newValue);
+    updateRegisterValue(deviceId, address, newValue);
   };
 
   const handleDecrement = () => {
     const newValue = value - 1;
     setValue(newValue);
-    updateRegisterValue(registerId, newValue);
+    updateRegisterValue(deviceId, address, newValue);
   };
 
   return (

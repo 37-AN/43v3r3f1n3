@@ -2,7 +2,7 @@ import { DeviceCard } from "@/components/DeviceCard";
 import { useDeviceUpdates } from "@/hooks/useDeviceUpdates";
 
 export const DeviceGrid = () => {
-  const devices = useDeviceUpdates();
+  const { devices } = useDeviceUpdates();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

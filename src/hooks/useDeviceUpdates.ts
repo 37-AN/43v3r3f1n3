@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Device } from "@/types/device";
+import { Device, DeviceMetric } from "@/types/device";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import { DeviceSimulation, isValidSimulationPayload } from "@/types/simulation";
+import { DeviceSimulation } from "@/types/simulation";
 import { updateDeviceMetrics } from "@/utils/metricCalculations";
 import { logRegisterOperation } from "@/utils/registerLogger";
 import { toast } from "sonner";
@@ -36,7 +36,7 @@ export const useDeviceUpdates = () => {
           setDevices(data.map(device => ({
             id: device.id,
             name: device.name,
-            status: 'active',
+            status: 'active' as const,
             metrics: []
           })));
         }
@@ -59,14 +59,15 @@ export const useDeviceUpdates = () => {
         },
         (payload: RealtimePostgresChangesPayload<DeviceSimulation>) => {
           console.log('Device simulation update:', payload);
-          if (payload.new && isValidSimulationPayload(payload.new)) {
+          if (payload.new) {
+            const newData = payload.new as DeviceSimulation;
             setDevices(currentDevices => 
               currentDevices.map(device => 
-                device.id === payload.new.device_id
+                device.id === newData.device_id
                   ? {
                       ...device,
-                      status: payload.new.is_running ? 'active' : 'inactive',
-                      metrics: updateDeviceMetrics(device.metrics, payload.new.parameters)
+                      status: newData.is_running ? 'active' as const : 'warning' as const,
+                      metrics: updateDeviceMetrics(device.metrics, newData.parameters)
                     }
                   : device
               )
@@ -95,7 +96,8 @@ export const useDeviceUpdates = () => {
         operation: 'write',
         value,
         address,
-        deviceId: deviceId
+        deviceId,
+        timestamp: new Date().toISOString()
       });
 
       console.log(`Register value updated for device ${deviceId}`);

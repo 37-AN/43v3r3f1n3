@@ -1,6 +1,6 @@
 type RegisterOperation = 'add' | 'delete' | 'write' | 'read';
 
-interface RegisterLogEntry {
+export interface RegisterLogEntry {
   operation: RegisterOperation;
   address: number;
   value?: number;
