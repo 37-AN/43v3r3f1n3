@@ -55,7 +55,6 @@ export function SimulationControl() {
     );
   }
 
-  // Convert RegisterWriteHistoryEntry to WriteHistoryEntry
   const formattedHistory: WriteHistoryEntry[] = writeHistory.map(entry => ({
     timestamp: entry.timestamp,
     metric: `Register ${entry.address}`,

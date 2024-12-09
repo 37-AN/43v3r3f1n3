@@ -58,6 +58,27 @@ export function isValidSimulationPayload(payload: unknown): payload is DeviceSim
   );
 }
 
+export function isValidSimulationParameters(params: unknown): params is SimulationParameters {
+  if (!params || typeof params !== 'object') return false;
+  
+  const requiredKeys = [
+    'temperature',
+    'pressure',
+    'vibration',
+    'production_rate',
+    'downtime_minutes',
+    'defect_rate',
+    'energy_consumption',
+    'machine_efficiency'
+  ];
+
+  return requiredKeys.every(key => 
+    key in (params as SimulationParameters) &&
+    'min' in (params as SimulationParameters)[key as keyof SimulationParameters] &&
+    'max' in (params as SimulationParameters)[key as keyof SimulationParameters]
+  );
+}
+
 export const defaultParameters: SimulationParameters = {
   temperature: { min: 20, max: 80 },
   pressure: { min: 0, max: 100 },
