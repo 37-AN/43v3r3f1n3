@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine";
-import { ChartData, RegisterWriteHistoryEntry } from "@/types/simulation";
+import { RegisterWriteHistoryEntry } from "@/types/simulation";
 
 export const useSimulationData = (
   isRunning: boolean,
@@ -10,7 +10,6 @@ export const useSimulationData = (
   simulationEngine?: IndustrialSimulationEngine
 ) => {
   const [writeHistory, setWriteHistory] = useState<RegisterWriteHistoryEntry[]>([]);
-  const [chartData, setChartData] = useState<ChartData>({});
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -40,25 +39,6 @@ export const useSimulationData = (
             }
           }));
 
-          // Update chart data
-          const newChartData: ChartData = {};
-          Object.entries(values).forEach(([key, value]) => {
-            const timestamp = new Date().toISOString();
-            if (!newChartData[key]) {
-              newChartData[key] = [];
-            }
-            newChartData[key].push({
-              timestamp,
-              value: typeof value === 'number' ? value : 0,
-              registerType: 'input',
-              address: 0
-            });
-          });
-          setChartData(prev => ({
-            ...prev,
-            ...newChartData
-          }));
-
           // Send to data refinery
           console.log('Sending metrics to refinery:', { deviceId, metricsArray });
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
@@ -84,10 +64,11 @@ export const useSimulationData = (
           if (refineryError) throw refineryError;
           console.log('Received refined data:', refinedData);
 
-          // Update history with register-style entries
+          // Update history
+          const timestamp = new Date().toISOString();
           setWriteHistory(prev => [
             {
-              timestamp: new Date().toISOString(),
+              timestamp,
               address: 0,
               value: Object.values(values)[0] as number
             },
@@ -107,5 +88,5 @@ export const useSimulationData = (
     };
   }, [isRunning, deviceId, simulationEngine]);
 
-  return { writeHistory, chartData };
+  return { writeHistory };
 };

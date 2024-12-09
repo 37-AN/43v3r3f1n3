@@ -1,13 +1,14 @@
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { defaultSimulationConfig } from "@/types/industrialSimulation";
 import { SimulationControls } from "@/features/simulation/components/SimulationControls";
 import { SimulationHistory } from "@/features/simulation/components/SimulationHistory";
-import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine";
 import { useDeviceId } from "@/features/simulation/hooks/useDeviceId";
 import { useSimulationData } from "@/hooks/useSimulationData";
 import { toast } from "sonner";
 import { WriteHistoryEntry } from "@/types/simulation";
+import { defaultSimulationConfig } from "@/types/industrialSimulation";
+import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine";
 
 export function SimulationControl() {
   const [isRunning, setIsRunning] = useState(false);
@@ -17,7 +18,6 @@ export function SimulationControl() {
   const { writeHistory } = useSimulationData(isRunning, deviceId, simulationEngine);
 
   useEffect(() => {
-    // Reset simulation state when device changes
     if (!deviceId) {
       setIsRunning(false);
     }

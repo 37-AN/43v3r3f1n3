@@ -1,10 +1,5 @@
 import { Card } from "@/components/ui/card";
-
-interface WriteHistoryEntry {
-  timestamp: string;
-  metric: string;
-  value: number;
-}
+import { WriteHistoryEntry } from "@/types/simulation";
 
 interface SimulationHistoryProps {
   writeHistory: WriteHistoryEntry[];
