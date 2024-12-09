@@ -7,6 +7,7 @@ import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine"
 import { useDeviceId } from "@/features/simulation/hooks/useDeviceId";
 import { useSimulationData } from "@/hooks/useSimulationData";
 import { toast } from "sonner";
+import { WriteHistoryEntry } from "@/types/simulation";
 
 export function SimulationControl() {
   const [isRunning, setIsRunning] = useState(false);
@@ -54,6 +55,13 @@ export function SimulationControl() {
     );
   }
 
+  // Convert RegisterWriteHistoryEntry to WriteHistoryEntry
+  const formattedHistory: WriteHistoryEntry[] = writeHistory.map(entry => ({
+    timestamp: entry.timestamp,
+    metric: `Register ${entry.address}`,
+    value: entry.value
+  }));
+
   return (
     <div className="space-y-4">
       <Card className="p-6 animate-fade-up glass-panel">
@@ -87,7 +95,7 @@ export function SimulationControl() {
         </div>
       </Card>
       
-      <SimulationHistory writeHistory={writeHistory} />
+      <SimulationHistory writeHistory={formattedHistory} />
     </div>
   );
 }
