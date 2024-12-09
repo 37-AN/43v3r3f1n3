@@ -15,7 +15,6 @@ serve(async (req) => {
     const { refinedData } = await req.json();
     console.log('Received refined data:', refinedData);
 
-    // Validate required fields
     if (!refinedData?.deviceId || !refinedData?.metrics || !Array.isArray(refinedData.metrics)) {
       console.error('Invalid refined data structure:', refinedData);
       return new Response(
@@ -27,13 +26,11 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Store MES metrics with validation
     const mesMetricsPromises = refinedData.metrics.map(metric => {
       const metricData = {
         device_id: refinedData.deviceId,
@@ -42,7 +39,7 @@ serve(async (req) => {
         unit: metric.unit || 'unit',
         timestamp: metric.timestamp || refinedData.timestamp || new Date().toISOString(),
         metadata: {
-          quality_score: metric.quality_score || 0.95,
+          quality_score: metric.metadata?.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
           source_device_id: refinedData.deviceId,
           category: metric.category || 'measurement'
@@ -55,6 +52,32 @@ serve(async (req) => {
 
     await Promise.all(mesMetricsPromises);
     console.log('Successfully stored MES metrics');
+
+    // Create a tokenized asset for the device if it doesn't exist
+    const assetData = {
+      asset_type: 'industrial_metric',
+      name: `Device ${refinedData.deviceId} Metrics`,
+      token_symbol: 'MES',
+      total_supply: 1000000,
+      price_per_token: 0.001,
+      owner_id: refinedData.metadata?.owner_id,
+      metadata: {
+        source_device_id: refinedData.deviceId,
+        last_update: new Date().toISOString(),
+        quality_score: refinedData.metadata?.quality_score || 0.95
+      }
+    };
+
+    const { error: assetError } = await supabaseClient
+      .from('tokenized_assets')
+      .upsert(assetData, { 
+        onConflict: 'metadata->source_device_id',
+        ignoreDuplicates: false 
+      });
+
+    if (assetError) {
+      console.error('Error creating tokenized asset:', assetError);
+    }
 
     return new Response(
       JSON.stringify({ 

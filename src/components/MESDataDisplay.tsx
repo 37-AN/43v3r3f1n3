@@ -39,8 +39,23 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
                   <p className="font-mono">
                     {metric.value.toFixed(2)} {metric.unit}
                   </p>
-                  <Badge variant={metric.metadata.quality_score >= 0.8 ? "success" : "warning"}>
-                    Quality: {(metric.metadata.quality_score * 100).toFixed(0)}%
+                  <Badge 
+                    variant={
+                      metric.metadata && 
+                      typeof metric.metadata === 'object' && 
+                      'quality_score' in metric.metadata && 
+                      (metric.metadata.quality_score as number) >= 0.8 
+                        ? "success" 
+                        : "warning"
+                    }
+                  >
+                    Quality: {
+                      metric.metadata && 
+                      typeof metric.metadata === 'object' && 
+                      'quality_score' in metric.metadata 
+                        ? ((metric.metadata.quality_score as number) * 100).toFixed(0) 
+                        : 0
+                    }%
                   </Badge>
                 </div>
               </div>

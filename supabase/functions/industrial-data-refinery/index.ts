@@ -14,7 +14,6 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
-    // Validate required fields
     if (!rawData?.deviceId || !rawData?.metrics || !Array.isArray(rawData.metrics)) {
       console.error('Invalid raw data structure:', rawData);
       return new Response(
@@ -26,25 +25,19 @@ serve(async (req) => {
       );
     }
 
-    // Process metrics with validation
-    const refinedMetrics = rawData.metrics.map(metric => {
-      if (!metric.metric_type) {
-        console.warn('Missing metric_type, using default');
-        metric.metric_type = 'unknown';
-      }
-
-      return {
-        metric_type: metric.metric_type,
-        value: typeof metric.value === 'number' ? metric.value : 0,
-        timestamp: metric.timestamp || rawData.timestamp || new Date().toISOString(),
+    const refinedMetrics = rawData.metrics.map(metric => ({
+      metric_type: metric.metric_type || 'unknown',
+      value: typeof metric.value === 'number' ? metric.value : 0,
+      timestamp: metric.timestamp || rawData.timestamp || new Date().toISOString(),
+      unit: metric.unit || 'unit',
+      metadata: {
         quality_score: metric.metadata?.quality_score || 0.95,
-        unit: metric.unit || 'unit'
-      };
-    });
+        source: metric.metadata?.source || 'simulation_engine'
+      }
+    }));
 
     console.log('Processed metrics:', refinedMetrics);
 
-    // Return refined data with complete structure
     const response = {
       deviceId: rawData.deviceId,
       dataType: rawData.dataType || 'measurement',
