@@ -15,9 +15,16 @@ serve(async (req) => {
     const { refinedData } = await req.json();
     console.log('Received refined data:', refinedData);
 
-    if (!refinedData || !refinedData.deviceId || !refinedData.metrics) {
-      console.error('Invalid refined data:', refinedData);
-      throw new Error('Invalid or missing refined data');
+    // Validate required fields
+    if (!refinedData || !refinedData.deviceId || !refinedData.metrics || !Array.isArray(refinedData.metrics)) {
+      console.error('Invalid refined data structure:', refinedData);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid or missing refined data' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     // Initialize Supabase client
@@ -32,8 +39,8 @@ serve(async (req) => {
         device_id: refinedData.deviceId,
         metric_type: metric.metric_type,
         value: metric.value,
-        unit: metric.unit,
-        timestamp: metric.timestamp || refinedData.timestamp,
+        unit: metric.unit || 'unit',
+        timestamp: metric.timestamp || refinedData.timestamp || new Date().toISOString(),
         metadata: {
           quality_score: refinedData.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
