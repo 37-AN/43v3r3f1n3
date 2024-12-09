@@ -13,12 +13,24 @@ serve(async (req) => {
 
   try {
     const { refinedData } = await req.json();
-    console.log('Received refined data:', refinedData);
+    console.log('Received data in MES engine:', refinedData);
 
-    if (!refinedData?.deviceId || !refinedData?.metrics || !Array.isArray(refinedData.metrics)) {
+    // Validate required fields
+    if (!refinedData || typeof refinedData !== 'object') {
       console.error('Invalid refined data structure:', refinedData);
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid or missing refined data' }),
+        JSON.stringify({ success: false, error: 'Invalid refined data structure' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    if (!refinedData.deviceId || !refinedData.metrics || !Array.isArray(refinedData.metrics)) {
+      console.error('Missing required fields in refined data:', refinedData);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing required fields in refined data' }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -31,11 +43,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Process each metric
     const mesMetricsPromises = refinedData.metrics.map(metric => {
+      if (!metric.metric_type || typeof metric.value !== 'number') {
+        console.warn('Skipping invalid metric:', metric);
+        return Promise.resolve();
+      }
+
       const metricData = {
         device_id: refinedData.deviceId,
-        metric_type: metric.metric_type || 'unknown',
-        value: typeof metric.value === 'number' ? metric.value : 0,
+        metric_type: metric.metric_type,
+        value: metric.value,
         unit: metric.unit || 'unit',
         timestamp: metric.timestamp || refinedData.timestamp || new Date().toISOString(),
         metadata: {
@@ -46,14 +64,14 @@ serve(async (req) => {
         }
       };
 
-      console.log('Storing metric:', metricData);
+      console.log('Storing MES metric:', metricData);
       return supabaseClient.from('mes_metrics').insert(metricData);
     });
 
-    await Promise.all(mesMetricsPromises);
+    await Promise.all(mesMetricsPromises.filter(p => p !== undefined));
     console.log('Successfully stored MES metrics');
 
-    // Create a tokenized asset for the device if it doesn't exist
+    // Create or update tokenized asset
     const assetData = {
       asset_type: 'industrial_metric',
       name: `Device ${refinedData.deviceId} Metrics`,

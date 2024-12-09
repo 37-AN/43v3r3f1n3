@@ -28,6 +28,14 @@ export function SimulationControl() {
         const values = simulationEngine.generateNextValues();
         
         try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            console.error('No active session');
+            toast.error('Please log in to run simulation');
+            setIsRunning(false);
+            return;
+          }
+
           // Format metrics array for processing
           const metricsArray = Object.entries(values).map(([key, value]) => ({
             metric_type: key,
@@ -40,7 +48,7 @@ export function SimulationControl() {
             }
           }));
           
-          console.log('Sending metrics to refinery:', metricsArray);
+          console.log('Sending metrics to refinery:', { deviceId, metricsArray });
           
           // Format data for industrial-data-refinery
           const rawData = {
@@ -51,7 +59,8 @@ export function SimulationControl() {
             metadata: {
               simulation: true,
               source: 'simulation_engine',
-              quality_score: 0.95
+              quality_score: 0.95,
+              owner_id: session.user.id
             }
           };
 
@@ -85,7 +94,8 @@ export function SimulationControl() {
                 quality_score: refinedData.metadata?.quality_score || 0.95,
                 source: 'industrial_refinery',
                 simulation: true,
-                source_device_id: deviceId
+                source_device_id: deviceId,
+                owner_id: session.user.id
               }
             }
           };
