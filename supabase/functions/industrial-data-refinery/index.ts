@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { rawData } = await req.json();
+    const body = await req.json();
+    const { rawData } = body;
     console.log('Received raw data:', rawData);
 
     // Validate required fields
@@ -43,7 +44,6 @@ serve(async (req) => {
       deviceId: rawData.deviceId,
       dataType: rawData.dataType,
       metrics: refinedMetrics,
-      quality_score: 0.95,
       timestamp: rawData.timestamp,
       metadata: {
         ...rawData.metadata,

@@ -68,6 +68,10 @@ export function SimulationControl() {
 
           console.log('Received refined data:', refinedData);
 
+          if (!refinedData || !refinedData.metrics) {
+            throw new Error('Invalid refined data received from refinery');
+          }
+
           // Format data for MES tokenization engine
           const mesData = {
             refinedData: {
