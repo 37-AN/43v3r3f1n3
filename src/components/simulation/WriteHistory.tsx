@@ -1,14 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface WriteHistoryEntry {
-  timestamp: string;
-  address: number;
-  value: number;
-}
+import { RegisterWriteHistoryEntry } from "@/types/simulation";
 
 interface WriteHistoryProps {
-  history: WriteHistoryEntry[];
+  history: RegisterWriteHistoryEntry[];
 }
 
 export function WriteHistory({ history }: WriteHistoryProps) {

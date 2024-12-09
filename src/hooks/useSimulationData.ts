@@ -2,20 +2,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine";
-import { ChartData } from "@/types/simulation";
-
-interface WriteHistoryEntry {
-  timestamp: string;
-  metric: string;
-  value: number;
-}
+import { ChartData, RegisterWriteHistoryEntry } from "@/types/simulation";
 
 export const useSimulationData = (
   isRunning: boolean,
   deviceId: string | null,
   simulationEngine?: IndustrialSimulationEngine
 ) => {
-  const [writeHistory, setWriteHistory] = useState<WriteHistoryEntry[]>([]);
+  const [writeHistory, setWriteHistory] = useState<RegisterWriteHistoryEntry[]>([]);
   const [chartData, setChartData] = useState<ChartData>({});
 
   useEffect(() => {
@@ -57,7 +51,7 @@ export const useSimulationData = (
               timestamp,
               value: typeof value === 'number' ? value : 0,
               registerType: 'input',
-              address: 0 // Using 0 as default address since we're simulating
+              address: 0
             });
           });
           setChartData(prev => ({
@@ -90,31 +84,13 @@ export const useSimulationData = (
           if (refineryError) throw refineryError;
           console.log('Received refined data:', refinedData);
 
-          // Send to MES engine
-          const { error: mesError } = await supabase.functions.invoke(
-            'mes-tokenization-engine',
-            {
-              body: {
-                refinedData: {
-                  ...refinedData,
-                  metadata: {
-                    ...refinedData.metadata,
-                    owner_id: session.user.id
-                  }
-                }
-              }
-            }
-          );
-
-          if (mesError) throw mesError;
-
-          // Update history
+          // Update history with register-style entries
           setWriteHistory(prev => [
-            ...metricsArray.map(metric => ({
-              timestamp: metric.timestamp,
-              metric: metric.metric_type,
-              value: metric.value
-            })),
+            {
+              timestamp: new Date().toISOString(),
+              address: 0,
+              value: Object.values(values)[0] as number
+            },
             ...prev
           ].slice(0, 50));
 

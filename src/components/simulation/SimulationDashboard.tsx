@@ -7,6 +7,7 @@ import { Settings2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SimulationConfig } from "./SimulationConfig";
 import { WriteHistory } from "./WriteHistory";
+import { RegisterWriteHistoryEntry } from "@/types/simulation";
 
 interface SimulationDashboardProps {
   deviceId: string;
@@ -54,7 +55,7 @@ export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
           <div className="mt-2">
             <SimulationCharts chartData={chartData} />
           </div>
-          <WriteHistory history={writeHistory} />
+          <WriteHistory history={writeHistory as RegisterWriteHistoryEntry[]} />
         </>
       )}
     </Card>

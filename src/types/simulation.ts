@@ -46,6 +46,18 @@ export const defaultParameters: SimulationParameters = {
   machine_efficiency: { min: 70, max: 100 }
 };
 
+export interface WriteHistoryEntry {
+  timestamp: string;
+  metric: string;
+  value: number;
+}
+
+export interface RegisterWriteHistoryEntry {
+  timestamp: string;
+  address: number;
+  value: number;
+}
+
 export function isValidSimulationPayload(payload: unknown): payload is DeviceSimulation {
   if (!payload || typeof payload !== 'object') return false;
   
