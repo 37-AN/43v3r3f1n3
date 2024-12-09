@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Device, initialDevices } from "@/types/device";
+import { Device } from "@/types/device";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { DeviceSimulation, isValidSimulationPayload } from "@/types/simulation";
 import { updateDeviceMetrics } from "@/utils/metricCalculations";
 import { logRegisterOperation } from "@/utils/registerLogger";
 
 export const useDeviceUpdates = () => {
-  const [devices, setDevices] = useState<Device[]>(initialDevices);
+  const [devices, setDevices] = useState<Device[]>([]);
 
   useEffect(() => {
     // Subscribe to device simulation updates
@@ -49,24 +49,8 @@ export const useDeviceUpdates = () => {
         console.log('Subscription status:', status);
       });
 
-    // Start periodic updates for active simulations
-    const updateInterval = setInterval(() => {
-      setDevices(currentDevices => 
-        currentDevices.map(device => {
-          if (device.status === 'active') {
-            return {
-              ...device,
-              metrics: updateDeviceMetrics(device.metrics, null)
-            };
-          }
-          return device;
-        })
-      );
-    }, 2000); // Update every 2 seconds
-
     return () => {
       deviceUpdates.unsubscribe();
-      clearInterval(updateInterval);
     };
   }, []);
 
@@ -87,8 +71,6 @@ export const useRegisterUpdates = (deviceId: string) => {
         deviceId: deviceId
       });
 
-      // Here you would typically update the register value in your database
-      // For now, we'll just log it
       console.log(`Register value updated for device ${deviceId}`);
       
       return true;
