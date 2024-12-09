@@ -33,22 +33,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Store MES metrics
-    const mesMetricsPromises = refinedData.metrics.map(metric => 
-      supabaseClient.from('mes_metrics').insert({
+    // Store MES metrics with validation
+    const mesMetricsPromises = refinedData.metrics.map(metric => {
+      const metricData = {
         device_id: refinedData.deviceId,
-        metric_type: metric.metric_type,
-        value: metric.value,
+        metric_type: metric.metric_type || 'unknown',
+        value: typeof metric.value === 'number' ? metric.value : 0,
         unit: metric.unit || 'unit',
         timestamp: metric.timestamp || refinedData.timestamp || new Date().toISOString(),
         metadata: {
           quality_score: metric.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
-          source_device_id: refinedData.metadata?.source_device_id,
+          source_device_id: refinedData.deviceId,
           category: metric.category || 'measurement'
         }
-      })
-    );
+      };
+
+      console.log('Storing metric:', metricData);
+      return supabaseClient.from('mes_metrics').insert(metricData);
+    });
 
     await Promise.all(mesMetricsPromises);
     console.log('Successfully stored MES metrics');

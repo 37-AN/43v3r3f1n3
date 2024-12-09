@@ -18,6 +18,7 @@ export function SimulationControl() {
   const [writeHistory, setWriteHistory] = useState<WriteHistoryEntry[]>([]);
   const [simulationEngine] = useState(() => new IndustrialSimulationEngine(defaultSimulationConfig));
   const [selectedMetric, setSelectedMetric] = useState<string>('');
+  const deviceId = 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5';
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -43,7 +44,7 @@ export function SimulationControl() {
           
           // Format data for industrial-data-refinery
           const rawData = {
-            deviceId: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5',
+            deviceId,
             dataType: 'simulation',
             metrics: metricsArray,
             timestamp: new Date().toISOString(),
@@ -84,7 +85,7 @@ export function SimulationControl() {
                 quality_score: refinedData.metadata?.quality_score || 0.95,
                 source: 'industrial_refinery',
                 simulation: true,
-                source_device_id: 'e2fae487-1ee2-4ea2-b87f-decedb7d12a5'
+                source_device_id: deviceId
               }
             }
           };
@@ -124,7 +125,7 @@ export function SimulationControl() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, simulationEngine]);
+  }, [isRunning, simulationEngine, deviceId]);
 
   const handleInjectAnomaly = async () => {
     if (!selectedMetric) {

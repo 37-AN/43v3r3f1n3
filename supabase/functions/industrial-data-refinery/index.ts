@@ -11,8 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { rawData } = body;
+    const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
     // Validate required fields
@@ -27,26 +26,35 @@ serve(async (req) => {
       );
     }
 
-    // Process metrics
-    const refinedMetrics = rawData.metrics.map(metric => ({
-      metric_type: metric.metric_type,
-      value: typeof metric.value === 'number' ? metric.value : 0,
-      timestamp: metric.timestamp || rawData.timestamp,
-      quality_score: metric.metadata?.quality_score || 0.95,
-      unit: metric.unit || 'unit'
-    }));
+    // Process metrics with validation
+    const refinedMetrics = rawData.metrics.map(metric => {
+      if (!metric.metric_type) {
+        console.warn('Missing metric_type, using default');
+        metric.metric_type = 'unknown';
+      }
+
+      return {
+        metric_type: metric.metric_type,
+        value: typeof metric.value === 'number' ? metric.value : 0,
+        timestamp: metric.timestamp || rawData.timestamp || new Date().toISOString(),
+        quality_score: metric.metadata?.quality_score || 0.95,
+        unit: metric.unit || 'unit'
+      };
+    });
 
     console.log('Processed metrics:', refinedMetrics);
 
-    // Return refined data
+    // Return refined data with complete structure
     const response = {
       deviceId: rawData.deviceId,
-      dataType: rawData.dataType,
+      dataType: rawData.dataType || 'measurement',
       metrics: refinedMetrics,
-      timestamp: rawData.timestamp,
+      timestamp: rawData.timestamp || new Date().toISOString(),
       metadata: {
         ...rawData.metadata,
-        processed_at: new Date().toISOString()
+        processed_at: new Date().toISOString(),
+        quality_score: 0.95,
+        source: 'industrial_refinery'
       }
     };
 
