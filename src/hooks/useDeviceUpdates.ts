@@ -5,47 +5,76 @@ import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { DeviceSimulation, isValidSimulationPayload } from "@/types/simulation";
 import { updateDeviceMetrics } from "@/utils/metricCalculations";
 import { logRegisterOperation } from "@/utils/registerLogger";
+import { toast } from "sonner";
 
 export const useDeviceUpdates = () => {
   const [devices, setDevices] = useState<Device[]>([]);
 
   useEffect(() => {
-    // Subscribe to device simulation updates
+    const fetchDevices = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log('No active session');
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('plc_devices')
+          .select('*')
+          .eq('owner_id', session.user.id)
+          .eq('is_active', true);
+
+        if (error) {
+          console.error('Error fetching devices:', error);
+          toast.error('Failed to fetch devices');
+          return;
+        }
+
+        console.log('Fetched devices:', data);
+        if (data) {
+          setDevices(data.map(device => ({
+            id: device.id,
+            name: device.name,
+            status: 'active',
+            metrics: []
+          })));
+        }
+      } catch (error) {
+        console.error('Error in device fetch:', error);
+        toast.error('Failed to load devices');
+      }
+    };
+
+    fetchDevices();
+
     const deviceUpdates = supabase
-      .channel('device-updates')
+      .channel('device_updates')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'device_simulations',
+          table: 'device_simulations'
         },
         (payload: RealtimePostgresChangesPayload<DeviceSimulation>) => {
-          console.log('Received device update:', payload);
-          
+          console.log('Device simulation update:', payload);
           if (payload.new && isValidSimulationPayload(payload.new)) {
-            const newPayload = payload.new;
-            const parameters = newPayload.parameters;
-
             setDevices(currentDevices => 
-              currentDevices.map(device => {
-                if (device.id === newPayload.device_id) {
-                  const updatedMetrics = updateDeviceMetrics(device.metrics, parameters);
-                  console.log('Updated metrics for device:', device.id, updatedMetrics);
-
-                  return {
-                    ...device,
-                    status: newPayload.is_running ? 'active' : 'warning',
-                    metrics: updatedMetrics
-                  };
-                }
-                return device;
-              })
+              currentDevices.map(device => 
+                device.id === payload.new.device_id
+                  ? {
+                      ...device,
+                      status: payload.new.is_running ? 'active' : 'inactive',
+                      metrics: updateDeviceMetrics(device.metrics, payload.new.parameters)
+                    }
+                  : device
+              )
             );
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe(status => {
         console.log('Subscription status:', status);
       });
 
@@ -54,20 +83,18 @@ export const useDeviceUpdates = () => {
     };
   }, []);
 
-  return devices;
-};
-
-export const useRegisterUpdates = (deviceId: string) => {
-  const updateRegisterValue = async (registerId: string, newValue: number) => {
+  const updateRegisterValue = async (
+    deviceId: string,
+    address: number,
+    value: number
+  ) => {
     try {
-      console.log(`Updating register ${registerId} with value ${newValue}`);
+      console.log(`Updating register for device ${deviceId}:`, { address, value });
       
-      // Log the register update operation
-      logRegisterOperation({
+      await logRegisterOperation({
         operation: 'write',
-        address: Number(registerId),
-        value: newValue,
-        timestamp: new Date().toISOString(),
+        value,
+        address,
         deviceId: deviceId
       });
 
@@ -75,10 +102,10 @@ export const useRegisterUpdates = (deviceId: string) => {
       
       return true;
     } catch (error) {
-      console.error('Error updating register value:', error);
+      console.error('Error updating register:', error);
       return false;
     }
   };
 
-  return { updateRegisterValue };
+  return { devices, updateRegisterValue };
 };

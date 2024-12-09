@@ -15,8 +15,8 @@ serve(async (req) => {
     const { refinedData } = await req.json();
     console.log('Received data in MES engine:', refinedData);
 
-    if (!refinedData?.deviceId) {
-      console.error('Missing deviceId in request:', refinedData);
+    if (!refinedData?.deviceId || typeof refinedData.deviceId !== 'string') {
+      console.error('Invalid or missing deviceId:', refinedData);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid or missing deviceId' }),
         { 
@@ -40,11 +40,10 @@ serve(async (req) => {
       ) : [];
 
     if (validMetrics.length === 0) {
-      console.error('No valid metrics to process');
+      console.warn('No valid metrics to process');
       return new Response(
-        JSON.stringify({ success: false, error: 'No valid metrics to process' }),
+        JSON.stringify({ success: true, message: 'No metrics to process' }),
         { 
-          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );

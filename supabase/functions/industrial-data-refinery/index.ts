@@ -14,8 +14,8 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
-    if (!rawData?.deviceId) {
-      console.error('Missing deviceId in request:', rawData);
+    if (!rawData?.deviceId || typeof rawData.deviceId !== 'string') {
+      console.error('Invalid or missing deviceId:', rawData);
       return new Response(
         JSON.stringify({ error: 'Invalid or missing deviceId' }),
         { 
