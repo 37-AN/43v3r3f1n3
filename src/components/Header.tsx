@@ -1,31 +1,14 @@
 import { Button } from "@/components/ui/button";
-import { PlusCircle, LogOut, List, Wallet } from "lucide-react";
+import { PlusCircle, List } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { useWeb3 } from "@/contexts/Web3Context";
 
 interface HeaderProps {
-  userEmail: string | null;
   isProcessing: boolean;
   onTokenizeClick: () => void;
 }
 
-export const Header = ({ userEmail, isProcessing, onTokenizeClick }: HeaderProps) => {
+export const Header = ({ isProcessing, onTokenizeClick }: HeaderProps) => {
   const navigate = useNavigate();
-  const { account, disconnect } = useWeb3();
-
-  const handleLogout = async () => {
-    try {
-      await disconnect();
-      await supabase.auth.signOut();
-      console.log("User logged out successfully");
-      toast.success("Logged out successfully");
-    } catch (error) {
-      console.error("Error logging out:", error);
-      toast.error("Failed to log out");
-    }
-  };
 
   return (
     <header className="animate-fade-up flex justify-between items-center">
@@ -34,11 +17,6 @@ export const Header = ({ userEmail, isProcessing, onTokenizeClick }: HeaderProps
         <p className="text-system-gray-500 mt-2">Real-time monitoring and tokenized data management</p>
         {isProcessing && (
           <p className="text-sm text-system-gray-400 mt-1">Processing data with AI models...</p>
-        )}
-        {account ? (
-          <p className="text-sm text-system-gray-400 mt-1">Connected wallet: {account.slice(0, 6)}...{account.slice(-4)}</p>
-        ) : userEmail && (
-          <p className="text-sm text-system-gray-400 mt-1">Logged in as: {userEmail}</p>
         )}
       </div>
       <div className="flex gap-4">
@@ -56,14 +34,6 @@ export const Header = ({ userEmail, isProcessing, onTokenizeClick }: HeaderProps
         >
           <PlusCircle className="w-4 h-4" />
           Tokenize Asset
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleLogout}
-          className="flex items-center gap-2"
-        >
-          <LogOut className="w-4 h-4" />
-          Logout
         </Button>
       </div>
     </header>
