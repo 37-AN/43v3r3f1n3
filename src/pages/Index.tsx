@@ -5,49 +5,60 @@ import { usePLCData } from "@/hooks/usePLCData";
 import { useSession } from "@/hooks/useSession";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Index() {
-  const { session, loading } = useSession();
+  const { session, loading: sessionLoading } = useSession();
   const { simulatedData } = useOPCUAClients();
   const { plcData } = usePLCData(!!session);
-
-  const selectedDeviceId = "e2fae487-1ee2-4ea2-b87f-decedb7d12a5";
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkConnection = async () => {
+    const fetchFirstDevice = async () => {
       try {
-        console.log("Checking Supabase connection...");
-        const { data, error } = await supabase
+        if (!session?.user?.id) {
+          console.log("No authenticated user");
+          return;
+        }
+
+        console.log("Fetching first available PLC device for user");
+        const { data: devices, error } = await supabase
           .from('plc_devices')
-          .select('id, owner_id')
-          .eq('id', selectedDeviceId)
+          .select('id')
+          .eq('owner_id', session.user.id)
+          .limit(1)
           .single();
 
         if (error) {
-          console.error("Supabase connection error:", error);
+          console.error("Error fetching PLC device:", error);
           if (error.message.includes('JWT')) {
-            toast.error("Authentication error. Please log in again.");
+            toast.error("Session expired. Please log in again.");
           } else {
-            toast.error("Error connecting to server. Please try again later.");
+            toast.error("Error loading device data");
           }
           return;
         }
 
-        console.log("Successfully connected to Supabase. Device data:", data);
+        if (devices) {
+          console.log("Found device:", devices.id);
+          setSelectedDeviceId(devices.id);
+        } else {
+          console.log("No devices found for user");
+          toast.info("No devices found. Please add a device first.");
+        }
       } catch (error) {
-        console.error("Unexpected error checking connection:", error);
-        toast.error("Failed to connect to server. Please check your connection.");
+        console.error("Unexpected error:", error);
+        toast.error("Failed to load device data");
       }
     };
 
-    if (session) {
-      checkConnection();
+    if (session && !selectedDeviceId) {
+      fetchFirstDevice();
     }
-  }, [session]);
+  }, [session, selectedDeviceId]);
 
-  if (loading) {
+  if (sessionLoading) {
     return (
       <div className="container mx-auto p-4 space-y-4">
         <Skeleton className="h-12 w-full" />
@@ -70,10 +81,17 @@ export default function Index() {
   return (
     <div className="container mx-auto p-4">
       <ConnectionStatusBanner />
-      <SimulationDashboard 
-        deviceId={selectedDeviceId}
-        simulatedData={simulatedData}
-      />
+      {selectedDeviceId ? (
+        <SimulationDashboard 
+          deviceId={selectedDeviceId}
+          simulatedData={simulatedData}
+        />
+      ) : (
+        <div className="text-center py-8">
+          <h2 className="text-xl font-semibold mb-2">No Device Selected</h2>
+          <p className="text-gray-600">Please add a PLC device to get started.</p>
+        </div>
+      )}
     </div>
   );
 }
