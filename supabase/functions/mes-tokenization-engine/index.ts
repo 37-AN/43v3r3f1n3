@@ -16,21 +16,10 @@ serve(async (req) => {
     console.log('Received data in MES engine:', refinedData);
 
     // Validate required fields
-    if (!refinedData || typeof refinedData !== 'object') {
+    if (!refinedData?.deviceId || !refinedData?.metrics || !Array.isArray(refinedData.metrics)) {
       console.error('Invalid refined data structure:', refinedData);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid refined data structure' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    if (!refinedData.deviceId || !refinedData.metrics || !Array.isArray(refinedData.metrics)) {
-      console.error('Missing required fields in refined data:', refinedData);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Missing required fields in refined data' }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -95,6 +84,7 @@ serve(async (req) => {
 
     if (assetError) {
       console.error('Error creating tokenized asset:', assetError);
+      throw assetError;
     }
 
     return new Response(
