@@ -15,22 +15,10 @@ serve(async (req) => {
     const { refinedData } = await req.json();
     console.log('Received data in MES engine:', refinedData);
 
-    // Validate required fields
-    if (!refinedData?.deviceId || typeof refinedData.deviceId !== 'string') {
-      console.error('Invalid deviceId:', refinedData?.deviceId);
+    if (!refinedData?.deviceId) {
+      console.error('Missing deviceId in request:', refinedData);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid or missing deviceId' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    if (!refinedData?.metrics || !Array.isArray(refinedData.metrics)) {
-      console.error('Invalid metrics:', refinedData?.metrics);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid or missing metrics array' }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -43,12 +31,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Process and validate each metric
-    const validMetrics = refinedData.metrics.filter(metric => 
-      metric && 
-      typeof metric.metric_type === 'string' && 
-      typeof metric.value === 'number'
-    );
+    // Process and validate metrics
+    const validMetrics = Array.isArray(refinedData.metrics) ? refinedData.metrics
+      .filter(metric => 
+        metric && 
+        typeof metric.metric_type === 'string' && 
+        typeof metric.value === 'number'
+      ) : [];
 
     if (validMetrics.length === 0) {
       console.error('No valid metrics to process');
@@ -68,7 +57,7 @@ serve(async (req) => {
         metric_type: metric.metric_type,
         value: metric.value,
         unit: metric.unit || 'unit',
-        timestamp: metric.timestamp || refinedData.timestamp || new Date().toISOString(),
+        timestamp: metric.timestamp || new Date().toISOString(),
         metadata: {
           quality_score: metric.metadata?.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
@@ -99,6 +88,7 @@ serve(async (req) => {
       }
     };
 
+    console.log('Creating/updating tokenized asset:', assetData);
     const { error: assetError } = await supabaseClient
       .from('tokenized_assets')
       .upsert(assetData);

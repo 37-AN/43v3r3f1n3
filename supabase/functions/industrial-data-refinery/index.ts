@@ -14,9 +14,8 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
-    // Validate required fields
-    if (!rawData?.deviceId || typeof rawData.deviceId !== 'string') {
-      console.error('Invalid deviceId:', rawData?.deviceId);
+    if (!rawData?.deviceId) {
+      console.error('Missing deviceId in request:', rawData);
       return new Response(
         JSON.stringify({ error: 'Invalid or missing deviceId' }),
         { 
@@ -26,19 +25,8 @@ serve(async (req) => {
       );
     }
 
-    if (!rawData?.metrics || !Array.isArray(rawData.metrics)) {
-      console.error('Invalid metrics:', rawData?.metrics);
-      return new Response(
-        JSON.stringify({ error: 'Invalid or missing metrics array' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
     // Process metrics with validation
-    const refinedMetrics = rawData.metrics
+    const refinedMetrics = Array.isArray(rawData.metrics) ? rawData.metrics
       .filter(metric => {
         const isValid = 
           metric &&
@@ -52,24 +40,13 @@ serve(async (req) => {
       .map(metric => ({
         metric_type: metric.metric_type,
         value: metric.value,
-        timestamp: metric.timestamp || rawData.timestamp || new Date().toISOString(),
+        timestamp: metric.timestamp || new Date().toISOString(),
         unit: metric.unit || 'unit',
         metadata: {
           quality_score: metric.metadata?.quality_score || 0.95,
           source: metric.metadata?.source || 'simulation_engine'
         }
-      }));
-
-    if (refinedMetrics.length === 0) {
-      console.error('No valid metrics after processing');
-      return new Response(
-        JSON.stringify({ error: 'No valid metrics provided' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
+      })) : [];
 
     console.log('Processed metrics:', refinedMetrics);
 
@@ -77,7 +54,7 @@ serve(async (req) => {
       deviceId: rawData.deviceId,
       dataType: rawData.dataType || 'measurement',
       metrics: refinedMetrics,
-      timestamp: rawData.timestamp || new Date().toISOString(),
+      timestamp: new Date().toISOString(),
       metadata: {
         ...rawData.metadata,
         processed_at: new Date().toISOString(),
