@@ -51,7 +51,8 @@ export const DataAnalysisProcessor = ({
             unit: 'unit',
             metadata: {
               quality_score: 0.95,
-              source: 'plc_analysis'
+              source: 'plc_analysis',
+              device_id: selectedDeviceId
             }
           };
         }).filter(Boolean);
@@ -97,23 +98,8 @@ export const DataAnalysisProcessor = ({
         }
 
         // Send refined data to MES tokenization engine
-        const mesRequestBody = {
-          refinedData: {
-            ...refinedData,
-            deviceId: selectedDeviceId,
-            metadata: {
-              ...refinedData.metadata,
-              device_id: selectedDeviceId,
-              owner_id: session.user.id,
-              timestamp: new Date().toISOString()
-            }
-          }
-        };
-
-        console.log('Sending data to MES tokenization engine:', mesRequestBody);
-
         const { data: mesData, error: mesError } = await supabase.functions.invoke('mes-tokenization-engine', {
-          body: mesRequestBody
+          body: { refinedData }
         });
 
         if (mesError) {

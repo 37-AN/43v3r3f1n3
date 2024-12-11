@@ -14,30 +14,30 @@ serve(async (req) => {
     const { rawData } = await req.json()
     console.log('Received raw data:', rawData)
     
+    // Validate required fields
     if (!rawData || typeof rawData !== 'object') {
-      console.error('Invalid raw data format')
+      console.error('Invalid raw data format - not an object')
       return new Response(
         JSON.stringify({ error: 'Invalid raw data format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const deviceId = rawData.deviceId
-    console.log('Processing data for device:', deviceId)
-
-    // Validate deviceId is a valid UUID
+    const { deviceId, metrics, metadata } = rawData
+    
+    // Validate deviceId format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!deviceId || !uuidRegex.test(deviceId)) {
-      console.error('Invalid or missing deviceId:', deviceId)
+      console.error('Invalid deviceId:', deviceId)
       return new Response(
-        JSON.stringify({ error: 'Invalid or missing deviceId' }),
+        JSON.stringify({ error: 'Invalid deviceId format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Validate metrics array
-    if (!Array.isArray(rawData.metrics) || rawData.metrics.length === 0) {
-      console.error('Invalid or empty metrics array:', rawData.metrics)
+    if (!Array.isArray(metrics) || metrics.length === 0) {
+      console.error('Invalid metrics format:', metrics)
       return new Response(
         JSON.stringify({ error: 'Invalid metrics format or empty metrics array' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,12 +48,19 @@ serve(async (req) => {
     const refinedData = {
       deviceId,
       timestamp: new Date().toISOString(),
-      metrics: rawData.metrics,
+      metrics: metrics.map(metric => ({
+        ...metric,
+        metadata: {
+          ...metric.metadata,
+          device_id: deviceId,
+          processed_at: new Date().toISOString()
+        }
+      })),
       analysis: "Data processed successfully",
       severity: "info",
       confidence: 0.95,
       metadata: {
-        ...rawData.metadata,
+        ...metadata,
         device_id: deviceId,
         processed_at: new Date().toISOString()
       }

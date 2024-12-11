@@ -6,7 +6,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -14,55 +13,49 @@ serve(async (req) => {
   try {
     const { refinedData } = await req.json()
     console.log('Received refined data:', refinedData)
-    
-    if (!refinedData || !refinedData.deviceId || !refinedData.metrics) {
+
+    if (!refinedData || typeof refinedData !== 'object') {
       console.error('Missing or invalid refined data:', refinedData)
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: 'Missing or invalid refined data in request body' 
         }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Extract deviceId and validate format
-    const deviceId = refinedData.deviceId
+    const { deviceId, metrics, metadata } = refinedData
+
+    // Validate deviceId
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(deviceId)) {
-      console.error('Invalid deviceId format:', deviceId)
+    if (!deviceId || !uuidRegex.test(deviceId)) {
+      console.error('Invalid deviceId in refined data:', deviceId)
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Invalid deviceId format. Must be a valid UUID.' 
+          error: 'Invalid deviceId in refined data' 
         }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Process the refined data
+    // Process the tokenization
     const tokenizationResult = {
       success: true,
-      deviceId: deviceId,
+      deviceId,
       timestamp: new Date().toISOString(),
       tokenId: crypto.randomUUID(),
       metadata: {
         source: 'mes_tokenization',
-        metrics: refinedData.metrics,
+        metrics,
         device_id: deviceId,
-        owner_id: refinedData.metadata?.owner_id,
+        owner_id: metadata?.owner_id,
         processed_at: new Date().toISOString()
       }
     }
 
     console.log('Tokenization result:', tokenizationResult)
-
     return new Response(
       JSON.stringify(tokenizationResult),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -75,10 +68,7 @@ serve(async (req) => {
         error: 'Internal server error',
         details: error.message 
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
