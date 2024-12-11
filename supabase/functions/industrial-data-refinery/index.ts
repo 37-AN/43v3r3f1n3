@@ -36,17 +36,28 @@ serve(async (req) => {
     }
 
     // Validate metrics array
-    if (!Array.isArray(rawData.metrics)) {
-      console.error('Invalid metrics format:', rawData.metrics)
+    if (!Array.isArray(rawData.metrics) || rawData.metrics.length === 0) {
+      console.error('Invalid or empty metrics array:', rawData.metrics)
       return new Response(
-        JSON.stringify({ error: 'Invalid metrics format' }),
+        JSON.stringify({ error: 'Invalid metrics format or empty metrics array' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    // Validate each metric
+    for (const metric of rawData.metrics) {
+      if (!metric.value || typeof metric.value !== 'number') {
+        console.error('Invalid metric value:', metric)
+        return new Response(
+          JSON.stringify({ error: 'Invalid metric value' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     // Process the data and return refined results
     const refinedData = {
-      deviceId: deviceId,
+      deviceId,
       timestamp: new Date().toISOString(),
       metrics: rawData.metrics,
       analysis: "Data processed successfully",
@@ -54,7 +65,7 @@ serve(async (req) => {
       confidence: 0.95,
       metadata: {
         ...rawData.metadata,
-        deviceId: deviceId,
+        device_id: deviceId,
         processed_at: new Date().toISOString()
       }
     }
@@ -67,7 +78,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing data:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

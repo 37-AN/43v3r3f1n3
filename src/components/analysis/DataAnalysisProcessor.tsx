@@ -26,17 +26,39 @@ export const DataAnalysisProcessor = ({
       try {
         console.log('Starting data analysis for device:', selectedDeviceId);
         
-        // Format metrics data
-        const metrics = preparedData.split(' ').map(value => ({
-          metric_type: 'measurement',
-          value: Number(value),
-          timestamp: new Date().toISOString(),
-          unit: 'unit',
-          metadata: {
-            quality_score: 0.95,
-            source: 'plc_analysis'
+        // Validate deviceId format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(selectedDeviceId)) {
+          console.error('Invalid deviceId format:', selectedDeviceId);
+          toast.error('Invalid device ID format');
+          return null;
+        }
+
+        // Format metrics data with proper structure
+        const metrics = preparedData.split(' ').map(value => {
+          const numValue = Number(value);
+          if (isNaN(numValue)) {
+            console.error('Invalid numeric value:', value);
+            return null;
           }
-        }));
+          return {
+            metric_type: 'measurement',
+            value: numValue,
+            timestamp: new Date().toISOString(),
+            unit: 'unit',
+            metadata: {
+              quality_score: 0.95,
+              source: 'plc_analysis',
+              device_id: selectedDeviceId
+            }
+          };
+        }).filter(Boolean);
+
+        if (metrics.length === 0) {
+          console.error('No valid metrics to process');
+          toast.error('No valid metrics to process');
+          return null;
+        }
 
         // Format data for industrial-data-refinery
         const rawData = {
@@ -46,7 +68,7 @@ export const DataAnalysisProcessor = ({
           timestamp: new Date().toISOString(),
           metadata: {
             source: 'plc_analysis',
-            deviceId: selectedDeviceId,
+            device_id: selectedDeviceId,
             quality_score: 0.95
           }
         };
@@ -78,7 +100,8 @@ export const DataAnalysisProcessor = ({
             deviceId: selectedDeviceId,
             metadata: {
               ...refinedData.metadata,
-              deviceId: selectedDeviceId
+              device_id: selectedDeviceId,
+              timestamp: new Date().toISOString()
             }
           }
         };
