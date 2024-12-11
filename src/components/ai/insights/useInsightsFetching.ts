@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useConsole } from '@/contexts/ConsoleContext';
 import { AIInsight } from '@/types/ai';
@@ -6,69 +6,98 @@ import { toast } from 'sonner';
 
 export function useInsightsFetching(deviceId: string) {
   const [insights, setInsights] = useState<AIInsight[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const { addMessage } = useConsole();
 
-  useEffect(() => {
-    const fetchInsights = async () => {
-      try {
-        if (!deviceId) {
-          console.log('No device ID provided');
-          return;
-        }
+  const fetchInsights = useCallback(async (attempt = 0) => {
+    if (!deviceId) {
+      console.log('No device ID provided');
+      return;
+    }
 
-        console.log('Fetching insights for device:', deviceId);
-        
-        // First verify device exists and user has access
-        const { data: deviceData, error: deviceError } = await supabase
-          .from('plc_devices')
-          .select('id, owner_id')
-          .eq('id', deviceId)
-          .single();
+    try {
+      setIsLoading(true);
+      console.log(`Attempt ${attempt + 1}: Fetching insights for device:`, deviceId);
+      
+      // First verify device exists and user has access
+      const { data: deviceData, error: deviceError } = await supabase
+        .from('plc_devices')
+        .select('id, owner_id')
+        .eq('id', deviceId)
+        .single();
 
-        if (deviceError) {
-          console.error('Error checking device:', deviceError);
-          if (deviceError.message.includes('JWT')) {
+      if (deviceError) {
+        console.error('Error checking device:', deviceError);
+        if (deviceError.message.includes('JWT')) {
+          const session = await supabase.auth.getSession();
+          if (!session.data.session) {
             toast.error('Session expired. Please log in again.');
-          } else {
-            toast.error('Error checking device access');
-          }
-          return;
-        }
-
-        if (!deviceData) {
-          console.error('Device not found or no access');
-          toast.error('Device not found or no access');
-          return;
-        }
-
-        console.log('Device data:', deviceData);
-        
-        const { data, error } = await supabase
-          .from('ai_insights')
-          .select('*')
-          .eq('device_id', deviceId)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (error) {
-          console.error('Error fetching insights:', error);
-          if (error.message.includes('JWT')) {
             addMessage('error', 'Session expired. Please log in again.');
-            toast.error('Session expired. Please log in again.');
-          } else {
-            toast.error('Failed to fetch insights');
+            return;
           }
+          // If we have a session but got a JWT error, retry
+          if (attempt < 3) {
+            const backoffDelay = Math.min(1000 * Math.pow(2, attempt), 5000);
+            console.log(`Retrying after ${backoffDelay}ms...`);
+            setTimeout(() => fetchInsights(attempt + 1), backoffDelay);
+            return;
+          }
+        }
+        toast.error('Error checking device access');
+        addMessage('error', `Error checking device: ${deviceError.message}`);
+        return;
+      }
+
+      if (!deviceData) {
+        console.error('Device not found or no access');
+        toast.error('Device not found or no access');
+        addMessage('error', 'Device not found or no access');
+        return;
+      }
+
+      console.log('Device data:', deviceData);
+      
+      const { data, error } = await supabase
+        .from('ai_insights')
+        .select('*')
+        .eq('device_id', deviceId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error('Error fetching insights:', error);
+        if (error.message.includes('JWT') && attempt < 3) {
+          const backoffDelay = Math.min(1000 * Math.pow(2, attempt), 5000);
+          console.log(`Retrying after ${backoffDelay}ms...`);
+          setTimeout(() => fetchInsights(attempt + 1), backoffDelay);
           return;
         }
-
-        console.log('Received insights data:', data);
-        setInsights(data as AIInsight[]);
-      } catch (error) {
-        console.error('Unexpected error:', error);
-        toast.error('Failed to process insights');
+        toast.error('Failed to fetch insights');
+        addMessage('error', `Failed to fetch insights: ${error.message}`);
+        return;
       }
-    };
 
+      console.log('Received insights data:', data);
+      setInsights(data as AIInsight[]);
+      setRetryCount(0); // Reset retry count on success
+
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      if (attempt < 3) {
+        const backoffDelay = Math.min(1000 * Math.pow(2, attempt), 5000);
+        console.log(`Retrying after ${backoffDelay}ms...`);
+        setTimeout(() => fetchInsights(attempt + 1), backoffDelay);
+      } else {
+        toast.error('Failed to process insights');
+        addMessage('error', `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [deviceId, addMessage]);
+
+  useEffect(() => {
     if (deviceId) {
       fetchInsights();
     }
@@ -98,7 +127,7 @@ export function useInsightsFetching(deviceId: string) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [deviceId, addMessage]);
+  }, [deviceId, fetchInsights, addMessage]);
 
-  return { insights };
+  return { insights, isLoading, refetch: () => fetchInsights() };
 }

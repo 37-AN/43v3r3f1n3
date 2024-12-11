@@ -1,11 +1,23 @@
-import { AIInsight } from '@/types/ai';
-import { InsightMessage } from '../InsightMessage';
+import { AIInsight } from "@/types/ai";
+import { InsightMessage } from "../InsightMessage";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface InsightsDisplayProps {
   insights: AIInsight[];
+  isLoading?: boolean;
 }
 
-export function InsightsDisplay({ insights }: InsightsDisplayProps) {
+export function InsightsDisplay({ insights, isLoading }: InsightsDisplayProps) {
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-20 w-full" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {insights.length > 0 ? (
