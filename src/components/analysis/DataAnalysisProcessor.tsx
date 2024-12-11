@@ -63,7 +63,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Format data for industrial-data-refinery with explicit rawData field
+        // Format request body with explicit rawData structure
         const requestBody = {
           rawData: {
             deviceId: selectedDeviceId,
@@ -79,12 +79,15 @@ export const DataAnalysisProcessor = ({
           }
         };
 
-        console.log('Sending data to industrial-data-refinery:', requestBody);
+        console.log('Sending data to industrial-data-refinery:', JSON.stringify(requestBody, null, 2));
 
         // Get AI analysis from edge function
-        const { data: refinedData, error: aiError } = await supabase.functions.invoke('industrial-data-refinery', {
-          body: requestBody
-        });
+        const { data: refinedData, error: aiError } = await supabase.functions.invoke(
+          'industrial-data-refinery',
+          {
+            body: requestBody
+          }
+        );
 
         if (aiError) {
           console.error('Error in AI analysis:', aiError);
@@ -100,9 +103,12 @@ export const DataAnalysisProcessor = ({
         }
 
         // Send refined data to MES tokenization engine
-        const { data: mesData, error: mesError } = await supabase.functions.invoke('mes-tokenization-engine', {
-          body: { refinedData }
-        });
+        const { data: mesData, error: mesError } = await supabase.functions.invoke(
+          'mes-tokenization-engine',
+          {
+            body: { refinedData }
+          }
+        );
 
         if (mesError) {
           console.error('Error in MES tokenization:', mesError);
