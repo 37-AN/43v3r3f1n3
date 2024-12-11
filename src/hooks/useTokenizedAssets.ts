@@ -16,8 +16,8 @@ export const useTokenizedAssets = (deviceId?: string) => {
 
       // Only apply device_id filter if provided
       if (deviceId) {
-        // Use containment operator @> for JSON field search
-        query = query.filter('metadata', 'cs', JSON.stringify({ device_id: deviceId }));
+        // Use cs operator for JSON containment with proper JSON structure
+        query = query.contains('metadata', { device_id: deviceId });
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
