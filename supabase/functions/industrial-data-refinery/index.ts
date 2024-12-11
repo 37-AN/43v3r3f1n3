@@ -14,19 +14,9 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
-    if (!rawData || typeof rawData !== 'object') {
-      console.error('Invalid data format:', rawData);
-      return new Response(
-        JSON.stringify({ error: 'Invalid data format' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    if (!rawData.deviceId || typeof rawData.deviceId !== 'string') {
-      console.error('Invalid or missing deviceId:', rawData.deviceId);
+    // Validate required fields
+    if (!rawData?.deviceId || typeof rawData.deviceId !== 'string') {
+      console.error('Invalid or missing deviceId:', rawData);
       return new Response(
         JSON.stringify({ error: 'Invalid or missing deviceId' }),
         { 
@@ -49,7 +39,7 @@ serve(async (req) => {
 
     const refinedMetrics = rawData.metrics.map(metric => ({
       metric_type: metric.metric_type || 'measurement',
-      value: Number(metric.value),
+      value: typeof metric.value === 'number' ? metric.value : 0,
       timestamp: metric.timestamp || new Date().toISOString(),
       unit: metric.unit || 'unit',
       metadata: {
@@ -71,6 +61,7 @@ serve(async (req) => {
       }
     };
 
+    console.log('Sending refined response:', response);
     return new Response(
       JSON.stringify(response),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

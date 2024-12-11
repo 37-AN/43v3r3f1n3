@@ -63,18 +63,18 @@ serve(async (req) => {
 
     await Promise.all(mesMetricsPromises);
 
-    // Create tokenized asset
+    // Create tokenized asset with proper metadata format
     const assetData = {
       asset_type: 'industrial_metric',
       name: `Device ${refinedData.deviceId} Metrics`,
       token_symbol: 'MES',
       total_supply: 1000000,
       price_per_token: 0.001,
-      metadata: {
+      metadata: JSON.stringify({
         source_device_id: refinedData.deviceId,
         last_update: new Date().toISOString(),
         quality_score: refinedData.metadata?.quality_score || 0.95
-      }
+      })
     };
 
     console.log('Creating tokenized asset:', assetData);
