@@ -1,69 +1,55 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-function isValidUUID(uuid: string) {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { refinedData } = await req.json();
-    console.log('Received refined data:', refinedData);
-
+    const { refinedData } = await req.json()
+    
     if (!refinedData || !refinedData.deviceId) {
-      throw new Error('Missing deviceId in request');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid or missing deviceId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    if (!isValidUUID(refinedData.deviceId)) {
-      throw new Error('Invalid deviceId format. Must be a valid UUID.');
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(refinedData.deviceId)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid deviceId format. Must be a valid UUID.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Process metrics into MES format
-    const mesMetrics = refinedData.metrics.map((metric: any) => ({
-      device_id: refinedData.deviceId,
-      metric_type: metric.metric_type || 'unknown',
-      value: metric.refined_value || metric.value,
-      unit: metric.unit || 'unit',
+    // Process the refined data
+    const tokenizationResult = {
+      success: true,
+      deviceId: refinedData.deviceId,
       timestamp: new Date().toISOString(),
+      tokenId: crypto.randomUUID(),
       metadata: {
-        quality_score: metric.quality_score || 0.8,
-        source: 'mes_tokenization_engine',
-        original_value: metric.value,
+        source: 'mes_tokenization',
+        metrics: refinedData.metrics || []
       }
-    }));
-
-    console.log('Processed MES metrics:', mesMetrics);
+    }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        mesMetrics,
-        tokenizationStatus: 'processed',
-        timestamp: new Date().toISOString()
-      }),
+      JSON.stringify(tokenizationResult),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    )
   } catch (error) {
-    console.error('Error in MES tokenization:', error);
+    console.error('Error in tokenization:', error)
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+      JSON.stringify({ success: false, error: 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-});
+})

@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { updateDeviceMetrics } from "@/utils/metricCalculations";
 import { DeviceSimulation, isValidSimulationPayload } from "@/types/simulation";
-import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { DeviceMetrics } from "./device/DeviceMetrics";
 import { DeviceControls } from "./device/DeviceControls";
 import { DeviceMetric } from "@/types/device";
+import { validateDeviceAccess } from "./device/DeviceValidation";
+import { startSimulation, stopSimulation } from "./device/DeviceSimulation";
 
 interface DeviceCardProps {
   name: string;
@@ -26,40 +27,10 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
   useEffect(() => {
     const checkSimulationStatus = async () => {
       try {
-        // First verify the session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          toast.error('Authentication error. Please log in again.');
+        if (!await validateDeviceAccess(supabase, deviceId)) {
           return;
         }
 
-        if (!session) {
-          console.log('No active session');
-          toast.error('Please log in to continue');
-          return;
-        }
-
-        // Then check device access
-        const { data: device, error: deviceError } = await supabase
-          .from('plc_devices')
-          .select('id, owner_id')
-          .eq('id', deviceId)
-          .single();
-
-        if (deviceError) {
-          console.error('Error checking device access:', deviceError);
-          toast.error('Error checking device access');
-          return;
-        }
-
-        if (!device) {
-          console.error('Device not found or no access');
-          toast.error('Device not found or no access');
-          return;
-        }
-
-        // Finally check simulation status
         const { data, error } = await supabase
           .from('device_simulations')
           .select('is_running, parameters')
@@ -89,7 +60,7 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
     const simulationChanges = supabase
       .channel(`device_simulations_${deviceId}`)
       .on(
-        'postgres_changes' as const,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
@@ -133,59 +104,13 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
   const toggleSimulation = async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Please log in to continue');
-        return;
-      }
-
       if (!isSimulating) {
-        const simulationData = {
-          device_id: deviceId,
-          simulation_type: 'modbus',
-          parameters: {
-            port: 502,
-            slave_id: 1,
-            registers: [
-              { address: 0, value: Math.floor(Math.random() * 1000) },
-              { address: 1, value: Math.floor(Math.random() * 1000) }
-            ]
-          },
-          is_running: true
-        };
-
-        const { data, error } = await supabase
-          .from('device_simulations')
-          .insert([simulationData])
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error starting simulation:', error);
-          toast.error('Failed to start simulation');
-          return;
-        }
-
-        console.log('Started simulation:', data);
-        toast.success('Simulation started');
+        const result = await startSimulation(deviceId);
+        if (!result) return;
       } else {
-        const { error } = await supabase
-          .from('device_simulations')
-          .update({ is_running: false })
-          .eq('device_id', deviceId);
-
-        if (error) {
-          console.error('Error stopping simulation:', error);
-          toast.error('Failed to stop simulation');
-          return;
-        }
-
-        console.log('Stopped simulation for device:', deviceId);
-        toast.success('Simulation stopped');
+        const success = await stopSimulation(deviceId);
+        if (!success) return;
       }
-    } catch (error) {
-      console.error('Error toggling simulation:', error);
-      toast.error('Failed to toggle simulation');
     } finally {
       setIsLoading(false);
     }
