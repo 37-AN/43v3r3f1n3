@@ -51,8 +51,7 @@ export const DataAnalysisProcessor = ({
             unit: 'unit',
             metadata: {
               quality_score: 0.95,
-              source: 'plc_analysis',
-              device_id: selectedDeviceId
+              source: 'plc_analysis'
             }
           };
         }).filter(Boolean);
