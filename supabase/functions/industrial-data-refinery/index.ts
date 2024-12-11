@@ -25,9 +25,8 @@ serve(async (req) => {
       );
     }
 
-    const deviceId = rawData.deviceId;
-    if (!deviceId || typeof deviceId !== 'string') {
-      console.error('Invalid or missing deviceId:', deviceId);
+    if (!rawData.deviceId || typeof rawData.deviceId !== 'string') {
+      console.error('Invalid or missing deviceId:', rawData.deviceId);
       return new Response(
         JSON.stringify({ error: 'Invalid or missing deviceId' }),
         { 
@@ -37,33 +36,30 @@ serve(async (req) => {
       );
     }
 
-    // Process metrics with validation
-    const refinedMetrics = Array.isArray(rawData.metrics) ? rawData.metrics
-      .filter(metric => {
-        const isValid = 
-          metric &&
-          typeof metric.metric_type === 'string' &&
-          typeof metric.value === 'number';
-        if (!isValid) {
-          console.warn('Skipping invalid metric:', metric);
+    if (!Array.isArray(rawData.metrics)) {
+      console.error('Invalid metrics format:', rawData.metrics);
+      return new Response(
+        JSON.stringify({ error: 'Invalid metrics format' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
-        return isValid;
-      })
-      .map(metric => ({
-        metric_type: metric.metric_type,
-        value: metric.value,
-        timestamp: metric.timestamp || new Date().toISOString(),
-        unit: metric.unit || 'unit',
-        metadata: {
-          quality_score: metric.metadata?.quality_score || 0.95,
-          source: metric.metadata?.source || 'simulation_engine'
-        }
-      })) : [];
+      );
+    }
 
-    console.log('Processed metrics:', refinedMetrics);
+    const refinedMetrics = rawData.metrics.map(metric => ({
+      metric_type: metric.metric_type || 'measurement',
+      value: Number(metric.value),
+      timestamp: metric.timestamp || new Date().toISOString(),
+      unit: metric.unit || 'unit',
+      metadata: {
+        quality_score: 0.95,
+        source: rawData.metadata?.source || 'industrial_refinery'
+      }
+    }));
 
     const response = {
-      deviceId,
+      deviceId: rawData.deviceId,
       dataType: rawData.dataType || 'measurement',
       metrics: refinedMetrics,
       timestamp: new Date().toISOString(),

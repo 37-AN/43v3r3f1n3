@@ -36,7 +36,7 @@ export function useDeviceUpdates(): UseDeviceUpdatesReturn {
             { label: 'Temperature', value: 0, unit: '°C' },
             { label: 'Pressure', value: 0, unit: 'PSI' },
             { label: 'Flow Rate', value: 0, unit: 'L/min' }
-          ]
+          ] as DeviceMetric[]
         }));
 
         setDevices(initialDevices);
@@ -59,25 +59,27 @@ export function useDeviceUpdates(): UseDeviceUpdatesReturn {
           table: 'device_simulations',
           filter: 'is_running=eq.true'
         },
-        (payload: { new: DeviceSimulation }) => {
+        (payload) => {
           console.log('Received simulation update:', payload);
-          if (!payload.new) return;
-
-          setDevices(currentDevices => 
-            currentDevices.map(device => {
-              if (device.id === payload.new.device_id) {
-                return {
-                  ...device,
-                  status: payload.new.is_running ? 'active' : 'warning',
-                  metrics: device.metrics.map(metric => ({
-                    ...metric,
-                    value: Math.random() * 100
-                  }))
-                };
-              }
-              return device;
-            })
-          );
+          const simulation = payload.new as DeviceSimulation;
+          
+          if (simulation && simulation.device_id) {
+            setDevices(currentDevices => 
+              currentDevices.map(device => {
+                if (device.id === simulation.device_id) {
+                  return {
+                    ...device,
+                    status: simulation.is_running ? 'active' : 'warning',
+                    metrics: device.metrics.map(metric => ({
+                      ...metric,
+                      value: Math.random() * 100
+                    }))
+                  };
+                }
+                return device;
+              })
+            );
+          }
         }
       )
       .subscribe();

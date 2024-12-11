@@ -31,26 +31,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Process and validate metrics
-    const validMetrics = Array.isArray(refinedData.metrics) ? refinedData.metrics
-      .filter(metric => 
-        metric && 
-        typeof metric.metric_type === 'string' && 
-        typeof metric.value === 'number'
-      ) : [];
-
-    if (validMetrics.length === 0) {
-      console.warn('No valid metrics to process');
+    if (!Array.isArray(refinedData.metrics)) {
+      console.error('Invalid metrics format:', refinedData.metrics);
       return new Response(
-        JSON.stringify({ success: true, message: 'No metrics to process' }),
+        JSON.stringify({ success: false, error: 'Invalid metrics format' }),
         { 
+          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
     // Store metrics
-    const mesMetricsPromises = validMetrics.map(metric => {
+    const mesMetricsPromises = refinedData.metrics.map(metric => {
       const metricData = {
         device_id: refinedData.deviceId,
         metric_type: metric.metric_type,
@@ -60,8 +53,7 @@ serve(async (req) => {
         metadata: {
           quality_score: metric.metadata?.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
-          source_device_id: refinedData.deviceId,
-          category: metric.category || 'measurement'
+          source_device_id: refinedData.deviceId
         }
       };
 
@@ -70,9 +62,8 @@ serve(async (req) => {
     });
 
     await Promise.all(mesMetricsPromises);
-    console.log('Successfully stored MES metrics');
 
-    // Create or update tokenized asset
+    // Create tokenized asset
     const assetData = {
       asset_type: 'industrial_metric',
       name: `Device ${refinedData.deviceId} Metrics`,
@@ -86,7 +77,7 @@ serve(async (req) => {
       }
     };
 
-    console.log('Creating/updating tokenized asset:', assetData);
+    console.log('Creating tokenized asset:', assetData);
     const { error: assetError } = await supabaseClient
       .from('tokenized_assets')
       .upsert(assetData);
@@ -100,7 +91,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true,
         message: 'Data processed successfully',
-        metrics_count: validMetrics.length
+        metrics_count: refinedData.metrics.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
