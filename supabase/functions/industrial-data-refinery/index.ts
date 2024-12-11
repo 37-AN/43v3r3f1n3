@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -65,13 +64,10 @@ serve(async (req) => {
 });
 
 function calculateQualityScore(metric: any): number {
-  // Implement quality score calculation based on your requirements
-  // This is a simple example
   if (!metric || typeof metric.value !== 'number') {
     return 0;
   }
   
-  // Check if value is within expected range
   const isInRange = metric.value >= 0 && metric.value < 10000;
   const hasValidTimestamp = Boolean(metric.timestamp);
   const hasMetadata = Boolean(metric.metadata);

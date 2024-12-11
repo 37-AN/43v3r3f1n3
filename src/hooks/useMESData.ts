@@ -53,13 +53,13 @@ export function useMESData(deviceId: string) {
   const { data: mesMetrics, isLoading: mesLoading } = useQuery({
     queryKey: ['mes_metrics', deviceId],
     queryFn: fetchMESMetrics,
-    enabled: !!deviceId
+    enabled: !!deviceId && deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) !== null
   });
 
   const { data: tokenizedAssets, isLoading: assetsLoading } = useQuery({
     queryKey: ['tokenized_assets', deviceId],
     queryFn: fetchTokenizedAssets,
-    enabled: !!deviceId
+    enabled: !!deviceId && deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) !== null
   });
 
   return {
