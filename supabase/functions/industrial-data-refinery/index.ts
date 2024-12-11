@@ -15,11 +15,11 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
-    // Validate deviceId
-    if (!rawData?.deviceId || typeof rawData.deviceId !== 'string') {
-      console.error('Invalid or missing deviceId:', rawData?.deviceId);
+    // Enhanced deviceId validation
+    if (!rawData?.deviceId || typeof rawData.deviceId !== 'string' || !rawData.deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      console.error('Invalid deviceId format:', rawData?.deviceId);
       return new Response(
-        JSON.stringify({ error: 'Invalid or missing deviceId' }),
+        JSON.stringify({ error: 'Invalid deviceId format. Must be a valid UUID.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

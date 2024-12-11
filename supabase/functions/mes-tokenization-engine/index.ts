@@ -15,11 +15,14 @@ serve(async (req) => {
     const { refinedData } = await req.json();
     console.log('Received refined data in MES engine:', refinedData);
 
-    // Validate required fields
-    if (!refinedData?.deviceId || typeof refinedData.deviceId !== 'string') {
-      console.error('Invalid or missing deviceId:', refinedData?.deviceId);
+    // Enhanced deviceId validation
+    if (!refinedData?.deviceId || typeof refinedData.deviceId !== 'string' || !refinedData.deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      console.error('Invalid deviceId format:', refinedData?.deviceId);
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid or missing deviceId' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid deviceId format. Must be a valid UUID.' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -27,7 +30,10 @@ serve(async (req) => {
     if (!Array.isArray(refinedData.metrics) || refinedData.metrics.length === 0) {
       console.error('Invalid metrics format:', refinedData.metrics);
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid data format' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Metrics must be a non-empty array' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -37,7 +43,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Store MES metrics
+    // Store MES metrics with enhanced validation
     const mesMetricsPromises = refinedData.metrics.map(metric => {
       if (!metric.metric_type || typeof metric.value !== 'number') {
         console.error('Invalid metric format:', metric);
@@ -63,7 +69,7 @@ serve(async (req) => {
 
     await Promise.all(mesMetricsPromises);
 
-    // Create or update tokenized asset
+    // Create or update tokenized asset with proper validation
     const assetData = {
       asset_type: 'industrial_metric',
       name: `Device ${refinedData.deviceId} Metrics`,
