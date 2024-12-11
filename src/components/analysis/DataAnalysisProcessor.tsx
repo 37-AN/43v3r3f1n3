@@ -37,7 +37,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Format metrics data with proper structure
+        // Format metrics data
         const metrics = preparedData.split(' ').map(value => {
           const numValue = Number(value);
           if (isNaN(numValue)) {
@@ -63,7 +63,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Format request body for industrial-data-refinery
+        // Call industrial-data-refinery
         const refineryRequestBody = {
           rawData: {
             deviceId: selectedDeviceId,
@@ -81,7 +81,6 @@ export const DataAnalysisProcessor = ({
 
         console.log('Sending data to industrial-data-refinery:', JSON.stringify(refineryRequestBody, null, 2));
 
-        // Get AI analysis from edge function
         const { data: refinedData, error: aiError } = await supabase.functions.invoke(
           'industrial-data-refinery',
           {
@@ -102,7 +101,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Format MES request with proper refinedData structure
+        // Call MES tokenization engine
         const mesRequestBody = {
           refinedData: {
             deviceId: selectedDeviceId,
@@ -119,7 +118,6 @@ export const DataAnalysisProcessor = ({
 
         console.log('Sending data to MES engine:', JSON.stringify(mesRequestBody, null, 2));
 
-        // Send refined data to MES tokenization engine
         const { data: mesData, error: mesError } = await supabase.functions.invoke(
           'mes-tokenization-engine',
           {

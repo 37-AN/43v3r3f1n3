@@ -5,45 +5,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function validateRefinedData(refinedData: any) {
-  console.log('Validating refined data:', refinedData);
-  
-  if (!refinedData || typeof refinedData !== 'object') {
-    return { isValid: false, error: 'Refined data must be an object' };
-  }
-
-  const { deviceId, metrics, metadata } = refinedData;
-
-  // Validate deviceId
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!deviceId || !uuidRegex.test(deviceId)) {
-    return { isValid: false, error: 'Invalid deviceId format' };
-  }
-
-  // Validate metrics
-  if (!Array.isArray(metrics)) {
-    return { isValid: false, error: 'Metrics must be an array' };
-  }
-
-  // Validate metadata
-  if (!metadata || typeof metadata !== 'object') {
-    return { isValid: false, error: 'Invalid metadata format' };
-  }
-
-  return { isValid: true };
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const requestData = await req.json();
-    console.log('Received request data:', requestData);
+    const { refinedData } = await req.json();
+    console.log('Received refined data:', refinedData);
 
-    if (!requestData.refinedData) {
-      console.error('No refinedData in request body');
+    if (!refinedData) {
+      console.error('No refinedData field in request');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -56,11 +28,13 @@ serve(async (req) => {
       );
     }
 
-    const validation = validateRefinedData(requestData.refinedData);
-    if (!validation.isValid) {
-      console.error('Validation error:', validation.error);
+    if (!refinedData.deviceId || !refinedData.metrics) {
+      console.error('Invalid refinedData structure:', refinedData);
       return new Response(
-        JSON.stringify({ success: false, error: validation.error }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid refinedData structure' 
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -68,24 +42,25 @@ serve(async (req) => {
       );
     }
 
-    // Process the tokenization
-    const tokenizationResult = {
+    // Process the metrics and generate MES tokens
+    const mesResult = {
       success: true,
-      deviceId: requestData.refinedData.deviceId,
-      timestamp: new Date().toISOString(),
-      tokenId: crypto.randomUUID(),
+      deviceId: refinedData.deviceId,
+      tokenizedMetrics: refinedData.metrics.map(metric => ({
+        ...metric,
+        tokenId: crypto.randomUUID(),
+        tokenizedAt: new Date().toISOString()
+      })),
       metadata: {
-        source: 'mes_tokenization',
-        metrics: requestData.refinedData.metrics,
-        device_id: requestData.refinedData.deviceId,
-        owner_id: requestData.refinedData.metadata?.owner_id,
-        processed_at: new Date().toISOString()
+        ...refinedData.metadata,
+        tokenization_timestamp: new Date().toISOString(),
+        source: 'mes_tokenization_engine'
       }
     };
 
-    console.log('Tokenization result:', tokenizationResult);
+    console.log('Returning MES result:', mesResult);
     return new Response(
-      JSON.stringify(tokenizationResult),
+      JSON.stringify(mesResult),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

@@ -5,36 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function validateRawData(rawData: any) {
-  console.log('Validating raw data:', rawData);
-  
-  if (!rawData || typeof rawData !== 'object') {
-    return { isValid: false, error: 'Raw data must be an object' };
-  }
-
-  const { deviceId, metrics, metadata } = rawData;
-
-  // Validate deviceId format
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!deviceId || !uuidRegex.test(deviceId)) {
-    return { isValid: false, error: 'Invalid deviceId format' };
-  }
-
-  // Validate metrics array
-  if (!Array.isArray(metrics) || metrics.length === 0) {
-    return { isValid: false, error: 'Metrics must be a non-empty array' };
-  }
-
-  // Validate each metric
-  for (const metric of metrics) {
-    if (!metric.metric_type || typeof metric.value !== 'number') {
-      return { isValid: false, error: 'Each metric must have a metric_type and numeric value' };
-    }
-  }
-
-  return { isValid: true };
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -42,11 +12,11 @@ serve(async (req) => {
   }
 
   try {
-    const requestData = await req.json();
-    console.log('Received request data:', requestData);
+    const { rawData } = await req.json();
+    console.log('Received raw data:', rawData);
 
-    if (!requestData.rawData) {
-      console.error('No rawData in request body');
+    if (!rawData) {
+      console.error('No rawData field in request');
       return new Response(
         JSON.stringify({ error: 'Request must include rawData field' }),
         { 
@@ -56,11 +26,10 @@ serve(async (req) => {
       );
     }
 
-    const validation = validateRawData(requestData.rawData);
-    if (!validation.isValid) {
-      console.error('Validation error:', validation.error);
+    if (!rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
+      console.error('Invalid rawData structure:', rawData);
       return new Response(
-        JSON.stringify({ error: validation.error }),
+        JSON.stringify({ error: 'Invalid rawData structure' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -68,23 +37,24 @@ serve(async (req) => {
       );
     }
 
-    // Process the data and return refined results
+    // Process the metrics and generate analysis
     const refinedData = {
-      deviceId: requestData.rawData.deviceId,
-      timestamp: new Date().toISOString(),
-      metrics: requestData.rawData.metrics.map((metric: any) => ({
+      deviceId: rawData.deviceId,
+      metrics: rawData.metrics.map(metric => ({
         ...metric,
         metadata: {
           ...metric.metadata,
-          processed_at: new Date().toISOString()
+          refined: true,
+          refinement_timestamp: new Date().toISOString()
         }
       })),
-      analysis: "Data processed successfully",
-      severity: "info",
+      analysis: 'Data processed and refined successfully',
+      severity: 'info',
       confidence: 0.95,
       metadata: {
-        ...requestData.rawData.metadata,
-        processed_at: new Date().toISOString()
+        ...rawData.metadata,
+        processed_at: new Date().toISOString(),
+        source: 'industrial_data_refinery'
       }
     };
 
