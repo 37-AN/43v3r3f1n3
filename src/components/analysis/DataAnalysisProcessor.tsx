@@ -26,7 +26,7 @@ export const DataAnalysisProcessor = ({
       try {
         console.log('Starting data analysis for device:', selectedDeviceId);
         
-        // Format data for industrial-data-refinery
+        // Format data for industrial-data-refinery with explicit deviceId
         const rawData = {
           deviceId: selectedDeviceId,
           dataType: 'measurement',
@@ -38,7 +38,8 @@ export const DataAnalysisProcessor = ({
           })),
           timestamp: new Date().toISOString(),
           metadata: {
-            source: 'plc_analysis'
+            source: 'plc_analysis',
+            deviceId: selectedDeviceId // Add deviceId to metadata as well
           }
         };
 
