@@ -77,7 +77,7 @@ export const DataAnalysisProcessor = ({
           }
         };
 
-        console.log('Sending data to industrial-data-refinery:', rawData);
+        console.log('Sending data to industrial-data-refinery:', { rawData });
 
         // Get AI analysis from edge function
         const { data: refinedData, error: aiError } = await supabase.functions.invoke('industrial-data-refinery', {

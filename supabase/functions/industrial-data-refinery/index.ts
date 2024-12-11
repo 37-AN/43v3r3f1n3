@@ -6,6 +6,8 @@ const corsHeaders = {
 }
 
 function validateRawData(rawData: any) {
+  console.log('Validating raw data:', rawData);
+  
   if (!rawData || typeof rawData !== 'object') {
     return { isValid: false, error: 'Raw data must be an object' };
   }
@@ -34,15 +36,27 @@ function validateRawData(rawData: any) {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { rawData } = await req.json();
-    console.log('Received raw data:', rawData);
+    const requestData = await req.json();
+    console.log('Received request data:', requestData);
 
-    const validation = validateRawData(rawData);
+    if (!requestData.rawData) {
+      console.error('No rawData in request body');
+      return new Response(
+        JSON.stringify({ error: 'Request must include rawData field' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const validation = validateRawData(requestData.rawData);
     if (!validation.isValid) {
       console.error('Validation error:', validation.error);
       return new Response(
@@ -54,7 +68,7 @@ serve(async (req) => {
       );
     }
 
-    const { deviceId, metrics, metadata } = rawData;
+    const { deviceId, metrics, metadata } = requestData.rawData;
 
     // Process the data and return refined results
     const refinedData = {
