@@ -63,12 +63,12 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Format data for industrial-data-refinery
+        // Format data for industrial-data-refinery with explicit rawData field
         const requestBody = {
           rawData: {
             deviceId: selectedDeviceId,
             dataType: 'measurement',
-            metrics,
+            metrics: metrics,
             timestamp: new Date().toISOString(),
             metadata: {
               source: 'plc_analysis',
