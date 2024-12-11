@@ -10,6 +10,7 @@ import { DeviceControls } from "./device/DeviceControls";
 import { DeviceMetric } from "@/types/device";
 import { validateDeviceAccess } from "./device/DeviceValidation";
 import { startSimulation, stopSimulation } from "./device/DeviceSimulation";
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface DeviceCardProps {
   name: string;
@@ -23,39 +24,51 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
   const [isSimulating, setIsSimulating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [localMetrics, setLocalMetrics] = useState(metrics);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000; // 1 second
+
+  const fetchSimulationStatus = async () => {
+    try {
+      if (!await validateDeviceAccess(supabase, deviceId)) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('device_simulations')
+        .select('is_running, parameters')
+        .eq('device_id', deviceId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Error checking simulation status:', error);
+        if (retryCount < MAX_RETRIES) {
+          console.log(`Retrying fetch attempt ${retryCount + 1} of ${MAX_RETRIES}...`);
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            fetchSimulationStatus();
+          }, RETRY_DELAY * (retryCount + 1));
+          return;
+        }
+        toast.error('Failed to check simulation status');
+        return;
+      }
+
+      setRetryCount(0); // Reset retry count on successful fetch
+      if (data) {
+        console.log('Initial simulation status for device:', deviceId, data);
+        setIsSimulating(data.is_running || false);
+      }
+    } catch (error) {
+      console.error('Error in simulation check:', error);
+      toast.error('Failed to check simulation status');
+    }
+  };
 
   useEffect(() => {
-    const checkSimulationStatus = async () => {
-      try {
-        if (!await validateDeviceAccess(supabase, deviceId)) {
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('device_simulations')
-          .select('is_running, parameters')
-          .eq('device_id', deviceId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (error) {
-          console.error('Error checking simulation status:', error);
-          toast.error('Failed to check simulation status');
-          return;
-        }
-
-        if (data) {
-          console.log('Initial simulation status for device:', deviceId, data);
-          setIsSimulating(data.is_running || false);
-        }
-      } catch (error) {
-        console.error('Error in simulation check:', error);
-        toast.error('Failed to check simulation status');
-      }
-    };
-
-    checkSimulationStatus();
+    fetchSimulationStatus();
 
     const simulationChanges = supabase
       .channel(`device_simulations_${deviceId}`)
@@ -78,12 +91,20 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Realtime subscription status:`, status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to realtime changes');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to realtime changes');
+          toast.error('Error connecting to real-time updates');
+        }
+      });
 
     return () => {
       simulationChanges.unsubscribe();
     };
-  }, [deviceId]);
+  }, [deviceId, retryCount]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
