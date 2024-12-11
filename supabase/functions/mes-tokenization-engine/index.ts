@@ -16,8 +16,26 @@ serve(async (req) => {
     const { refinedData } = await req.json()
     console.log('Received refined data:', refinedData)
     
+    // Check if refinedData exists
+    if (!refinedData) {
+      console.error('Missing refined data in request')
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Missing refined data in request body' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Extract deviceId from either top level or metadata
+    const deviceId = refinedData.deviceId || refinedData.metadata?.deviceId
+    
     // Validate deviceId exists and is a valid UUID
-    if (!refinedData?.deviceId) {
+    if (!deviceId) {
       console.error('Missing deviceId in request')
       return new Response(
         JSON.stringify({ 
@@ -32,8 +50,8 @@ serve(async (req) => {
     }
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(refinedData.deviceId)) {
-      console.error('Invalid deviceId format:', refinedData.deviceId)
+    if (!uuidRegex.test(deviceId)) {
+      console.error('Invalid deviceId format:', deviceId)
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -49,13 +67,13 @@ serve(async (req) => {
     // Process the refined data
     const tokenizationResult = {
       success: true,
-      deviceId: refinedData.deviceId,
+      deviceId: deviceId,
       timestamp: new Date().toISOString(),
       tokenId: crypto.randomUUID(),
       metadata: {
         source: 'mes_tokenization',
         metrics: refinedData.metrics || [],
-        deviceId: refinedData.deviceId
+        deviceId: deviceId
       }
     }
 
