@@ -57,12 +57,12 @@ export const DataAnalysisProcessor = ({
 
         console.log('Received refined data:', refinedData);
 
-        // Send refined data to MES tokenization engine
+        // Send refined data to MES tokenization engine with explicit deviceId
         const { data: mesData, error: mesError } = await supabase.functions.invoke('mes-tokenization-engine', {
           body: { 
             refinedData: {
               ...refinedData,
-              deviceId: selectedDeviceId,
+              deviceId: selectedDeviceId, // Explicitly set deviceId
               timestamp: new Date().toISOString()
             }
           }
