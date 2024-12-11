@@ -63,8 +63,8 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Format request body with explicit rawData structure
-        const requestBody = {
+        // Format request body for industrial-data-refinery
+        const refineryRequestBody = {
           rawData: {
             deviceId: selectedDeviceId,
             dataType: 'measurement',
@@ -79,13 +79,13 @@ export const DataAnalysisProcessor = ({
           }
         };
 
-        console.log('Sending data to industrial-data-refinery:', JSON.stringify(requestBody, null, 2));
+        console.log('Sending data to industrial-data-refinery:', JSON.stringify(refineryRequestBody, null, 2));
 
         // Get AI analysis from edge function
         const { data: refinedData, error: aiError } = await supabase.functions.invoke(
           'industrial-data-refinery',
           {
-            body: requestBody
+            body: refineryRequestBody
           }
         );
 
@@ -107,10 +107,10 @@ export const DataAnalysisProcessor = ({
           refinedData: {
             deviceId: selectedDeviceId,
             metrics: refinedData.metrics || metrics,
-            analysis: refinedData.analysis,
+            analysis: refinedData.analysis || 'No analysis available',
             timestamp: new Date().toISOString(),
             metadata: {
-              ...refinedData.metadata,
+              ...(refinedData.metadata || {}),
               owner_id: session.user.id,
               source: 'industrial_data_refinery'
             }
