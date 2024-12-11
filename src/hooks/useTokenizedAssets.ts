@@ -16,7 +16,7 @@ export const useTokenizedAssets = (deviceId?: string) => {
 
       // Only apply device_id filter if provided
       if (deviceId) {
-        // Use cs operator for JSON containment with proper JSON structure
+        // Use proper JSON containment syntax with object
         query = query.contains('metadata', { device_id: deviceId });
       }
 
