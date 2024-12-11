@@ -15,7 +15,20 @@ serve(async (req) => {
     const { refinedData } = await req.json();
     console.log('Received data in MES engine:', refinedData);
 
-    if (!refinedData?.deviceId || typeof refinedData.deviceId !== 'string') {
+    // Validate data structure
+    if (!refinedData || typeof refinedData !== 'object') {
+      console.error('Invalid data format:', refinedData);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid data format' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Validate deviceId
+    if (!refinedData.deviceId || typeof refinedData.deviceId !== 'string') {
       console.error('Invalid or missing deviceId:', refinedData);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid or missing deviceId' }),
@@ -70,11 +83,11 @@ serve(async (req) => {
       token_symbol: 'MES',
       total_supply: 1000000,
       price_per_token: 0.001,
-      metadata: JSON.stringify({
+      metadata: {
         source_device_id: refinedData.deviceId,
         last_update: new Date().toISOString(),
         quality_score: refinedData.metadata?.quality_score || 0.95
-      })
+      }
     };
 
     console.log('Creating tokenized asset:', assetData);
