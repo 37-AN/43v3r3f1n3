@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsole } from "@/contexts/ConsoleContext";
 import { useInsightCalculations } from "./ai/useInsightCalculations";
-import { AIInsight } from "@/types/ai";
 import { toast } from "sonner";
 import { InsightsHeader } from "./ai/insights/InsightsHeader";
 import { InsightsContent } from "./ai/insights/InsightsContent";
@@ -11,11 +10,6 @@ import { useAIInsightsFetching } from "@/hooks/useAIInsightsFetching";
 
 export function AIInsights({ deviceId }: { deviceId: string }) {
   const { insights, isLoading, fetchInsights } = useAIInsightsFetching(deviceId);
-  const [metrics, setMetrics] = useState({
-    efficiency: 0,
-    stability: 0,
-    anomalyCount: 0
-  });
   const { addMessage } = useConsole();
   const { calculateEfficiencyMetric, calculateStabilityMetric } = useInsightCalculations(insights);
 
@@ -36,12 +30,11 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
         },
         (payload) => {
           console.log('New insight received:', payload);
-          const newInsight = payload.new as AIInsight;
-          setInsights(current => [newInsight, ...current.slice(0, 4)]);
+          fetchInsights(0); // Refresh insights when new data arrives
           
-          if (newInsight.severity === 'critical') {
-            addMessage('error', newInsight.message);
-            toast.error(newInsight.message);
+          if (payload.new.severity === 'critical') {
+            addMessage('error', payload.new.message);
+            toast.error(payload.new.message);
           }
         }
       )
@@ -52,17 +45,11 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
     };
   }, [deviceId, addMessage, fetchInsights]);
 
-  useEffect(() => {
-    const efficiency = calculateEfficiencyMetric(insights);
-    const stability = calculateStabilityMetric(insights);
-    const anomalyCount = insights.filter(i => i.severity === 'critical').length;
-
-    setMetrics({
-      efficiency,
-      stability,
-      anomalyCount
-    });
-  }, [insights, calculateEfficiencyMetric, calculateStabilityMetric]);
+  const metrics = {
+    efficiency: calculateEfficiencyMetric(insights),
+    stability: calculateStabilityMetric(insights),
+    anomalyCount: insights.filter(i => i.severity === 'critical').length
+  };
 
   if (!deviceId) {
     return (
