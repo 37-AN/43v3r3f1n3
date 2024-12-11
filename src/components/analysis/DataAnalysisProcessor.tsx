@@ -102,11 +102,28 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
+        // Format MES request with proper refinedData structure
+        const mesRequestBody = {
+          refinedData: {
+            deviceId: selectedDeviceId,
+            metrics: refinedData.metrics || metrics,
+            analysis: refinedData.analysis,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              ...refinedData.metadata,
+              owner_id: session.user.id,
+              source: 'industrial_data_refinery'
+            }
+          }
+        };
+
+        console.log('Sending data to MES engine:', JSON.stringify(mesRequestBody, null, 2));
+
         // Send refined data to MES tokenization engine
         const { data: mesData, error: mesError } = await supabase.functions.invoke(
           'mes-tokenization-engine',
           {
-            body: { refinedData }
+            body: mesRequestBody
           }
         );
 
