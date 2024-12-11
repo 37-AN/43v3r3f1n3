@@ -39,7 +39,7 @@ export const DataAnalysisProcessor = ({
           timestamp: new Date().toISOString(),
           metadata: {
             source: 'plc_analysis',
-            deviceId: selectedDeviceId // Add deviceId to metadata as well
+            deviceId: selectedDeviceId
           }
         };
 
@@ -63,6 +63,10 @@ export const DataAnalysisProcessor = ({
           refinedData: {
             ...refinedData,
             deviceId: selectedDeviceId,
+            metadata: {
+              ...refinedData?.metadata,
+              deviceId: selectedDeviceId
+            },
             timestamp: new Date().toISOString()
           }
         };
