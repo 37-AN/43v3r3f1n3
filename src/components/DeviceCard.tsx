@@ -11,6 +11,8 @@ import { DeviceMetric } from "@/types/device";
 import { validateDeviceAccess } from "./device/DeviceValidation";
 import { startSimulation, stopSimulation } from "./device/DeviceSimulation";
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { Button } from "./ui/button";
+import { Loader2 } from "lucide-react";
 
 interface DeviceCardProps {
   name: string;
@@ -26,6 +28,7 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
   const [localMetrics, setLocalMetrics] = useState(metrics);
   const [retryCount, setRetryCount] = useState(0);
   const [lastError, setLastError] = useState<Error | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 1000; // 1 second
 
@@ -33,6 +36,7 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
     try {
       console.log('Fetching simulation status for device:', deviceId);
       setLastError(null);
+      setIsRetrying(true);
 
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session) {
@@ -41,8 +45,14 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
         return;
       }
 
+      // Add retry delay if this is a retry attempt
+      if (retryCount > 0) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount - 1)));
+      }
+
       if (!await validateDeviceAccess(supabase, deviceId)) {
         console.error('Device access validation failed');
+        toast.error('Access to device denied');
         return;
       }
 
@@ -59,7 +69,7 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
         if (retryCount < MAX_RETRIES) {
           console.log(`Retrying fetch attempt ${retryCount + 1} of ${MAX_RETRIES}...`);
           setRetryCount(prev => prev + 1);
-          setTimeout(fetchSimulationStatus, RETRY_DELAY * Math.pow(2, retryCount));
+          await fetchSimulationStatus();
           return;
         }
         setLastError(error);
@@ -76,6 +86,8 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
       console.error('Error in simulation check:', error);
       setLastError(error as Error);
       toast.error('Failed to check simulation status');
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -157,16 +169,24 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
           <div className="text-red-500">
             Failed to load device data. Please check your connection.
           </div>
-          <button 
+          <Button 
             onClick={() => {
               setRetryCount(0);
               setLastError(null);
               fetchSimulationStatus();
             }}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            disabled={isRetrying}
+            className="w-full"
           >
-            Retry
-          </button>
+            {isRetrying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Retrying...
+              </>
+            ) : (
+              'Retry'
+            )}
+          </Button>
         </div>
       </Card>
     );
