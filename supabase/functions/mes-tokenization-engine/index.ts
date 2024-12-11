@@ -13,29 +13,21 @@ serve(async (req) => {
 
   try {
     const { refinedData } = await req.json();
-    console.log('Received data in MES engine:', refinedData);
+    console.log('Received refined data in MES engine:', refinedData);
 
-    // Validate data structure
-    if (!refinedData || typeof refinedData !== 'object') {
-      console.error('Invalid data format:', refinedData);
+    if (!refinedData?.deviceId || typeof refinedData.deviceId !== 'string') {
+      console.error('Invalid or missing deviceId:', refinedData?.deviceId);
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid data format' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ success: false, error: 'Invalid or missing deviceId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate deviceId
-    if (!refinedData.deviceId || typeof refinedData.deviceId !== 'string') {
-      console.error('Invalid or missing deviceId:', refinedData);
+    if (!Array.isArray(refinedData.metrics)) {
+      console.error('Invalid metrics format:', refinedData.metrics);
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid or missing deviceId' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ success: false, error: 'Metrics must be an array' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -44,27 +36,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    if (!Array.isArray(refinedData.metrics)) {
-      console.error('Invalid metrics format:', refinedData.metrics);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid metrics format' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Store metrics
+    // Store MES metrics
     const mesMetricsPromises = refinedData.metrics.map(metric => {
       const metricData = {
         device_id: refinedData.deviceId,
         metric_type: metric.metric_type,
         value: metric.value,
         unit: metric.unit || 'unit',
-        timestamp: metric.timestamp || new Date().toISOString(),
+        timestamp: refinedData.timestamp || new Date().toISOString(),
         metadata: {
-          quality_score: metric.metadata?.quality_score || 0.95,
+          quality_score: metric.quality_score || 0.95,
           source: refinedData.metadata?.source || 'mes_engine',
           source_device_id: refinedData.deviceId
         }
@@ -76,7 +57,7 @@ serve(async (req) => {
 
     await Promise.all(mesMetricsPromises);
 
-    // Create tokenized asset with proper metadata format
+    // Create or update tokenized asset
     const assetData = {
       asset_type: 'industrial_metric',
       name: `Device ${refinedData.deviceId} Metrics`,
@@ -86,11 +67,11 @@ serve(async (req) => {
       metadata: {
         source_device_id: refinedData.deviceId,
         last_update: new Date().toISOString(),
-        quality_score: refinedData.metadata?.quality_score || 0.95
+        quality_score: refinedData.metrics[0]?.quality_score || 0.95
       }
     };
 
-    console.log('Creating tokenized asset:', assetData);
+    console.log('Creating/updating tokenized asset:', assetData);
     const { error: assetError } = await supabaseClient
       .from('tokenized_assets')
       .upsert(assetData);

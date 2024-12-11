@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,80 +15,55 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
-    // Validate data structure
-    if (!rawData || typeof rawData !== 'object') {
-      console.error('Invalid data format:', rawData);
-      return new Response(
-        JSON.stringify({ error: 'Invalid data format' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Validate deviceId
-    if (!rawData.deviceId || typeof rawData.deviceId !== 'string') {
-      console.error('Invalid or missing deviceId:', rawData);
+    // Validate required fields
+    if (!rawData?.deviceId || typeof rawData.deviceId !== 'string') {
+      console.error('Invalid or missing deviceId:', rawData?.deviceId);
       return new Response(
         JSON.stringify({ error: 'Invalid or missing deviceId' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate metrics array
     if (!Array.isArray(rawData.metrics)) {
       console.error('Invalid metrics format:', rawData.metrics);
       return new Response(
-        JSON.stringify({ error: 'Invalid metrics format' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Metrics must be an array' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const refinedMetrics = rawData.metrics.map(metric => ({
-      metric_type: metric.metric_type || 'measurement',
-      value: typeof metric.value === 'number' ? metric.value : 0,
-      timestamp: metric.timestamp || new Date().toISOString(),
-      unit: metric.unit || 'unit',
-      metadata: {
-        quality_score: 0.95,
-        source: rawData.metadata?.source || 'industrial_refinery'
-      }
-    }));
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    const response = {
+    // Process and store refined data
+    const refinedData = {
       deviceId: rawData.deviceId,
-      dataType: rawData.dataType || 'measurement',
-      metrics: refinedMetrics,
       timestamp: new Date().toISOString(),
-      metadata: {
-        ...rawData.metadata,
-        processed_at: new Date().toISOString(),
+      metrics: rawData.metrics.map(metric => ({
+        ...metric,
         quality_score: 0.95,
-        source: 'industrial_refinery'
-      }
+        metadata: {
+          ...metric.metadata,
+          refined: true,
+          source: rawData.metadata?.source || 'industrial_data_refinery'
+        }
+      }))
     };
 
-    console.log('Sending refined response:', response);
+    console.log('Processed refined data:', refinedData);
+
     return new Response(
-      JSON.stringify(response),
+      JSON.stringify(refinedData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in data refinement:', error);
+    console.error('Error in industrial data refinery:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
