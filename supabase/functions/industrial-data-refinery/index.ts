@@ -14,7 +14,7 @@ function validateRawData(rawData: any) {
 
   const { deviceId, metrics, metadata } = rawData;
 
-  // Validate deviceId (UUID format)
+  // Validate deviceId format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!deviceId || !uuidRegex.test(deviceId)) {
     return { isValid: false, error: 'Invalid deviceId format' };
@@ -68,17 +68,14 @@ serve(async (req) => {
       );
     }
 
-    const { deviceId, metrics, metadata } = requestData.rawData;
-
     // Process the data and return refined results
     const refinedData = {
-      deviceId,
+      deviceId: requestData.rawData.deviceId,
       timestamp: new Date().toISOString(),
-      metrics: metrics.map(metric => ({
+      metrics: requestData.rawData.metrics.map((metric: any) => ({
         ...metric,
         metadata: {
           ...metric.metadata,
-          device_id: deviceId,
           processed_at: new Date().toISOString()
         }
       })),
@@ -86,8 +83,7 @@ serve(async (req) => {
       severity: "info",
       confidence: 0.95,
       metadata: {
-        ...metadata,
-        device_id: deviceId,
+        ...requestData.rawData.metadata,
         processed_at: new Date().toISOString()
       }
     };
@@ -100,8 +96,14 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing data:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 })

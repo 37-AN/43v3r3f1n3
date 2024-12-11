@@ -64,24 +64,26 @@ export const DataAnalysisProcessor = ({
         }
 
         // Format data for industrial-data-refinery
-        const rawData = {
-          deviceId: selectedDeviceId,
-          dataType: 'measurement',
-          metrics,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            source: 'plc_analysis',
-            device_id: selectedDeviceId,
-            quality_score: 0.95,
-            owner_id: session.user.id
+        const requestBody = {
+          rawData: {
+            deviceId: selectedDeviceId,
+            dataType: 'measurement',
+            metrics,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              source: 'plc_analysis',
+              device_id: selectedDeviceId,
+              quality_score: 0.95,
+              owner_id: session.user.id
+            }
           }
         };
 
-        console.log('Sending data to industrial-data-refinery:', { rawData });
+        console.log('Sending data to industrial-data-refinery:', requestBody);
 
         // Get AI analysis from edge function
         const { data: refinedData, error: aiError } = await supabase.functions.invoke('industrial-data-refinery', {
-          body: { rawData }
+          body: requestBody
         });
 
         if (aiError) {
