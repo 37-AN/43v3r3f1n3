@@ -25,17 +25,62 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
 
   useEffect(() => {
     const checkSimulationStatus = async () => {
-      const { data, error } = await supabase
-        .from('device_simulations')
-        .select('is_running, parameters')
-        .eq('device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      try {
+        // First verify the session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          toast.error('Authentication error. Please log in again.');
+          return;
+        }
 
-      if (!error && data) {
-        console.log('Initial simulation status for device:', deviceId, data);
-        setIsSimulating(data.is_running || false);
+        if (!session) {
+          console.log('No active session');
+          toast.error('Please log in to continue');
+          return;
+        }
+
+        // Then check device access
+        const { data: device, error: deviceError } = await supabase
+          .from('plc_devices')
+          .select('id, owner_id')
+          .eq('id', deviceId)
+          .single();
+
+        if (deviceError) {
+          console.error('Error checking device access:', deviceError);
+          toast.error('Error checking device access');
+          return;
+        }
+
+        if (!device) {
+          console.error('Device not found or no access');
+          toast.error('Device not found or no access');
+          return;
+        }
+
+        // Finally check simulation status
+        const { data, error } = await supabase
+          .from('device_simulations')
+          .select('is_running, parameters')
+          .eq('device_id', deviceId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) {
+          console.error('Error checking simulation status:', error);
+          toast.error('Failed to check simulation status');
+          return;
+        }
+
+        if (data) {
+          console.log('Initial simulation status for device:', deviceId, data);
+          setIsSimulating(data.is_running || false);
+        }
+      } catch (error) {
+        console.error('Error in simulation check:', error);
+        toast.error('Failed to check simulation status');
       }
     };
 
@@ -88,28 +133,39 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
   const toggleSimulation = async () => {
     setIsLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please log in to continue');
+        return;
+      }
+
       if (!isSimulating) {
+        const simulationData = {
+          device_id: deviceId,
+          simulation_type: 'modbus',
+          parameters: {
+            port: 502,
+            slave_id: 1,
+            registers: [
+              { address: 0, value: Math.floor(Math.random() * 1000) },
+              { address: 1, value: Math.floor(Math.random() * 1000) }
+            ]
+          },
+          is_running: true
+        };
+
         const { data, error } = await supabase
           .from('device_simulations')
-          .insert([
-            {
-              device_id: deviceId,
-              simulation_type: 'modbus',
-              parameters: {
-                port: 502,
-                slave_id: 1,
-                registers: [
-                  { address: 0, value: Math.floor(Math.random() * 1000) },
-                  { address: 1, value: Math.floor(Math.random() * 1000) }
-                ]
-              },
-              is_running: true
-            }
-          ])
+          .insert([simulationData])
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error starting simulation:', error);
+          toast.error('Failed to start simulation');
+          return;
+        }
+
         console.log('Started simulation:', data);
         toast.success('Simulation started');
       } else {
@@ -118,7 +174,12 @@ export function DeviceCard({ name, status, metrics, className, deviceId }: Devic
           .update({ is_running: false })
           .eq('device_id', deviceId);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error stopping simulation:', error);
+          toast.error('Failed to stop simulation');
+          return;
+        }
+
         console.log('Stopped simulation for device:', deviceId);
         toast.success('Simulation stopped');
       }

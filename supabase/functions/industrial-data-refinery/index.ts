@@ -15,7 +15,7 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
-    // Validate required fields
+    // Validate deviceId
     if (!rawData?.deviceId || typeof rawData.deviceId !== 'string') {
       console.error('Invalid or missing deviceId:', rawData?.deviceId);
       return new Response(
@@ -24,12 +24,24 @@ serve(async (req) => {
       );
     }
 
-    if (!Array.isArray(rawData.metrics)) {
+    // Validate metrics array
+    if (!Array.isArray(rawData.metrics) || rawData.metrics.length === 0) {
       console.error('Invalid metrics format:', rawData.metrics);
       return new Response(
-        JSON.stringify({ error: 'Metrics must be an array' }),
+        JSON.stringify({ error: 'Metrics must be a non-empty array' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Validate each metric
+    for (const metric of rawData.metrics) {
+      if (!metric.metric_type || typeof metric.value !== 'number') {
+        console.error('Invalid metric format:', metric);
+        return new Response(
+          JSON.stringify({ error: 'Invalid metric format' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const supabase = createClient(
