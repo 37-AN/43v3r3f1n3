@@ -4,6 +4,7 @@ import { DataPreparation } from './DataPreparation';
 import { InsightStorage } from './InsightStorage';
 import { generateInsight } from '@/utils/insightGenerator';
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from '@/hooks/useSession';
 
 interface DataAnalysisProcessorProps {
   selectedDeviceId: string;
@@ -16,9 +17,11 @@ export const DataAnalysisProcessor = ({
   simulatedData, 
   featureExtractor 
 }: DataAnalysisProcessorProps) => {
+  const { session } = useSession();
+
   useEffect(() => {
-    if (!selectedDeviceId || !featureExtractor) {
-      console.log('Missing required props:', { selectedDeviceId, featureExtractor });
+    if (!selectedDeviceId || !featureExtractor || !session?.user) {
+      console.log('Missing required props or session:', { selectedDeviceId, featureExtractor, session });
       return;
     }
 
@@ -69,7 +72,8 @@ export const DataAnalysisProcessor = ({
           metadata: {
             source: 'plc_analysis',
             device_id: selectedDeviceId,
-            quality_score: 0.95
+            quality_score: 0.95,
+            owner_id: session.user.id
           }
         };
 
@@ -101,6 +105,7 @@ export const DataAnalysisProcessor = ({
             metadata: {
               ...refinedData.metadata,
               device_id: selectedDeviceId,
+              owner_id: session.user.id,
               timestamp: new Date().toISOString()
             }
           }
@@ -158,7 +163,7 @@ export const DataAnalysisProcessor = ({
     }, 30000);
 
     return () => clearInterval(analysisInterval);
-  }, [selectedDeviceId, simulatedData, featureExtractor]);
+  }, [selectedDeviceId, simulatedData, featureExtractor, session]);
 
   return null;
 };

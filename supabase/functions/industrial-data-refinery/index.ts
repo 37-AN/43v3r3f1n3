@@ -44,17 +44,6 @@ serve(async (req) => {
       )
     }
 
-    // Validate each metric
-    for (const metric of rawData.metrics) {
-      if (!metric.value || typeof metric.value !== 'number') {
-        console.error('Invalid metric value:', metric)
-        return new Response(
-          JSON.stringify({ error: 'Invalid metric value' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-    }
-
     // Process the data and return refined results
     const refinedData = {
       deviceId,

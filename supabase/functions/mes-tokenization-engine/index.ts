@@ -15,7 +15,6 @@ serve(async (req) => {
     const { refinedData } = await req.json()
     console.log('Received refined data:', refinedData)
     
-    // Check if refinedData exists and has required properties
     if (!refinedData || !refinedData.deviceId || !refinedData.metrics) {
       console.error('Missing or invalid refined data:', refinedData)
       return new Response(
@@ -57,6 +56,7 @@ serve(async (req) => {
         source: 'mes_tokenization',
         metrics: refinedData.metrics,
         device_id: deviceId,
+        owner_id: refinedData.metadata?.owner_id,
         processed_at: new Date().toISOString()
       }
     }
