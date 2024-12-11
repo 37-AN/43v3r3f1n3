@@ -6,6 +6,8 @@ const corsHeaders = {
 }
 
 function validateRefinedData(refinedData: any) {
+  console.log('Validating refined data:', refinedData);
+  
   if (!refinedData || typeof refinedData !== 'object') {
     return { isValid: false, error: 'Refined data must be an object' };
   }
@@ -37,29 +39,46 @@ serve(async (req) => {
   }
 
   try {
-    const { refinedData } = await req.json();
-    console.log('Received refined data:', refinedData);
+    const requestData = await req.json();
+    console.log('Received request data:', requestData);
 
-    const validation = validateRefinedData(refinedData);
+    if (!requestData.refinedData) {
+      console.error('No refinedData in request body');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Request must include refinedData field' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const validation = validateRefinedData(requestData.refinedData);
     if (!validation.isValid) {
       console.error('Validation error:', validation.error);
       return new Response(
         JSON.stringify({ success: false, error: validation.error }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
     // Process the tokenization
     const tokenizationResult = {
       success: true,
-      deviceId: refinedData.deviceId,
+      deviceId: requestData.refinedData.deviceId,
       timestamp: new Date().toISOString(),
       tokenId: crypto.randomUUID(),
       metadata: {
         source: 'mes_tokenization',
-        metrics: refinedData.metrics,
-        device_id: refinedData.deviceId,
-        owner_id: refinedData.metadata?.owner_id,
+        metrics: requestData.refinedData.metrics,
+        device_id: requestData.refinedData.deviceId,
+        owner_id: requestData.refinedData.metadata?.owner_id,
         processed_at: new Date().toISOString()
       }
     };
@@ -77,7 +96,10 @@ serve(async (req) => {
         error: 'Internal server error',
         details: error.message 
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 })
