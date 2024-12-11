@@ -5,39 +5,78 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { NewPLCDeviceDialog } from "./NewPLCDeviceDialog";
+import { toast } from "sonner";
 
 export const PLCDeviceGrid = () => {
   const [showNewDevice, setShowNewDevice] = useState(false);
 
-  const { data: devices, isLoading } = useQuery({
+  const { data: devices, isLoading, error } = useQuery({
     queryKey: ["plc-devices"],
     queryFn: async () => {
       console.log("Fetching PLC devices...");
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.log("No user found");
-        return [];
-      }
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError) {
+          console.error("Authentication error:", authError);
+          toast.error("Authentication error. Please try logging in again.");
+          throw authError;
+        }
 
-      const { data, error } = await supabase
-        .from("plc_devices")
-        .select("*")
-        .eq("owner_id", user.id)
-        .order("created_at", { ascending: false });
+        if (!user) {
+          console.log("No user found");
+          toast.error("Please log in to view devices");
+          return [];
+        }
 
-      if (error) {
-        console.error("Error fetching PLC devices:", error);
+        console.log("Authenticated user:", user.id);
+
+        const { data, error } = await supabase
+          .from("plc_devices")
+          .select("*")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching PLC devices:", error);
+          if (error.message.includes('Failed to fetch')) {
+            toast.error("Connection error. Please check your internet connection.");
+          } else if (error.message.includes('JWT')) {
+            toast.error("Session expired. Please log in again.");
+          } else {
+            toast.error("Failed to load devices. Please try again.");
+          }
+          throw error;
+        }
+
+        console.log("Successfully fetched PLC devices:", data);
+        return data;
+      } catch (error) {
+        console.error("Error in PLC devices fetch:", error);
         throw error;
       }
-
-      console.log("Fetched PLC devices:", data);
-      return data;
     },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+  if (error) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-red-500">Failed to load devices</p>
+        <Button 
+          variant="outline" 
+          className="mt-2"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading) {
-    return <div>Loading devices...</div>;
+    return <div className="p-4">Loading devices...</div>;
   }
 
   return (
