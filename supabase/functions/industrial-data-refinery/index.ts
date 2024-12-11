@@ -33,29 +33,13 @@ serve(async (req) => {
       );
     }
 
-    // Validate each metric
-    for (const metric of rawData.metrics) {
-      if (!metric.metric_type || typeof metric.value !== 'number') {
-        console.error('Invalid metric format:', metric);
-        return new Response(
-          JSON.stringify({ error: 'Invalid metric format' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Process and store refined data
+    // Process and refine the data
     const refinedData = {
       deviceId: rawData.deviceId,
       timestamp: new Date().toISOString(),
       metrics: rawData.metrics.map(metric => ({
         ...metric,
-        quality_score: 0.95,
+        quality_score: calculateQualityScore(metric),
         metadata: {
           ...metric.metadata,
           refined: true,
@@ -79,3 +63,23 @@ serve(async (req) => {
     );
   }
 });
+
+function calculateQualityScore(metric: any): number {
+  // Implement quality score calculation based on your requirements
+  // This is a simple example
+  if (!metric || typeof metric.value !== 'number') {
+    return 0;
+  }
+  
+  // Check if value is within expected range
+  const isInRange = metric.value >= 0 && metric.value < 10000;
+  const hasValidTimestamp = Boolean(metric.timestamp);
+  const hasMetadata = Boolean(metric.metadata);
+  
+  let score = 0.5; // Base score
+  if (isInRange) score += 0.2;
+  if (hasValidTimestamp) score += 0.15;
+  if (hasMetadata) score += 0.15;
+  
+  return Math.min(1, score);
+}

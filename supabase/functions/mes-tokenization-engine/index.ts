@@ -37,7 +37,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Store MES metrics with validation
+    // Store MES metrics
     const mesMetricsPromises = refinedData.metrics.map(metric => {
       if (!metric.metric_type || typeof metric.value !== 'number') {
         console.error('Invalid metric format:', metric);
@@ -63,11 +63,11 @@ serve(async (req) => {
 
     await Promise.all(mesMetricsPromises);
 
-    // Create or update tokenized asset with validation
+    // Create or update tokenized asset
     const assetData = {
       asset_type: 'industrial_metric',
       name: `Device ${refinedData.deviceId} Metrics`,
-      token_symbol: 'MES',
+      token_symbol: `MES_${refinedData.deviceId.slice(0, 8)}`,
       total_supply: 1000000,
       price_per_token: 0.001,
       metadata: {
