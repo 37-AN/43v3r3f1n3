@@ -10,6 +10,18 @@ interface MESDataDisplayProps {
 export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
   const { mesMetrics, tokenizedAssets, isLoading } = useMESData(deviceId);
 
+  const getMetricDisplayName = (metricType: string) => {
+    const metricMap: Record<string, string> = {
+      'motor_speed': 'Motor Speed (RPM)',
+      'oil_pressure': 'Oil Pressure (PSI)',
+      'bearing_temperature': 'Bearing Temperature (°F)',
+      'vibration': 'Vibration (mm/s)',
+      'current_draw': 'Current Draw (A)',
+      'power_factor': 'Power Factor (PF)'
+    };
+    return metricMap[metricType] || metricType;
+  };
+
   if (isLoading) {
     return (
       <Card className="p-4">
@@ -30,7 +42,7 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
                 className="p-2 bg-gray-50 rounded-lg flex items-center justify-between"
               >
                 <div>
-                  <p className="font-medium">{metric.metric_type}</p>
+                  <p className="font-medium">{getMetricDisplayName(metric.metric_type)}</p>
                   <p className="text-sm text-gray-500">
                     {new Date(metric.timestamp).toLocaleString()}
                   </p>
