@@ -7,25 +7,42 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
     const { refinedData } = await req.json()
+    console.log('Received refined data:', refinedData)
     
-    if (!refinedData || !refinedData.deviceId) {
+    // Validate deviceId exists and is a valid UUID
+    if (!refinedData?.deviceId) {
+      console.error('Missing deviceId in request')
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid or missing deviceId' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'Missing deviceId in request body' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       )
     }
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(refinedData.deviceId)) {
+      console.error('Invalid deviceId format:', refinedData.deviceId)
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid deviceId format. Must be a valid UUID.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid deviceId format. Must be a valid UUID.' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       )
     }
 
@@ -37,9 +54,12 @@ serve(async (req) => {
       tokenId: crypto.randomUUID(),
       metadata: {
         source: 'mes_tokenization',
-        metrics: refinedData.metrics || []
+        metrics: refinedData.metrics || [],
+        deviceId: refinedData.deviceId
       }
     }
+
+    console.log('Tokenization result:', tokenizationResult)
 
     return new Response(
       JSON.stringify(tokenizationResult),
@@ -48,8 +68,15 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in tokenization:', error)
     return new Response(
-      JSON.stringify({ success: false, error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: false, 
+        error: 'Internal server error',
+        details: error.message 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     )
   }
 })
