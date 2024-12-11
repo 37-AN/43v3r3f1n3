@@ -26,26 +26,34 @@ export const DataAnalysisProcessor = ({
       try {
         console.log('Starting data analysis for device:', selectedDeviceId);
         
-        // Format data for industrial-data-refinery with explicit deviceId
+        // Format metrics data
+        const metrics = preparedData.split(' ').map(value => ({
+          metric_type: 'measurement',
+          value: Number(value),
+          timestamp: new Date().toISOString(),
+          unit: 'unit',
+          metadata: {
+            quality_score: 0.95,
+            source: 'plc_analysis'
+          }
+        }));
+
+        // Format data for industrial-data-refinery
         const rawData = {
           deviceId: selectedDeviceId,
           dataType: 'measurement',
-          metrics: preparedData.split(' ').map(value => ({
-            metric_type: 'measurement',
-            value: Number(value),
-            timestamp: new Date().toISOString(),
-            unit: 'unit'
-          })),
+          metrics,
           timestamp: new Date().toISOString(),
           metadata: {
             source: 'plc_analysis',
-            deviceId: selectedDeviceId
+            deviceId: selectedDeviceId,
+            quality_score: 0.95
           }
         };
 
         console.log('Sending data to industrial-data-refinery:', rawData);
 
-        // Get AI analysis from our edge function
+        // Get AI analysis from edge function
         const { data: refinedData, error: aiError } = await supabase.functions.invoke('industrial-data-refinery', {
           body: { rawData }
         });
@@ -58,16 +66,20 @@ export const DataAnalysisProcessor = ({
 
         console.log('Received refined data:', refinedData);
 
-        // Send refined data to MES tokenization engine with explicit deviceId
+        if (!refinedData) {
+          console.error('No refined data received');
+          return null;
+        }
+
+        // Send refined data to MES tokenization engine
         const mesRequestBody = {
           refinedData: {
             ...refinedData,
             deviceId: selectedDeviceId,
             metadata: {
-              ...refinedData?.metadata,
+              ...refinedData.metadata,
               deviceId: selectedDeviceId
-            },
-            timestamp: new Date().toISOString()
+            }
           }
         };
 

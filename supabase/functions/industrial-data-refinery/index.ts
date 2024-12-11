@@ -35,11 +35,20 @@ serve(async (req) => {
       )
     }
 
+    // Validate metrics array
+    if (!Array.isArray(rawData.metrics)) {
+      console.error('Invalid metrics format:', rawData.metrics)
+      return new Response(
+        JSON.stringify({ error: 'Invalid metrics format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Process the data and return refined results
     const refinedData = {
       deviceId: deviceId,
       timestamp: new Date().toISOString(),
-      metrics: rawData.metrics || [],
+      metrics: rawData.metrics,
       analysis: "Data processed successfully",
       severity: "info",
       confidence: 0.95,
