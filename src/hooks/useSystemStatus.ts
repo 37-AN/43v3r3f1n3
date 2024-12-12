@@ -19,6 +19,8 @@ export function useSystemStatus() {
   useEffect(() => {
     const checkSystemStatus = async () => {
       try {
+        console.log('Checking system status...');
+        
         // Check AI Refinery status
         const { data: refineryData, error: refineryError } = await supabase.functions.invoke(
           'industrial-data-refinery',
@@ -27,6 +29,8 @@ export function useSystemStatus() {
           }
         );
 
+        console.log('Refinery status check:', { refineryData, refineryError });
+        
         setRefineryStatus({
           isConnected: !refineryError && refineryData?.status === 'healthy',
           lastHeartbeat: new Date(),
@@ -40,6 +44,8 @@ export function useSystemStatus() {
             body: { action: 'health-check' }
           }
         );
+
+        console.log('MES engine status check:', { mesData, mesError });
 
         setMesStatus({
           isConnected: !mesError && mesData?.status === 'healthy',

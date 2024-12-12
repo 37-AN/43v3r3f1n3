@@ -6,6 +6,7 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -14,13 +15,19 @@ serve(async (req) => {
     const body = await req.json();
     console.log('Received request body:', body);
 
+    // Handle health check requests
+    if (body.action === 'health-check') {
+      return new Response(
+        JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate request body for tokenization requests
     if (!body.refinedData) {
       console.error('No refinedData field in request');
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Request must include refinedData field' 
-        }),
+        JSON.stringify({ success: false, error: 'Request must include refinedData field' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -30,49 +37,37 @@ serve(async (req) => {
 
     const { refinedData } = body;
 
-    if (!refinedData.deviceId || !refinedData.metrics) {
-      console.error('Invalid refinedData structure:', refinedData);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Invalid refinedData structure' 
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Process the metrics and generate MES tokens
-    const tokenizedMetrics = refinedData.metrics.map(metric => ({
-      ...metric,
-      tokenId: crypto.randomUUID(),
-      tokenizedAt: new Date().toISOString()
-    }));
-
-    const mesResult = {
-      success: true,
+    // Process the metrics and generate tokenized assets
+    const tokenizedMetrics = {
       deviceId: refinedData.deviceId,
-      tokenizedMetrics,
+      metrics: refinedData.metrics.map((metric: any) => ({
+        ...metric,
+        metadata: {
+          ...metric.metadata,
+          tokenized: true,
+          tokenization_timestamp: new Date().toISOString()
+        }
+      })),
+      analysis: refinedData.analysis || 'No analysis available',
+      timestamp: new Date().toISOString(),
       metadata: {
         ...refinedData.metadata,
-        tokenization_timestamp: new Date().toISOString(),
-        source: 'mes_tokenization_engine'
+        tokenized: true,
+        engine_version: '1.0.0'
       }
     };
 
-    console.log('Returning MES result:', mesResult);
+    console.log('Processed tokenized metrics:', tokenizedMetrics);
+    
     return new Response(
-      JSON.stringify(mesResult),
+      JSON.stringify(tokenizedMetrics),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in tokenization:', error);
+    console.error('Error processing request:', error);
     return new Response(
       JSON.stringify({ 
-        success: false, 
-        error: 'Internal server error',
+        error: 'Internal server error', 
         details: error.message 
       }),
       { 

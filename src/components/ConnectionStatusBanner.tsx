@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +18,14 @@ export function ConnectionStatusBanner() {
     const checkRefinedData = async () => {
       console.log("Checking refined industrial data connection...");
       try {
-        const { data, error } = await supabase
+        const { data: engineResponse } = await supabase.functions.invoke(
+          'mes-tokenization-engine',
+          {
+            body: { action: 'health-check' }
+          }
+        );
+
+        const { data: refineryData, error } = await supabase
           .from('refined_industrial_data')
           .select('timestamp')
           .order('timestamp', { ascending: false })
@@ -31,10 +38,10 @@ export function ConnectionStatusBanner() {
           return;
         }
 
-        const isConnected = data && data.length > 0;
-        const lastUpdate = isConnected ? new Date(data[0].timestamp) : null;
+        const isConnected = refineryData && refineryData.length > 0 && engineResponse?.status === 'healthy';
+        const lastUpdate = isConnected ? new Date(refineryData[0].timestamp) : null;
 
-        console.log("Refined data status:", { isConnected, lastUpdate });
+        console.log("Refined data status:", { isConnected, lastUpdate, engineResponse });
         setRefinedDataStatus({ isConnected, lastUpdate });
 
         if (isConnected) {
