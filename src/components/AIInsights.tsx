@@ -15,34 +15,45 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
 
   useEffect(() => {
     if (deviceId) {
-      fetchInsights(0);
-    }
+      console.log('Initial insights fetch for device:', deviceId);
+      fetchInsights();
 
-    const subscription = supabase
-      .channel('ai_insights_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ai_insights',
-          filter: `device_id=eq.${deviceId}`
-        },
-        (payload) => {
-          console.log('New insight received:', payload);
-          fetchInsights(0); // Refresh insights when new data arrives
-          
-          if (payload.new.severity === 'critical') {
-            addMessage('error', payload.new.message);
-            toast.error(payload.new.message);
+      // Set up real-time subscription
+      const subscription = supabase
+        .channel(`ai_insights_${deviceId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'ai_insights',
+            filter: `device_id=eq.${deviceId}`
+          },
+          (payload) => {
+            console.log('New insight received:', payload);
+            // Refresh insights when new data arrives
+            fetchInsights();
+            
+            if (payload.new.severity === 'critical') {
+              addMessage('error', payload.new.message);
+              toast.error(payload.new.message);
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
 
-    return () => {
-      subscription.unsubscribe();
-    };
+      // Set up periodic refresh (every 30 seconds)
+      const refreshInterval = setInterval(() => {
+        console.log('Periodic refresh of insights');
+        fetchInsights();
+      }, 30000);
+
+      return () => {
+        console.log('Cleaning up AI insights subscriptions');
+        subscription.unsubscribe();
+        clearInterval(refreshInterval);
+      };
+    }
   }, [deviceId, addMessage, fetchInsights]);
 
   const metrics = {
@@ -63,7 +74,10 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
     <Card className="p-4 space-y-4">
       <InsightsHeader
         isLoading={isLoading}
-        onRefresh={() => fetchInsights(0)}
+        onRefresh={() => {
+          console.log('Manual refresh triggered');
+          fetchInsights();
+        }}
         metrics={metrics}
       />
       <InsightsContent 
