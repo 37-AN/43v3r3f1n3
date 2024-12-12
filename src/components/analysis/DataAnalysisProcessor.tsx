@@ -63,7 +63,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Call industrial-data-refinery
+        // Call industrial-data-refinery with proper request body structure
         const refineryRequestBody = {
           rawData: {
             deviceId: selectedDeviceId,
@@ -81,15 +81,15 @@ export const DataAnalysisProcessor = ({
 
         console.log('Sending data to industrial-data-refinery:', JSON.stringify(refineryRequestBody, null, 2));
 
-        const { data: refinedData, error: aiError } = await supabase.functions.invoke(
+        const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
           'industrial-data-refinery',
           {
             body: refineryRequestBody
           }
         );
 
-        if (aiError) {
-          console.error('Error in AI analysis:', aiError);
+        if (refineryError) {
+          console.error('Error in AI analysis:', refineryError);
           toast.error('Failed to process data in AI refinery');
           return null;
         }
@@ -101,7 +101,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Call MES tokenization engine
+        // Call MES tokenization engine with proper request body structure
         const mesRequestBody = {
           refinedData: {
             deviceId: selectedDeviceId,
