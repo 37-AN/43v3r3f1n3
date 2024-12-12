@@ -89,8 +89,8 @@ export const DataAnalysisProcessor = ({
         );
 
         if (refineryError) {
-          console.error('Error in AI analysis:', refineryError);
-          toast.error('Failed to process data in AI refinery');
+          console.error('Error in data refinement:', refineryError);
+          toast.error('Failed to process data in refinery');
           return null;
         }
 
@@ -101,38 +101,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Call MES tokenization engine with proper request body structure
-        const mesRequestBody = {
-          refinedData: {
-            deviceId: selectedDeviceId,
-            metrics: refinedData.metrics || metrics,
-            analysis: refinedData.analysis || 'No analysis available',
-            timestamp: new Date().toISOString(),
-            metadata: {
-              ...(refinedData.metadata || {}),
-              owner_id: session.user.id,
-              source: 'industrial_data_refinery'
-            }
-          }
-        };
-
-        console.log('Sending data to MES engine:', JSON.stringify(mesRequestBody, null, 2));
-
-        const { data: mesData, error: mesError } = await supabase.functions.invoke(
-          'mes-tokenization-engine',
-          {
-            body: mesRequestBody
-          }
-        );
-
-        if (mesError) {
-          console.error('Error in MES tokenization:', mesError);
-          toast.error('Failed to process in MES engine');
-          return null;
-        }
-
-        console.log('MES tokenization response:', mesData);
-
+        // Generate features and insight without MES tokenization
         const features = featureExtractor(preparedData);
         console.log('Extracted features:', features);
 
