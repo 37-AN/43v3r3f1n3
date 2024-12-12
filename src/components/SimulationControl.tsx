@@ -49,11 +49,37 @@ export function SimulationControl() {
     );
   }
 
-  const formattedHistory: WriteHistoryEntry[] = writeHistory.map(entry => ({
-    timestamp: entry.timestamp,
-    metric: `Register ${entry.address}`,
-    value: entry.value
-  }));
+  const formattedHistory: WriteHistoryEntry[] = writeHistory.map(entry => {
+    // Format the metric name to be more readable
+    const metricName = entry.metric.includes('.')
+      ? entry.metric.split('.').map(part => 
+          part.charAt(0).toUpperCase() + part.slice(1).replace(/_/g, ' ')
+        ).join(' - ')
+      : entry.metric.charAt(0).toUpperCase() + entry.metric.slice(1).replace(/_/g, ' ');
+
+    // Add appropriate units based on metric type
+    let formattedValue = entry.value;
+    let unit = '';
+    
+    if (entry.metric.includes('temperature')) {
+      unit = '°C';
+    } else if (entry.metric.includes('pressure')) {
+      unit = 'bar';
+    } else if (entry.metric.includes('vibration')) {
+      unit = 'mm/s';
+    } else if (entry.metric.includes('efficiency') || entry.metric.includes('rate')) {
+      unit = '%';
+      formattedValue = Math.min(100, Math.max(0, formattedValue));
+    } else if (entry.metric.includes('energy')) {
+      unit = 'kWh';
+    }
+
+    return {
+      timestamp: entry.timestamp,
+      metric: metricName,
+      value: unit ? `${formattedValue.toFixed(2)}${unit}` : formattedValue.toFixed(2)
+    };
+  });
 
   return (
     <div className="space-y-4">
