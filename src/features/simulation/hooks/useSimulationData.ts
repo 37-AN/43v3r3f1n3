@@ -42,15 +42,13 @@ export const useSimulationData = (
             }
           }));
 
-          // Send to data refinery
-          console.log('Sending metrics to refinery:', { deviceId, metricsArray });
+          // Send to data refinery with proper request body structure
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
               body: { 
                 rawData: {
                   deviceId,
-                  dataType: 'simulation',
                   metrics: metricsArray,
                   timestamp: new Date().toISOString(),
                   metadata: {
@@ -67,13 +65,14 @@ export const useSimulationData = (
           if (refineryError) throw refineryError;
           console.log('Received refined data:', refinedData);
 
-          // Send to MES engine
+          // Send to MES engine with proper request body structure
           const { error: mesError } = await supabase.functions.invoke(
             'mes-tokenization-engine',
             {
               body: {
                 refinedData: {
-                  ...refinedData,
+                  deviceId: refinedData.deviceId,
+                  metrics: refinedData.metrics,
                   metadata: {
                     ...refinedData.metadata,
                     owner_id: session.user.id

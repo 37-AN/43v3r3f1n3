@@ -12,10 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const { rawData } = await req.json();
-    console.log('Received raw data:', rawData);
+    const body = await req.json();
+    console.log('Received request body:', body);
 
-    if (!rawData) {
+    if (!body.rawData) {
       console.error('No rawData field in request');
       return new Response(
         JSON.stringify({ error: 'Request must include rawData field' }),
@@ -25,6 +25,8 @@ serve(async (req) => {
         }
       );
     }
+
+    const { rawData } = body;
 
     if (!rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
       console.error('Invalid rawData structure:', rawData);

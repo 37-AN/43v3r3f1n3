@@ -11,10 +11,10 @@ serve(async (req) => {
   }
 
   try {
-    const { refinedData } = await req.json();
-    console.log('Received refined data:', refinedData);
+    const body = await req.json();
+    console.log('Received request body:', body);
 
-    if (!refinedData) {
+    if (!body.refinedData) {
       console.error('No refinedData field in request');
       return new Response(
         JSON.stringify({ 
@@ -27,6 +27,8 @@ serve(async (req) => {
         }
       );
     }
+
+    const { refinedData } = body;
 
     if (!refinedData.deviceId || !refinedData.metrics) {
       console.error('Invalid refinedData structure:', refinedData);
