@@ -6,68 +6,73 @@ import { useInsightCalculations } from "./ai/useInsightCalculations";
 import { toast } from "sonner";
 import { InsightsHeader } from "./ai/insights/InsightsHeader";
 import { InsightsContent } from "./ai/insights/InsightsContent";
-import { useAIInsightsFetching } from "@/hooks/useAIInsightsFetching";
+import { useQuery } from "@tanstack/react-query";
 
 export function AIInsights({ deviceId }: { deviceId: string }) {
-  const { insights, isLoading, fetchInsights } = useAIInsightsFetching(deviceId);
   const { addMessage } = useConsole();
+  
+  const fetchInsights = async () => {
+    console.log('Fetching insights for device:', deviceId);
+    if (!deviceId) return [];
+    
+    const { data, error } = await supabase
+      .from('ai_insights')
+      .select('*')
+      .eq('device_id', deviceId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.error('Error fetching insights:', error);
+      toast.error('Failed to fetch insights');
+      addMessage('error', `Failed to fetch insights: ${error.message}`);
+      throw error;
+    }
+
+    console.log('Received insights:', data);
+    return data || [];
+  };
+
+  const { data: insights = [], isLoading, refetch } = useQuery({
+    queryKey: ['ai-insights', deviceId],
+    queryFn: fetchInsights,
+    enabled: !!deviceId,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   const { calculateEfficiencyMetric, calculateStabilityMetric } = useInsightCalculations(insights);
 
   useEffect(() => {
-    let subscription: any;
-    let refreshInterval: NodeJS.Timeout;
+    if (!deviceId) return;
 
-    const setupSubscriptionAndRefresh = () => {
-      if (!deviceId) {
-        console.log('No device ID provided');
-        return;
-      }
-
-      console.log('Initial insights fetch for device:', deviceId);
-      fetchInsights();
-
-      // Set up real-time subscription
-      subscription = supabase
-        .channel(`ai_insights_${deviceId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'ai_insights',
-            filter: `device_id=eq.${deviceId}`
-          },
-          (payload) => {
-            console.log('New insight received:', payload);
-            fetchInsights();
-            
-            if (payload.new.severity === 'critical') {
-              addMessage('error', payload.new.message);
-              toast.error(payload.new.message);
-            }
+    console.log('Setting up real-time subscription for device:', deviceId);
+    const subscription = supabase
+      .channel(`ai_insights_${deviceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ai_insights',
+          filter: `device_id=eq.${deviceId}`
+        },
+        (payload) => {
+          console.log('New insight received:', payload);
+          refetch();
+          
+          if (payload.new.severity === 'critical') {
+            addMessage('error', payload.new.message);
+            toast.error(payload.new.message);
           }
-        )
-        .subscribe();
-
-      // Set up periodic refresh (every 30 seconds)
-      refreshInterval = setInterval(() => {
-        console.log('Periodic refresh of insights');
-        fetchInsights();
-      }, 30000);
-    };
-
-    setupSubscriptionAndRefresh();
+        }
+      )
+      .subscribe();
 
     return () => {
-      console.log('Cleaning up AI insights subscriptions');
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
+      console.log('Cleaning up AI insights subscription');
+      subscription.unsubscribe();
     };
-  }, [deviceId, addMessage, fetchInsights]);
+  }, [deviceId, addMessage, refetch]);
 
   const metrics = {
     efficiency: calculateEfficiencyMetric(insights),
@@ -85,7 +90,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
             isLoading={isLoading}
             onRefresh={() => {
               console.log('Manual refresh triggered');
-              fetchInsights();
+              refetch();
             }}
             metrics={metrics}
           />
