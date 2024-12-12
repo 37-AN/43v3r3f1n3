@@ -101,7 +101,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Generate features and insight without MES tokenization
+        // Generate features and insight
         const features = featureExtractor(preparedData);
         console.log('Extracted features:', features);
 
