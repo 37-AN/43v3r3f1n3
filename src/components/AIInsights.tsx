@@ -14,12 +14,20 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
   const { calculateEfficiencyMetric, calculateStabilityMetric } = useInsightCalculations(insights);
 
   useEffect(() => {
-    if (deviceId) {
+    let subscription: any;
+    let refreshInterval: NodeJS.Timeout;
+
+    const setupSubscriptionAndRefresh = () => {
+      if (!deviceId) {
+        console.log('No device ID provided');
+        return;
+      }
+
       console.log('Initial insights fetch for device:', deviceId);
       fetchInsights();
 
       // Set up real-time subscription
-      const subscription = supabase
+      subscription = supabase
         .channel(`ai_insights_${deviceId}`)
         .on(
           'postgres_changes',
@@ -31,7 +39,6 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
           },
           (payload) => {
             console.log('New insight received:', payload);
-            // Refresh insights when new data arrives
             fetchInsights();
             
             if (payload.new.severity === 'critical') {
@@ -43,17 +50,23 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
         .subscribe();
 
       // Set up periodic refresh (every 30 seconds)
-      const refreshInterval = setInterval(() => {
+      refreshInterval = setInterval(() => {
         console.log('Periodic refresh of insights');
         fetchInsights();
       }, 30000);
+    };
 
-      return () => {
-        console.log('Cleaning up AI insights subscriptions');
+    setupSubscriptionAndRefresh();
+
+    return () => {
+      console.log('Cleaning up AI insights subscriptions');
+      if (subscription) {
         subscription.unsubscribe();
+      }
+      if (refreshInterval) {
         clearInterval(refreshInterval);
-      };
-    }
+      }
+    };
   }, [deviceId, addMessage, fetchInsights]);
 
   const metrics = {
@@ -62,28 +75,26 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
     anomalyCount: insights.filter(i => i.severity === 'critical').length
   };
 
-  if (!deviceId) {
-    return (
-      <Card className="p-4">
-        <p className="text-center text-gray-500">No device selected</p>
-      </Card>
-    );
-  }
-
   return (
     <Card className="p-4 space-y-4">
-      <InsightsHeader
-        isLoading={isLoading}
-        onRefresh={() => {
-          console.log('Manual refresh triggered');
-          fetchInsights();
-        }}
-        metrics={metrics}
-      />
-      <InsightsContent 
-        insights={insights}
-        isLoading={isLoading}
-      />
+      {!deviceId ? (
+        <p className="text-center text-gray-500">No device selected</p>
+      ) : (
+        <>
+          <InsightsHeader
+            isLoading={isLoading}
+            onRefresh={() => {
+              console.log('Manual refresh triggered');
+              fetchInsights();
+            }}
+            metrics={metrics}
+          />
+          <InsightsContent 
+            insights={insights}
+            isLoading={isLoading}
+          />
+        </>
+      )}
     </Card>
   );
 }
