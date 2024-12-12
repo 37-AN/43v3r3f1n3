@@ -45,14 +45,16 @@ serve(async (req) => {
     }
 
     // Process the metrics and generate MES tokens
+    const tokenizedMetrics = refinedData.metrics.map(metric => ({
+      ...metric,
+      tokenId: crypto.randomUUID(),
+      tokenizedAt: new Date().toISOString()
+    }));
+
     const mesResult = {
       success: true,
       deviceId: refinedData.deviceId,
-      tokenizedMetrics: refinedData.metrics.map(metric => ({
-        ...metric,
-        tokenId: crypto.randomUUID(),
-        tokenizedAt: new Date().toISOString()
-      })),
+      tokenizedMetrics,
       metadata: {
         ...refinedData.metadata,
         tokenization_timestamp: new Date().toISOString(),
