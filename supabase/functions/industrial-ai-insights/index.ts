@@ -7,6 +7,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function generateFallbackInsight(metrics: Record<string, number>) {
+  // Generate a basic insight based on metrics without using AI
+  const efficiency = metrics.efficiency || 0;
+  const stability = metrics.stability || 0;
+  
+  let severity: 'info' | 'warning' | 'critical' = 'info';
+  let message = '';
+
+  if (efficiency < 70 || stability < 70) {
+    severity = 'critical';
+    message = `Performance metrics are below threshold: Efficiency ${efficiency.toFixed(1)}%, Stability ${stability.toFixed(1)}%`;
+  } else if (efficiency < 85 || stability < 85) {
+    severity = 'warning';
+    message = `Performance metrics need attention: Efficiency ${efficiency.toFixed(1)}%, Stability ${stability.toFixed(1)}%`;
+  } else {
+    message = `System operating normally: Efficiency ${efficiency.toFixed(1)}%, Stability ${stability.toFixed(1)}%`;
+  }
+
+  return {
+    message,
+    severity,
+    confidence: 0.7
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -23,8 +48,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Format data for GPT analysis
-    const prompt = `Analyze this industrial IoT data and provide insights:
+    try {
+      // Attempt to get AI-generated insight
+      const prompt = `Analyze this industrial IoT data and provide insights:
 Device ID: ${deviceId}
 Time Range: ${timeRange}
 Metrics:
@@ -37,72 +63,90 @@ Provide analysis focusing on:
 4. Resource optimization suggestions
 5. Quality control insights`;
 
-    console.log('Sending request to OpenAI...');
-    
-    // Get AI analysis using GPT
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an industrial AI expert specializing in manufacturing analytics and optimization.'
-          },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorData = await aiResponse.json();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${JSON.stringify(errorData)}`);
-    }
-
-    const aiData = await aiResponse.json();
-    console.log('Received OpenAI response:', aiData);
-
-    if (!aiData.choices || !aiData.choices[0] || !aiData.choices[0].message) {
-      console.error('Invalid OpenAI response format:', aiData);
-      throw new Error('Invalid response format from OpenAI');
-    }
-
-    const analysis = aiData.choices[0].message.content;
-    console.log('Generated analysis:', analysis);
-
-    // Store the insight in the database
-    const { error: insightError } = await supabase
-      .from('ai_insights')
-      .insert({
-        device_id: deviceId,
-        insight_type: 'advanced_analysis',
-        message: analysis,
-        confidence: 0.95,
-        severity: analysis.toLowerCase().includes('critical') ? 'critical' : 
-                 analysis.toLowerCase().includes('warning') ? 'warning' : 'info',
-        metadata: {
-          analyzed_metrics: metrics,
-          time_range: timeRange,
-          model: 'gpt-4o-mini'
-        }
+      console.log('Sending request to OpenAI...');
+      
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an industrial AI expert specializing in manufacturing analytics and optimization.'
+            },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+        }),
       });
 
-    if (insightError) {
-      console.error('Error storing insight:', insightError);
-      throw insightError;
-    }
+      if (!aiResponse.ok) {
+        console.log('OpenAI API error, falling back to basic insight generation');
+        throw new Error('OpenAI API error');
+      }
 
-    return new Response(
-      JSON.stringify({ success: true, analysis }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      const aiData = await aiResponse.json();
+      const analysis = aiData.choices[0].message.content;
+      console.log('Generated AI analysis:', analysis);
+
+      // Store the AI-generated insight
+      await supabase
+        .from('ai_insights')
+        .insert({
+          device_id: deviceId,
+          insight_type: 'advanced_analysis',
+          message: analysis,
+          confidence: 0.95,
+          severity: analysis.toLowerCase().includes('critical') ? 'critical' : 
+                   analysis.toLowerCase().includes('warning') ? 'warning' : 'info',
+          metadata: {
+            analyzed_metrics: metrics,
+            time_range: timeRange,
+            model: 'gpt-4o-mini'
+          }
+        });
+
+      return new Response(
+        JSON.stringify({ success: true, analysis }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } catch (aiError) {
+      console.error('AI analysis failed, using fallback:', aiError);
+      
+      // Generate and store fallback insight
+      const fallbackInsight = generateFallbackInsight(metrics);
+      
+      await supabase
+        .from('ai_insights')
+        .insert({
+          device_id: deviceId,
+          insight_type: 'basic_analysis',
+          message: fallbackInsight.message,
+          confidence: fallbackInsight.confidence,
+          severity: fallbackInsight.severity,
+          metadata: {
+            analyzed_metrics: metrics,
+            time_range: timeRange,
+            fallback: true,
+            error: aiError.message
+          }
+        });
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          analysis: fallbackInsight.message,
+          fallback: true 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
   } catch (error) {
     console.error('Error in industrial-ai-insights function:', error);
     return new Response(
