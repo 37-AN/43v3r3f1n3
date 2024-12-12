@@ -43,46 +43,68 @@ export const useSimulationData = (
           }));
 
           // Send to data refinery with proper request body structure
+          const refineryRequestBody = {
+            rawData: {
+              deviceId,
+              metrics: metricsArray,
+              timestamp: new Date().toISOString(),
+              metadata: {
+                simulation: true,
+                source: 'simulation_engine',
+                quality_score: 0.95,
+                owner_id: session.user.id
+              }
+            }
+          };
+
+          console.log('Sending data to refinery:', refineryRequestBody);
+
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
-              body: { 
-                rawData: {
-                  deviceId,
-                  metrics: metricsArray,
-                  timestamp: new Date().toISOString(),
-                  metadata: {
-                    simulation: true,
-                    source: 'simulation_engine',
-                    quality_score: 0.95,
-                    owner_id: session.user.id
-                  }
-                }
-              }
+              body: refineryRequestBody
             }
           );
 
-          if (refineryError) throw refineryError;
+          if (refineryError) {
+            console.error('Error in data refinement:', refineryError);
+            throw refineryError;
+          }
+
           console.log('Received refined data:', refinedData);
 
+          if (!refinedData) {
+            console.error('No refined data received');
+            return;
+          }
+
           // Send to MES engine with proper request body structure
-          const { error: mesError } = await supabase.functions.invoke(
+          const mesRequestBody = {
+            refinedData: {
+              deviceId: refinedData.deviceId,
+              metrics: refinedData.metrics,
+              metadata: {
+                ...refinedData.metadata,
+                owner_id: session.user.id
+              }
+            }
+          };
+
+          console.log('Sending data to MES engine:', mesRequestBody);
+
+          const { data: mesData, error: mesError } = await supabase.functions.invoke(
             'mes-tokenization-engine',
             {
-              body: {
-                refinedData: {
-                  deviceId: refinedData.deviceId,
-                  metrics: refinedData.metrics,
-                  metadata: {
-                    ...refinedData.metadata,
-                    owner_id: session.user.id
-                  }
-                }
-              }
+              body: mesRequestBody
             }
           );
 
-          if (mesError) throw mesError;
+          if (mesError) {
+            console.error('Error in MES tokenization:', mesError);
+            throw mesError;
+          }
+
+          console.log('MES tokenization response:', mesData);
 
           // Update history
           setWriteHistory(prev => [
