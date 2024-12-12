@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { InsightsHeader } from "./ai/insights/InsightsHeader";
 import { InsightsContent } from "./ai/insights/InsightsContent";
 import { useQuery } from "@tanstack/react-query";
+import { AIInsight } from "@/types/ai";
 
 export function AIInsights({ deviceId }: { deviceId: string }) {
   const { addMessage } = useConsole();
@@ -29,8 +30,21 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
       throw error;
     }
 
-    console.log('Received insights:', data);
-    return data || [];
+    // Validate and transform the severity field
+    const validatedData = (data || []).map(insight => {
+      // Ensure severity is one of the allowed values, default to 'info' if invalid
+      const severity = ['info', 'warning', 'critical'].includes(insight.severity) 
+        ? insight.severity as AIInsight['severity']
+        : 'info';
+      
+      return {
+        ...insight,
+        severity
+      } as AIInsight;
+    });
+
+    console.log('Received insights:', validatedData);
+    return validatedData;
   };
 
   const { data: insights = [], isLoading, refetch } = useQuery({
