@@ -84,10 +84,7 @@ export const DataAnalysisProcessor = ({
         const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
           'industrial-data-refinery',
           {
-            body: refineryRequestBody,
-            headers: {
-              'Content-Type': 'application/json'
-            }
+            body: refineryRequestBody
           }
         );
 
@@ -124,10 +121,7 @@ export const DataAnalysisProcessor = ({
         const { data: mesData, error: mesError } = await supabase.functions.invoke(
           'mes-tokenization-engine',
           {
-            body: mesRequestBody,
-            headers: {
-              'Content-Type': 'application/json'
-            }
+            body: mesRequestBody
           }
         );
 
