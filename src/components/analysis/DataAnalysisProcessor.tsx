@@ -63,28 +63,25 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Call industrial-data-refinery with proper request body structure
-        const refineryRequestBody = {
-          rawData: {
-            deviceId: selectedDeviceId,
-            dataType: 'measurement',
-            metrics: metrics,
-            timestamp: new Date().toISOString(),
-            metadata: {
-              source: 'plc_analysis',
-              device_id: selectedDeviceId,
-              quality_score: 0.95,
-              owner_id: session.user.id
-            }
+        const rawData = {
+          deviceId: selectedDeviceId,
+          dataType: 'measurement',
+          metrics: metrics,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            source: 'plc_analysis',
+            device_id: selectedDeviceId,
+            quality_score: 0.95,
+            owner_id: session.user.id
           }
         };
 
-        console.log('Sending data to industrial-data-refinery:', JSON.stringify(refineryRequestBody, null, 2));
+        console.log('Sending data to industrial-data-refinery:', { rawData });
 
         const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
           'industrial-data-refinery',
           {
-            body: refineryRequestBody
+            body: { rawData }
           }
         );
 
