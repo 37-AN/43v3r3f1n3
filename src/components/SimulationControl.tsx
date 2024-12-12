@@ -49,35 +49,33 @@ export function SimulationControl() {
     );
   }
 
+  // Convert register writes to simulation metrics
   const formattedHistory: WriteHistoryEntry[] = writeHistory.map(entry => {
-    // Format the metric name to be more readable
-    const metricName = entry.metric.includes('.')
-      ? entry.metric.split('.').map(part => 
-          part.charAt(0).toUpperCase() + part.slice(1).replace(/_/g, ' ')
-        ).join(' - ')
-      : entry.metric.charAt(0).toUpperCase() + entry.metric.slice(1).replace(/_/g, ' ');
+    // Map register addresses to meaningful metrics
+    const metricMap: Record<number, string> = {
+      0: 'temperature',
+      1: 'pressure',
+      2: 'vibration',
+      3: 'efficiency',
+      4: 'energy_consumption'
+    };
 
-    // Add appropriate units based on metric type
-    let formattedValue = entry.value;
-    let unit = '';
+    const metric = metricMap[entry.address] || `register_${entry.address}`;
+    let value = entry.value;
     
-    if (entry.metric.includes('temperature')) {
-      unit = '°C';
-    } else if (entry.metric.includes('pressure')) {
-      unit = 'bar';
-    } else if (entry.metric.includes('vibration')) {
-      unit = 'mm/s';
-    } else if (entry.metric.includes('efficiency') || entry.metric.includes('rate')) {
-      unit = '%';
-      formattedValue = Math.min(100, Math.max(0, formattedValue));
-    } else if (entry.metric.includes('energy')) {
-      unit = 'kWh';
+    // Add appropriate units based on metric type
+    if (metric === 'temperature') {
+      value = (value / 10); // Assuming temperature is stored with 1 decimal place
+    } else if (metric === 'pressure') {
+      value = (value / 100); // Assuming pressure is stored with 2 decimal places
+    } else if (metric === 'efficiency') {
+      value = Math.min(100, Math.max(0, value));
     }
 
     return {
       timestamp: entry.timestamp,
-      metric: metricName,
-      value: unit ? `${formattedValue.toFixed(2)}${unit}` : formattedValue.toFixed(2)
+      metric: metric.charAt(0).toUpperCase() + metric.slice(1).replace(/_/g, ' '),
+      value
     };
   });
 
