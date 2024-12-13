@@ -48,6 +48,7 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
     try {
       const timeRange = '24h'; // Can be made configurable
       
+      console.log('Generating new insight with metrics:', metrics);
       const { data, error } = await supabase.functions.invoke('industrial-ai-insights', {
         body: { 
           deviceId,
@@ -56,7 +57,10 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error generating insight:', error);
+        throw error;
+      }
 
       console.log('Generated new AI insight:', data);
       toast.success('New AI insight generated');
@@ -70,11 +74,13 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
   };
 
   useEffect(() => {
+    if (!deviceId) return;
+    
     fetchInsights();
 
     // Subscribe to real-time updates
     const subscription = supabase
-      .channel('ai_insights_changes')
+      .channel(`ai_insights_${deviceId}`)
       .on(
         'postgres_changes',
         {
@@ -89,6 +95,7 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
           
           if (payload.new.severity === 'critical') {
             addMessage('error', payload.new.message);
+            toast.error(payload.new.message);
           }
         }
       )

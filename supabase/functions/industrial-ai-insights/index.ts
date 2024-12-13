@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 function generateFallbackInsight(metrics: Record<string, number>) {
-  // Generate a basic insight based on metrics without using AI
   const efficiency = metrics.efficiency || 0;
   const stability = metrics.stability || 0;
   
@@ -49,7 +48,6 @@ serve(async (req) => {
     );
 
     try {
-      // Attempt to get AI-generated insight
       const prompt = `Analyze this industrial IoT data and provide insights:
 Device ID: ${deviceId}
 Time Range: ${timeRange}
@@ -95,7 +93,7 @@ Provide analysis focusing on:
       console.log('Generated AI analysis:', analysis);
 
       // Store the AI-generated insight
-      await supabase
+      const { error: insertError } = await supabase
         .from('ai_insights')
         .insert({
           device_id: deviceId,
@@ -111,6 +109,11 @@ Provide analysis focusing on:
           }
         });
 
+      if (insertError) {
+        console.error('Error storing insight:', insertError);
+        throw insertError;
+      }
+
       return new Response(
         JSON.stringify({ success: true, analysis }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -122,7 +125,7 @@ Provide analysis focusing on:
       // Generate and store fallback insight
       const fallbackInsight = generateFallbackInsight(metrics);
       
-      await supabase
+      const { error: insertError } = await supabase
         .from('ai_insights')
         .insert({
           device_id: deviceId,
@@ -137,6 +140,11 @@ Provide analysis focusing on:
             error: aiError.message
           }
         });
+
+      if (insertError) {
+        console.error('Error storing fallback insight:', insertError);
+        throw insertError;
+      }
 
       return new Response(
         JSON.stringify({ 
