@@ -8,5 +8,12 @@ export interface AIInsight {
   confidence: number | null;
   severity: 'info' | 'warning' | 'critical';
   created_at: string | null;
-  metadata: Json | null;
+  metadata: Record<string, any>;
+}
+
+export interface InsightMetadata {
+  type?: string;
+  efficiency?: number;
+  stability?: number;
+  [key: string]: any;
 }

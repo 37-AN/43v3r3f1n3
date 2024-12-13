@@ -1,4 +1,5 @@
 import { AlertCircle, AlertTriangle, Info } from "lucide-react";
+import { InsightMetadata } from "@/types/ai";
 
 interface InsightMessageProps {
   id: string;
@@ -6,7 +7,7 @@ interface InsightMessageProps {
   severity: 'info' | 'warning' | 'critical';
   confidence: number;
   created_at: string;
-  metadata: Record<string, any>;
+  metadata: InsightMetadata;
 }
 
 export function InsightMessage({ message, severity, confidence, created_at, metadata }: InsightMessageProps) {
