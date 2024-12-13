@@ -1,70 +1,56 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { MESMetric, TokenizedAsset } from "@/types/tokenize";
 import { toast } from "sonner";
 
-export function useMESData(deviceId: string) {
-  const fetchMESMetrics = async () => {
-    try {
-      console.log('Fetching MES metrics for device:', deviceId);
-      const { data: metrics, error } = await supabase
+export const useMESData = (deviceId: string) => {
+  const fetchMESData = async () => {
+    console.log('Fetching MES data for device:', deviceId);
+    
+    const [metricsResponse, assetsResponse] = await Promise.all([
+      supabase
         .from('mes_metrics')
         .select('*')
         .eq('device_id', deviceId)
         .order('timestamp', { ascending: false })
-        .limit(10);
-
-      if (error) {
-        console.error('Error fetching MES metrics:', error);
-        throw error;
-      }
-      
-      console.log('Fetched MES metrics:', metrics);
-      return metrics;
-    } catch (error) {
-      console.error('Error fetching MES metrics:', error);
-      toast.error('Failed to fetch MES metrics');
-      throw error;
-    }
-  };
-
-  const fetchTokenizedAssets = async () => {
-    try {
-      console.log('Fetching tokenized assets for device:', deviceId);
-      const { data: assets, error } = await supabase
+        .limit(10),
+      supabase
         .from('tokenized_assets')
         .select('*')
-        .filter('metadata->device_id', 'eq', JSON.stringify(deviceId))
-        .order('created_at', { ascending: false });
+        .eq('metadata->device_id', deviceId)
+        .order('created_at', { ascending: false })
+    ]);
 
-      if (error) {
-        console.error('Error fetching tokenized assets:', error);
-        throw error;
-      }
-
-      console.log('Fetched tokenized assets:', assets);
-      return assets;
-    } catch (error) {
-      console.error('Error fetching tokenized assets:', error);
-      toast.error('Failed to fetch tokenized assets');
-      throw error;
+    if (metricsResponse.error) {
+      console.error('Error fetching MES metrics:', metricsResponse.error);
+      toast.error('Failed to load MES metrics');
+      throw metricsResponse.error;
     }
+
+    if (assetsResponse.error) {
+      console.error('Error fetching tokenized assets:', assetsResponse.error);
+      toast.error('Failed to load tokenized assets');
+      throw assetsResponse.error;
+    }
+
+    console.log('Fetched MES metrics:', metricsResponse.data);
+    console.log('Fetched tokenized assets:', assetsResponse.data);
+
+    return {
+      mesMetrics: metricsResponse.data as MESMetric[],
+      tokenizedAssets: assetsResponse.data as TokenizedAsset[]
+    };
   };
 
-  const { data: mesMetrics, isLoading: mesLoading } = useQuery({
-    queryKey: ['mes_metrics', deviceId],
-    queryFn: fetchMESMetrics,
-    enabled: !!deviceId && deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) !== null
-  });
-
-  const { data: tokenizedAssets, isLoading: assetsLoading } = useQuery({
-    queryKey: ['tokenized_assets', deviceId],
-    queryFn: fetchTokenizedAssets,
-    enabled: !!deviceId && deviceId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) !== null
+  const { data, isLoading } = useQuery({
+    queryKey: ['mes-data', deviceId],
+    queryFn: fetchMESData,
+    enabled: !!deviceId,
   });
 
   return {
-    mesMetrics,
-    tokenizedAssets,
-    isLoading: mesLoading || assetsLoading
+    mesMetrics: data?.mesMetrics || [],
+    tokenizedAssets: data?.tokenizedAssets || [],
+    isLoading
   };
-}
+};

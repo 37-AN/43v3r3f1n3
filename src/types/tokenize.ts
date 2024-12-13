@@ -1,3 +1,5 @@
+import { Json } from "@/integrations/supabase/types";
+
 export interface TokenizeFormData {
   name: string;
   description: string;
@@ -31,11 +33,7 @@ export interface TokenizedAsset {
   price_per_token: number;
   owner_id: string;
   created_at: string;
-  metadata: {
-    source_metric?: MESMetric;
-    timestamp?: string;
-    quality_score?: number;
-  } | null;
+  metadata: Json | null;
 }
 
 export interface ComplianceStatus {
