@@ -1,10 +1,12 @@
+import { Json } from "@/integrations/supabase/types";
+
 export interface AIInsight {
   id: string;
-  device_id: string;
+  device_id: string | null;
   insight_type: string;
   message: string;
-  confidence: number;
+  confidence: number | null;
   severity: 'info' | 'warning' | 'critical';
-  created_at: string;
-  metadata: Record<string, any>;
+  created_at: string | null;
+  metadata: Json | null;
 }

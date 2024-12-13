@@ -35,13 +35,16 @@ export function UnifiedAIInsights({ deviceId }: { deviceId: string }) {
 
     const validatedData = (data || []).map(insight => ({
       ...insight,
-      severity: ['info', 'warning', 'critical'].includes(insight.severity) 
+      severity: ['info', 'warning', 'critical'].includes(insight.severity as string) 
         ? insight.severity as AIInsight['severity']
-        : 'info'
+        : 'info',
+      metadata: insight.metadata || {},
+      confidence: insight.confidence || 0,
+      created_at: insight.created_at || new Date().toISOString()
     }));
 
     console.log('Received insights:', validatedData);
-    return validatedData;
+    return validatedData as AIInsight[];
   };
 
   const { data: insights = [], isLoading, refetch } = useQuery({
