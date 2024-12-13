@@ -7,30 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function generateFallbackInsight(metrics: Record<string, number>) {
-  const efficiency = metrics.efficiency || 0;
-  const stability = metrics.stability || 0;
-  
-  let severity: 'info' | 'warning' | 'critical' = 'info';
-  let message = '';
-
-  if (efficiency < 70 || stability < 70) {
-    severity = 'critical';
-    message = `Performance metrics are below threshold: Efficiency ${efficiency.toFixed(1)}%, Stability ${stability.toFixed(1)}%`;
-  } else if (efficiency < 85 || stability < 85) {
-    severity = 'warning';
-    message = `Performance metrics need attention: Efficiency ${efficiency.toFixed(1)}%, Stability ${stability.toFixed(1)}%`;
-  } else {
-    message = `System operating normally: Efficiency ${efficiency.toFixed(1)}%, Stability ${stability.toFixed(1)}%`;
-  }
-
-  return {
-    message,
-    severity,
-    confidence: 0.7
-  };
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -123,16 +99,19 @@ Provide analysis focusing on:
       console.error('AI analysis failed, using fallback:', aiError);
       
       // Generate and store fallback insight
-      const fallbackInsight = generateFallbackInsight(metrics);
+      const severity = Object.values(metrics).some(value => value > 90) ? 'warning' : 'info';
+      const message = `System metrics analyzed: ${Object.entries(metrics)
+        .map(([key, value]) => `${key} is at ${value}`)
+        .join(', ')}`;
       
       const { error: insertError } = await supabase
         .from('ai_insights')
         .insert({
           device_id: deviceId,
-          insight_type: 'basic_analysis',
-          message: fallbackInsight.message,
-          confidence: fallbackInsight.confidence,
-          severity: fallbackInsight.severity,
+          insight_type: 'advanced_analysis',
+          message,
+          confidence: 0.7,
+          severity,
           metadata: {
             analyzed_metrics: metrics,
             time_range: timeRange,
@@ -149,7 +128,7 @@ Provide analysis focusing on:
       return new Response(
         JSON.stringify({ 
           success: true, 
-          analysis: fallbackInsight.message,
+          analysis: message,
           fallback: true 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

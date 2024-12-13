@@ -19,9 +19,21 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
   const { addMessage } = useConsole();
 
   const fetchInsights = async () => {
+    if (!deviceId) {
+      console.log('No device ID provided for fetching insights');
+      return;
+    }
+
     try {
       console.log('Fetching advanced insights for device:', deviceId);
       
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.error('No active session');
+        toast.error('Please log in to view insights');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('ai_insights')
         .select('*')
@@ -36,6 +48,7 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
         return;
       }
 
+      console.log('Received insights:', data);
       setInsights(data as AIInsight[]);
     } catch (error) {
       console.error('Error:', error);
@@ -44,27 +57,45 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
   };
 
   const generateNewInsight = async () => {
+    if (!deviceId || !metrics) {
+      console.error('Missing required data for insight generation');
+      toast.error('Missing required data for analysis');
+      return;
+    }
+
     setIsAnalyzing(true);
     try {
-      const timeRange = '24h'; // Can be made configurable
-      
       console.log('Generating new insight with metrics:', metrics);
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.error('No active session');
+        toast.error('Please log in to generate insights');
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('industrial-ai-insights', {
         body: { 
           deviceId,
           metrics,
-          timeRange
+          timeRange: '24h'
         }
       });
 
       if (error) {
         console.error('Error generating insight:', error);
-        throw error;
+        toast.error('Failed to generate insight');
+        return;
       }
 
       console.log('Generated new AI insight:', data);
-      toast.success('New AI insight generated');
-      fetchInsights();
+      
+      if (data?.analysis) {
+        toast.success('New AI insight generated');
+        await fetchInsights();
+      } else {
+        console.error('No analysis received from AI function');
+        toast.error('Failed to generate meaningful insight');
+      }
     } catch (error) {
       console.error('Error generating insight:', error);
       toast.error('Failed to generate new insight');
@@ -74,12 +105,16 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
   };
 
   useEffect(() => {
-    if (!deviceId) return;
+    if (!deviceId) {
+      console.log('No device ID available for insights');
+      return;
+    }
     
+    console.log('Initial insights fetch for device:', deviceId);
     fetchInsights();
 
     // Subscribe to real-time updates
-    const subscription = supabase
+    const channel = supabase
       .channel(`ai_insights_${deviceId}`)
       .on(
         'postgres_changes',
@@ -102,7 +137,8 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      console.log('Cleaning up insights subscription');
+      channel.unsubscribe();
     };
   }, [deviceId, addMessage]);
 
@@ -117,7 +153,7 @@ export function AdvancedAIInsights({ deviceId, metrics }: AdvancedAIInsightsProp
           variant="outline" 
           size="sm"
           onClick={generateNewInsight}
-          disabled={isAnalyzing}
+          disabled={isAnalyzing || !deviceId}
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${isAnalyzing ? 'animate-spin' : ''}`} />
           {isAnalyzing ? 'Analyzing...' : 'Generate New Insight'}
