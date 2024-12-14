@@ -6,6 +6,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface Metric {
+  metric_type: string;
+  value: number;
+  unit: string;
+  timestamp: string;
+  metadata: {
+    quality_score: number;
+    source: string;
+  };
+}
+
+interface RawData {
+  deviceId: string;
+  dataType: string;
+  metrics: Metric[];
+  timestamp: string;
+  metadata: {
+    simulation: boolean;
+    source: string;
+    quality_score: number;
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -16,8 +39,9 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data for refinement:', rawData);
 
-    if (!rawData || !rawData.deviceId || !rawData.metrics) {
-      throw new Error('Invalid data format');
+    // Validate required fields
+    if (!rawData || !rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
+      throw new Error('Missing required fields in raw data');
     }
 
     // Initialize Supabase client
@@ -27,32 +51,36 @@ serve(async (req) => {
     );
 
     // Process each metric
-    const refinedMetrics = rawData.metrics.map((metric: any) => {
+    const refinedMetrics = rawData.metrics.map((metric: Metric) => {
       try {
-        // Simple anomaly detection based on statistical analysis
-        const value = typeof metric.value === 'number' ? metric.value : 0;
-        const isAnomaly = detectAnomaly(value, metric.metric_type);
+        // Validate metric data
+        if (!metric.metric_type || typeof metric.value !== 'number') {
+          console.error('Invalid metric format:', metric);
+          throw new Error('Invalid metric format');
+        }
+
+        // Apply refinement based on metric type
+        let refinedValue = metric.value;
+        const isAnomaly = detectAnomaly(refinedValue, metric.metric_type);
         
-        // Apply refinement if anomaly detected
-        let refinedValue = value;
         if (isAnomaly) {
-          refinedValue = applyRefinement(value, metric.metric_type);
+          refinedValue = normalizeValue(refinedValue, metric.metric_type);
         }
 
         return {
           ...metric,
+          value: refinedValue,
           metadata: {
             ...metric.metadata,
             refined: true,
             is_anomaly: isAnomaly,
-            original_value: value,
+            original_value: metric.value,
             refinement_timestamp: new Date().toISOString()
-          },
-          value: refinedValue
+          }
         };
       } catch (error) {
         console.error('Error processing metric:', error);
-        return metric;
+        throw error;
       }
     });
 
@@ -64,7 +92,8 @@ serve(async (req) => {
         data_type: metric.metric_type,
         value: metric.value,
         quality_score: calculateQualityScore(metric),
-        metadata: metric.metadata
+        metadata: metric.metadata,
+        timestamp: new Date().toISOString()
       })));
 
     if (insertError) {
@@ -88,10 +117,14 @@ serve(async (req) => {
       JSON.stringify(refinedData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Error in data refinement:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'Error occurred during data refinement process'
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -100,38 +133,43 @@ serve(async (req) => {
   }
 });
 
-// Helper functions for data processing
 function detectAnomaly(value: number, metricType: string): boolean {
-  // Implement basic anomaly detection based on metric type
   const thresholds: Record<string, { min: number; max: number }> = {
-    temperature: { min: 0, max: 100 },
+    temperature: { min: -20, max: 120 },
     pressure: { min: 0, max: 1000 },
-    vibration: { min: 0, max: 50 },
-    efficiency: { min: 0, max: 100 },
-    energy_consumption: { min: 0, max: 1000 }
+    vibration: { min: 0, max: 100 },
+    production_rate: { min: 0, max: 1000 },
+    downtime_minutes: { min: 0, max: 1440 },
+    defect_rate: { min: 0, max: 100 },
+    energy_consumption: { min: 0, max: 10000 },
+    machine_efficiency: { min: 0, max: 100 }
   };
 
   const threshold = thresholds[metricType] || { min: -Infinity, max: Infinity };
   return value < threshold.min || value > threshold.max;
 }
 
-function applyRefinement(value: number, metricType: string): number {
-  // Apply appropriate refinement based on metric type
-  const normalizers: Record<string, (v: number) => number> = {
-    temperature: (v) => Math.max(0, Math.min(100, v)),
-    pressure: (v) => Math.max(0, Math.min(1000, v)),
-    vibration: (v) => Math.max(0, Math.min(50, v)),
-    efficiency: (v) => Math.max(0, Math.min(100, v)),
-    energy_consumption: (v) => Math.max(0, Math.min(1000, v))
+function normalizeValue(value: number, metricType: string): number {
+  const thresholds = {
+    temperature: { min: -20, max: 120 },
+    pressure: { min: 0, max: 1000 },
+    vibration: { min: 0, max: 100 },
+    production_rate: { min: 0, max: 1000 },
+    downtime_minutes: { min: 0, max: 1440 },
+    defect_rate: { min: 0, max: 100 },
+    energy_consumption: { min: 0, max: 10000 },
+    machine_efficiency: { min: 0, max: 100 }
   };
 
-  return normalizers[metricType]?.(value) ?? value;
+  const range = thresholds[metricType as keyof typeof thresholds];
+  if (!range) return value;
+
+  return Math.max(range.min, Math.min(range.max, value));
 }
 
-function calculateQualityScore(metric: any): number {
-  // Calculate quality score based on metadata and refinement
+function calculateQualityScore(metric: Metric & { metadata?: { is_anomaly?: boolean } }): number {
   if (metric.metadata?.is_anomaly) {
-    return 0.5; // Reduced score for refined anomalous data
+    return 0.6; // Reduced score for refined anomalous data
   }
   return 0.95; // High score for normal data
 }

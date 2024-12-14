@@ -30,13 +30,13 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         setProgress(prev => Math.min(prev + 10, 90));
       }, 500);
 
-      console.log('Sending data to refinery:', {
+      const requestBody = {
         rawData: {
           deviceId,
           dataType: 'simulation',
           metrics: Object.entries(simulatedData).map(([key, value]) => ({
             metric_type: key,
-            value,
+            value: typeof value === 'number' ? value : 0,
             unit: key === 'temperature' ? '°C' :
                   key === 'pressure' ? 'bar' :
                   key === 'vibration' ? 'mm/s' :
@@ -58,38 +58,12 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
             quality_score: 0.95
           }
         }
-      });
+      };
+
+      console.log('Sending data to refinery:', requestBody);
 
       const { data, error } = await supabase.functions.invoke('industrial-data-refinery', {
-        body: {
-          rawData: {
-            deviceId,
-            dataType: 'simulation',
-            metrics: Object.entries(simulatedData).map(([key, value]) => ({
-              metric_type: key,
-              value,
-              unit: key === 'temperature' ? '°C' :
-                    key === 'pressure' ? 'bar' :
-                    key === 'vibration' ? 'mm/s' :
-                    key === 'production_rate' ? 'units/hr' :
-                    key === 'downtime_minutes' ? 'min' :
-                    key === 'defect_rate' ? '%' :
-                    key === 'energy_consumption' ? 'kWh' :
-                    key === 'machine_efficiency' ? '%' : 'unit',
-              timestamp: new Date().toISOString(),
-              metadata: {
-                quality_score: 0.95,
-                source: 'simulation_engine'
-              }
-            })),
-            timestamp: new Date().toISOString(),
-            metadata: {
-              simulation: true,
-              source: 'simulation_engine',
-              quality_score: 0.95
-            }
-          }
-        }
+        body: requestBody
       });
 
       clearInterval(progressInterval);
