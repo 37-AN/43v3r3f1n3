@@ -30,23 +30,76 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         setProgress(prev => Math.min(prev + 10, 90));
       }, 500);
 
-      const { data, error } = await supabase.functions.invoke('industrial-data-refinery', {
-        body: {
+      console.log('Sending data to refinery:', {
+        rawData: {
           deviceId,
+          dataType: 'simulation',
           metrics: Object.entries(simulatedData).map(([key, value]) => ({
             metric_type: key,
             value,
-            timestamp: new Date().toISOString()
-          }))
+            unit: key === 'temperature' ? '°C' :
+                  key === 'pressure' ? 'bar' :
+                  key === 'vibration' ? 'mm/s' :
+                  key === 'production_rate' ? 'units/hr' :
+                  key === 'downtime_minutes' ? 'min' :
+                  key === 'defect_rate' ? '%' :
+                  key === 'energy_consumption' ? 'kWh' :
+                  key === 'machine_efficiency' ? '%' : 'unit',
+            timestamp: new Date().toISOString(),
+            metadata: {
+              quality_score: 0.95,
+              source: 'simulation_engine'
+            }
+          })),
+          timestamp: new Date().toISOString(),
+          metadata: {
+            simulation: true,
+            source: 'simulation_engine',
+            quality_score: 0.95
+          }
+        }
+      });
+
+      const { data, error } = await supabase.functions.invoke('industrial-data-refinery', {
+        body: {
+          rawData: {
+            deviceId,
+            dataType: 'simulation',
+            metrics: Object.entries(simulatedData).map(([key, value]) => ({
+              metric_type: key,
+              value,
+              unit: key === 'temperature' ? '°C' :
+                    key === 'pressure' ? 'bar' :
+                    key === 'vibration' ? 'mm/s' :
+                    key === 'production_rate' ? 'units/hr' :
+                    key === 'downtime_minutes' ? 'min' :
+                    key === 'defect_rate' ? '%' :
+                    key === 'energy_consumption' ? 'kWh' :
+                    key === 'machine_efficiency' ? '%' : 'unit',
+              timestamp: new Date().toISOString(),
+              metadata: {
+                quality_score: 0.95,
+                source: 'simulation_engine'
+              }
+            })),
+            timestamp: new Date().toISOString(),
+            metadata: {
+              simulation: true,
+              source: 'simulation_engine',
+              quality_score: 0.95
+            }
+          }
         }
       });
 
       clearInterval(progressInterval);
 
       if (error) {
+        console.error('Error from refinery:', error);
         throw error;
       }
 
+      console.log('Received refined data:', data);
       setProgress(100);
       toast.success("Data refined and stored successfully");
 
