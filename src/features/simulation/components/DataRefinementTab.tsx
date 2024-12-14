@@ -30,27 +30,28 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         setProgress(prev => Math.min(prev + 10, 90));
       }, 500);
 
+      // Format metrics array with proper structure
+      const metrics = Object.entries(simulatedData).map(([key, value]) => ({
+        metric_type: key,
+        value: typeof value === 'number' ? value : 0,
+        unit: key === 'temperature' ? '°C' :
+              key === 'pressure' ? 'bar' :
+              key === 'vibration' ? 'mm/s' :
+              key === 'production_rate' ? 'units/hr' :
+              key === 'downtime_minutes' ? 'min' :
+              key === 'defect_rate' ? '%' :
+              key === 'energy_consumption' ? 'kWh' :
+              key === 'machine_efficiency' ? '%' : 'unit',
+        metadata: {
+          quality_score: 0.95,
+          source: 'simulation_engine'
+        }
+      }));
+
       const requestBody = {
         rawData: {
           deviceId,
-          dataType: 'simulation',
-          metrics: Object.entries(simulatedData).map(([key, value]) => ({
-            metric_type: key,
-            value: typeof value === 'number' ? value : 0,
-            unit: key === 'temperature' ? '°C' :
-                  key === 'pressure' ? 'bar' :
-                  key === 'vibration' ? 'mm/s' :
-                  key === 'production_rate' ? 'units/hr' :
-                  key === 'downtime_minutes' ? 'min' :
-                  key === 'defect_rate' ? '%' :
-                  key === 'energy_consumption' ? 'kWh' :
-                  key === 'machine_efficiency' ? '%' : 'unit',
-            timestamp: new Date().toISOString(),
-            metadata: {
-              quality_score: 0.95,
-              source: 'simulation_engine'
-            }
-          })),
+          metrics,
           timestamp: new Date().toISOString(),
           metadata: {
             simulation: true,
