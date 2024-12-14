@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { pipeline } from "https://esm.sh/@huggingface/transformers@2.12.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,28 +20,23 @@ serve(async (req) => {
       throw new Error('Invalid data format');
     }
 
-    // Initialize AI pipeline for anomaly detection
-    const classifier = await pipeline(
-      "text-classification",
-      "Xenova/industrial-anomaly-detection",
-      { revision: "main" }
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     // Process each metric
-    const refinedMetrics = await Promise.all(rawData.metrics.map(async (metric: any) => {
+    const refinedMetrics = rawData.metrics.map((metric: any) => {
       try {
-        // Convert metric to text format for classification
-        const textData = `${metric.metric_type}: ${metric.value}`;
-        const result = await classifier(textData);
+        // Simple anomaly detection based on statistical analysis
+        const value = typeof metric.value === 'number' ? metric.value : 0;
+        const isAnomaly = detectAnomaly(value, metric.metric_type);
         
-        const anomalyScore = result[0].score;
-        const isAnomaly = anomalyScore > 0.7;
-
-        // Apply refinement based on anomaly detection
-        let refinedValue = metric.value;
+        // Apply refinement if anomaly detected
+        let refinedValue = value;
         if (isAnomaly) {
-          // Use moving average for anomalous values
-          refinedValue = calculateMovingAverage(rawData.metrics, metric);
+          refinedValue = applyRefinement(value, metric.metric_type);
         }
 
         return {
@@ -50,9 +44,8 @@ serve(async (req) => {
           metadata: {
             ...metric.metadata,
             refined: true,
-            anomaly_score: anomalyScore,
             is_anomaly: isAnomaly,
-            original_value: metric.value,
+            original_value: value,
             refinement_timestamp: new Date().toISOString()
           },
           value: refinedValue
@@ -61,14 +54,27 @@ serve(async (req) => {
         console.error('Error processing metric:', error);
         return metric;
       }
-    }));
+    });
+
+    // Store refined data
+    const { error: insertError } = await supabaseClient
+      .from('refined_industrial_data')
+      .insert(refinedMetrics.map(metric => ({
+        device_id: rawData.deviceId,
+        data_type: metric.metric_type,
+        value: metric.value,
+        quality_score: calculateQualityScore(metric),
+        metadata: metric.metadata
+      })));
+
+    if (insertError) {
+      console.error('Error storing refined data:', insertError);
+      throw insertError;
+    }
 
     const refinedData = {
       deviceId: rawData.deviceId,
       metrics: refinedMetrics,
-      analysis: generateAnalysis(refinedMetrics),
-      severity: determineSeverity(refinedMetrics),
-      confidence: calculateConfidence(refinedMetrics),
       metadata: {
         ...rawData.metadata,
         processed_at: new Date().toISOString(),
@@ -77,27 +83,6 @@ serve(async (req) => {
     };
 
     console.log('Refined data:', refinedData);
-
-    // Store refined data
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const { error: insertError } = await supabase
-      .from('refined_industrial_data')
-      .insert(refinedMetrics.map(metric => ({
-        device_id: rawData.deviceId,
-        data_type: metric.metric_type,
-        value: metric.value,
-        quality_score: 1 - (metric.metadata.anomaly_score || 0),
-        metadata: metric.metadata
-      })));
-
-    if (insertError) {
-      console.error('Error storing refined data:', insertError);
-      throw insertError;
-    }
 
     return new Response(
       JSON.stringify(refinedData),
@@ -115,40 +100,38 @@ serve(async (req) => {
   }
 });
 
-// Helper functions
-function calculateMovingAverage(metrics: any[], currentMetric: any, windowSize = 5) {
-  const sameTypeMetrics = metrics.filter(m => m.metric_type === currentMetric.metric_type);
-  const index = sameTypeMetrics.indexOf(currentMetric);
-  const start = Math.max(0, index - windowSize);
-  const end = Math.min(sameTypeMetrics.length, index + windowSize + 1);
-  const window = sameTypeMetrics.slice(start, end);
-  
-  return window.reduce((sum, m) => sum + m.value, 0) / window.length;
+// Helper functions for data processing
+function detectAnomaly(value: number, metricType: string): boolean {
+  // Implement basic anomaly detection based on metric type
+  const thresholds: Record<string, { min: number; max: number }> = {
+    temperature: { min: 0, max: 100 },
+    pressure: { min: 0, max: 1000 },
+    vibration: { min: 0, max: 50 },
+    efficiency: { min: 0, max: 100 },
+    energy_consumption: { min: 0, max: 1000 }
+  };
+
+  const threshold = thresholds[metricType] || { min: -Infinity, max: Infinity };
+  return value < threshold.min || value > threshold.max;
 }
 
-function generateAnalysis(metrics: any[]) {
-  const anomalies = metrics.filter(m => m.metadata.is_anomaly);
-  if (anomalies.length === 0) return 'All metrics within normal parameters';
-  
-  return `Detected ${anomalies.length} anomalies. Affected metrics: ${
-    anomalies.map(a => a.metric_type).join(', ')
-  }`;
+function applyRefinement(value: number, metricType: string): number {
+  // Apply appropriate refinement based on metric type
+  const normalizers: Record<string, (v: number) => number> = {
+    temperature: (v) => Math.max(0, Math.min(100, v)),
+    pressure: (v) => Math.max(0, Math.min(1000, v)),
+    vibration: (v) => Math.max(0, Math.min(50, v)),
+    efficiency: (v) => Math.max(0, Math.min(100, v)),
+    energy_consumption: (v) => Math.max(0, Math.min(1000, v))
+  };
+
+  return normalizers[metricType]?.(value) ?? value;
 }
 
-function determineSeverity(metrics: any[]) {
-  const anomalyCount = metrics.filter(m => m.metadata.is_anomaly).length;
-  const anomalyRatio = anomalyCount / metrics.length;
-  
-  if (anomalyRatio > 0.5) return 'critical';
-  if (anomalyRatio > 0.2) return 'warning';
-  return 'info';
-}
-
-function calculateConfidence(metrics: any[]) {
-  const avgQualityScore = metrics.reduce(
-    (sum, m) => sum + (1 - (m.metadata.anomaly_score || 0)), 
-    0
-  ) / metrics.length;
-  
-  return Number(avgQualityScore.toFixed(2));
+function calculateQualityScore(metric: any): number {
+  // Calculate quality score based on metadata and refinement
+  if (metric.metadata?.is_anomaly) {
+    return 0.5; // Reduced score for refined anomalous data
+  }
+  return 0.95; // High score for normal data
 }
