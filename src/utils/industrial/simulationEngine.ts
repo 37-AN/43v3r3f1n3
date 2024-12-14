@@ -1,4 +1,5 @@
 import { IndustrialSimulationConfig, SimulationRange } from "@/types/industrialSimulation";
+import { Machine, Product } from "./factoryConfig";
 
 interface CorrelationRules {
   [key: string]: {
@@ -11,10 +12,18 @@ export class IndustrialSimulationEngine {
   private config: IndustrialSimulationConfig;
   private currentValues: Record<string, number> = {};
   private correlationRules: CorrelationRules;
+  private machines: Machine[] = [];
+  private products: Product[] = [];
 
-  constructor(config: IndustrialSimulationConfig) {
+  constructor(
+    config: IndustrialSimulationConfig,
+    machines: Machine[] = [],
+    products: Product[] = []
+  ) {
     console.log('Initializing Industrial Simulation Engine');
     this.config = config;
+    this.machines = machines;
+    this.products = products;
     this.initializeCorrelationRules();
     this.initializeValues();
   }
@@ -85,10 +94,44 @@ export class IndustrialSimulationEngine {
     }
   }
 
+  public getMachines(): Machine[] {
+    return this.machines;
+  }
+
+  public getProducts(): Product[] {
+    return this.products;
+  }
+
+  public addMachine(machine: Machine): void {
+    console.log('Adding machine to simulation:', machine);
+    this.machines.push(machine);
+  }
+
+  public addProduct(product: Product): void {
+    console.log('Adding product to simulation:', product);
+    this.products.push(product);
+  }
+
   public generateNextValues(timeStep: number = 1): Record<string, number> {
     console.log(`Generating values for time step ${timeStep}`);
     
-    // Update independent variables first
+    // Update machine-specific metrics
+    this.machines.forEach(machine => {
+      const efficiency = machine.efficiency * (0.9 + Math.random() * 0.2); // ±10% variation
+      this.currentValues[`machine.${machine.id}.efficiency`] = efficiency * 100;
+      this.currentValues[`machine.${machine.id}.maintenance_score`] = 
+        machine.maintenanceScore * (0.95 + Math.random() * 0.1); // ±5% variation
+    });
+
+    // Update product-specific metrics
+    this.products.forEach(product => {
+      this.currentValues[`product.${product.id}.cycle_time`] = 
+        product.cycleTime * (0.9 + Math.random() * 0.2); // ±10% variation
+      this.currentValues[`product.${product.id}.quality_score`] = 
+        product.qualityThreshold * 100 * (0.95 + Math.random() * 0.1); // ±5% variation
+    });
+
+    // Update independent variables
     this.traverseConfig(this.config, '', (path, range) => {
       if (!this.correlationRules[path]) {
         const currentValue = this.currentValues[path];

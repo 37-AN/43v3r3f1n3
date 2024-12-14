@@ -519,6 +519,53 @@ export type Database = {
           },
         ]
       }
+      refined_mes_data: {
+        Row: {
+          batch_id: string | null
+          data_type: string
+          device_id: string | null
+          id: string
+          metadata: Json | null
+          process_parameters: Json | null
+          production_line: string | null
+          quality_score: number | null
+          timestamp: string | null
+          value: number
+        }
+        Insert: {
+          batch_id?: string | null
+          data_type: string
+          device_id?: string | null
+          id?: string
+          metadata?: Json | null
+          process_parameters?: Json | null
+          production_line?: string | null
+          quality_score?: number | null
+          timestamp?: string | null
+          value: number
+        }
+        Update: {
+          batch_id?: string | null
+          data_type?: string
+          device_id?: string | null
+          id?: string
+          metadata?: Json | null
+          process_parameters?: Json | null
+          production_line?: string | null
+          quality_score?: number | null
+          timestamp?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refined_mes_data_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "plc_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       token_transactions: {
         Row: {
           amount: number
