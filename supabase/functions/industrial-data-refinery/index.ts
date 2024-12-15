@@ -6,15 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface RefinedMetric {
-  device_id: string;
-  data_type: string;
-  value: number;
-  quality_score: number;
-  metadata: Record<string, unknown>;
-  timestamp: string;
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -25,22 +16,49 @@ serve(async (req) => {
     const requestData = await req.json();
     console.log('Received request data:', requestData);
 
+    // Enhanced validation
     if (!requestData?.rawData) {
-      console.error('No raw data provided in request');
-      throw new Error('No raw data provided');
+      console.error('No raw data provided');
+      return new Response(
+        JSON.stringify({
+          error: 'No raw data provided',
+          details: 'rawData object is required'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     const { rawData } = requestData;
 
-    // Enhanced validation
     if (!rawData.deviceId) {
       console.error('Device ID is missing');
-      throw new Error('Device ID is required');
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid data structure',
+          details: 'deviceId is required'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    if (!rawData.metrics || !Array.isArray(rawData.metrics) || rawData.metrics.length === 0) {
+    if (!Array.isArray(rawData.metrics) || rawData.metrics.length === 0) {
       console.error('Invalid or empty metrics array');
-      throw new Error('Valid metrics array is required');
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid data structure',
+          details: 'metrics must be a non-empty array'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     // Initialize Supabase client
@@ -50,7 +68,7 @@ serve(async (req) => {
     );
 
     // Process and refine each metric
-    const refinedMetrics: RefinedMetric[] = rawData.metrics.map((metric: any) => {
+    const refinedMetrics = rawData.metrics.map((metric: any) => {
       if (!metric.metric_type || typeof metric.value === 'undefined') {
         console.error('Invalid metric structure:', metric);
         throw new Error(`Invalid metric structure for type: ${metric.metric_type}`);
@@ -136,7 +154,7 @@ function normalizeValue(value: number, metricType: string): number {
 
 function calculateQualityScore(value: number, metricType: string): number {
   // Simple quality score calculation
-  return 0.95; // Default high quality score
+  return 0.95; // Default high quality score for now
 }
 
 function getDefaultUnit(metricType: string): string {
