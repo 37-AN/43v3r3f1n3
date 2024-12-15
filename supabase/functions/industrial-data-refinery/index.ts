@@ -75,6 +75,8 @@ serve(async (req) => {
       };
     });
 
+    console.log('Refined metrics:', refinedMetrics);
+
     // Store refined data
     const { error: insertError } = await supabaseClient
       .from('refined_industrial_data')
