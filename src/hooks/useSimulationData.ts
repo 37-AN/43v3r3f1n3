@@ -2,19 +2,22 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine";
-import { RegisterWriteHistoryEntry } from "@/types/simulation";
 
 export const useSimulationData = (
   isRunning: boolean,
   deviceId: string | null,
-  simulationEngine?: IndustrialSimulationEngine
+  simulationEngine: IndustrialSimulationEngine
 ) => {
-  const [writeHistory, setWriteHistory] = useState<RegisterWriteHistoryEntry[]>([]);
+  const [writeHistory, setWriteHistory] = useState<Array<{
+    timestamp: string;
+    metric: string;
+    value: number;
+  }>>([]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (isRunning && deviceId && simulationEngine) {
+    if (isRunning && deviceId) {
       interval = setInterval(async () => {
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -27,7 +30,7 @@ export const useSimulationData = (
           const values = simulationEngine.generateNextValues();
           console.log('Generated simulation values:', values);
 
-          // Format metrics array with proper structure
+          // Format metrics array
           const metricsArray = Object.entries(values).map(([key, value]) => ({
             metric_type: key,
             value: typeof value === 'number' ? value : 0,
@@ -35,11 +38,8 @@ export const useSimulationData = (
             unit: key === 'temperature' ? '°C' :
                   key === 'pressure' ? 'bar' :
                   key === 'vibration' ? 'mm/s' :
-                  key === 'production_rate' ? 'units/hr' :
-                  key === 'downtime_minutes' ? 'min' :
-                  key === 'defect_rate' ? '%' :
-                  key === 'energy_consumption' ? 'kWh' :
-                  key === 'machine_efficiency' ? '%' : 'unit',
+                  key === 'efficiency' ? '%' :
+                  key === 'energy_consumption' ? 'kWh' : 'unit',
             metadata: {
               quality_score: 0.95,
               source: 'simulation_engine',
@@ -47,9 +47,20 @@ export const useSimulationData = (
             }
           }));
 
-          console.log('Formatted metrics array:', metricsArray);
+          console.log('Sending data to refinery:', {
+            rawData: {
+              deviceId,
+              metrics: metricsArray,
+              timestamp: new Date().toISOString(),
+              metadata: {
+                simulation: true,
+                source: 'simulation_engine',
+                quality_score: 0.95,
+                owner_id: session.user.id
+              }
+            }
+          });
 
-          // Send to data refinery with proper request body structure
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
@@ -79,14 +90,13 @@ export const useSimulationData = (
 
           // Update history with new entries
           const timestamp = new Date().toISOString();
-          const newEntries: RegisterWriteHistoryEntry[] = Object.entries(values).map(([key, value], index) => ({
+          const newEntries = Object.entries(values).map(([key, value]) => ({
             timestamp,
-            address: index,
+            metric: key,
             value: typeof value === 'number' ? value : 0
           }));
 
           setWriteHistory(prev => [...newEntries, ...prev].slice(0, 50));
-
           console.log('Successfully processed simulation data');
         } catch (error) {
           console.error('Error in simulation pipeline:', error);
