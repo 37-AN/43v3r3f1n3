@@ -47,7 +47,8 @@ export const useSimulationData = (
             }
           }));
 
-          console.log('Sending data to refinery:', {
+          // Send to data refinery with proper request body structure
+          const refineryRequestBody = {
             rawData: {
               deviceId,
               metrics: metricsArray,
@@ -59,44 +60,34 @@ export const useSimulationData = (
                 owner_id: session.user.id
               }
             }
-          });
+          };
+
+          console.log('Sending data to refinery:', refineryRequestBody);
 
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
-              body: {
-                rawData: {
-                  deviceId,
-                  metrics: metricsArray,
-                  timestamp: new Date().toISOString(),
-                  metadata: {
-                    simulation: true,
-                    source: 'simulation_engine',
-                    quality_score: 0.95,
-                    owner_id: session.user.id
-                  }
-                }
-              }
+              body: refineryRequestBody
             }
           );
 
           if (refineryError) {
             console.error('Error in data refinement:', refineryError);
-            toast.error('Failed to process simulation data');
-            return;
+            throw refineryError;
           }
 
           console.log('Received refined data:', refinedData);
 
-          // Update history with new entries
-          const timestamp = new Date().toISOString();
-          const newEntries = Object.entries(values).map(([key, value]) => ({
-            timestamp,
-            metric: key,
-            value: typeof value === 'number' ? value : 0
-          }));
+          // Update history
+          setWriteHistory(prev => [
+            ...metricsArray.map(metric => ({
+              timestamp: metric.timestamp,
+              metric: metric.metric_type,
+              value: metric.value
+            })),
+            ...prev
+          ].slice(0, 50));
 
-          setWriteHistory(prev => [...newEntries, ...prev].slice(0, 50));
           console.log('Successfully processed simulation data');
         } catch (error) {
           console.error('Error in simulation pipeline:', error);
