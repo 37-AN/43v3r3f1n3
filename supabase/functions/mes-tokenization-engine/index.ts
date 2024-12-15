@@ -23,56 +23,71 @@ serve(async (req) => {
       );
     }
 
-    // Validate request body for tokenization requests
+    // Validate request body
     if (!body.refinedData) {
-      console.error('No refinedData field in request');
+      console.error('No refined data provided');
       return new Response(
-        JSON.stringify({ success: false, error: 'Request must include refinedData field' }),
+        JSON.stringify({ 
+          error: 'No refined data provided',
+          details: 'Request must include refinedData field'
+        }),
         { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
     const { refinedData } = body;
+    console.log('Processing refined data:', refinedData);
 
-    // Process the metrics and generate tokenized assets
-    const tokenizedMetrics = {
-      deviceId: refinedData.deviceId,
-      metrics: refinedData.metrics.map((metric: any) => ({
-        ...metric,
-        metadata: {
-          ...metric.metadata,
-          tokenized: true,
-          tokenization_timestamp: new Date().toISOString()
+    // Validate metrics array
+    if (!Array.isArray(refinedData.metrics)) {
+      console.error('Invalid metrics format:', refinedData.metrics);
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid metrics format',
+          details: 'Metrics must be an array'
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
-      })),
-      analysis: refinedData.analysis || 'No analysis available',
-      timestamp: new Date().toISOString(),
-      metadata: {
-        ...refinedData.metadata,
-        tokenized: true,
-        engine_version: '1.0.0'
-      }
-    };
+      );
+    }
 
-    console.log('Processed tokenized metrics:', tokenizedMetrics);
-    
+    // Process metrics and generate MES tokens
+    const processedMetrics = refinedData.metrics.map(metric => ({
+      ...metric,
+      metadata: {
+        ...metric.metadata,
+        tokenized: true,
+        tokenization_timestamp: new Date().toISOString(),
+        process_type: 'mes_tokenization'
+      }
+    }));
+
+    console.log('Processed metrics:', processedMetrics);
+
     return new Response(
-      JSON.stringify(tokenizedMetrics),
+      JSON.stringify({
+        success: true,
+        processedMetrics,
+        message: 'Data successfully tokenized'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Error processing request:', error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error', 
-        details: error.message 
+      JSON.stringify({
+        error: 'Internal server error',
+        details: error.message
       }),
       { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
