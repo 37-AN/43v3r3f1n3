@@ -7,7 +7,7 @@ export const useMESData = (deviceId: string) => {
   const fetchMESData = async () => {
     console.log('Fetching MES data for device:', deviceId);
     
-    const [metricsResponse, assetsResponse] = await Promise.all([
+    const [metricsResponse, assetsResponse, refinedDataResponse] = await Promise.all([
       supabase
         .from('mes_metrics')
         .select('*')
@@ -18,7 +18,13 @@ export const useMESData = (deviceId: string) => {
         .from('tokenized_assets')
         .select('*')
         .filter('metadata->device_id', 'eq', deviceId)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('refined_mes_data')
+        .select('*')
+        .eq('device_id', deviceId)
+        .order('timestamp', { ascending: false })
+        .limit(100)
     ]);
 
     if (metricsResponse.error) {
@@ -33,12 +39,20 @@ export const useMESData = (deviceId: string) => {
       throw assetsResponse.error;
     }
 
+    if (refinedDataResponse.error) {
+      console.error('Error fetching refined data:', refinedDataResponse.error);
+      toast.error('Failed to load refined data');
+      throw refinedDataResponse.error;
+    }
+
     console.log('Fetched MES metrics:', metricsResponse.data);
     console.log('Fetched tokenized assets:', assetsResponse.data);
+    console.log('Fetched refined data:', refinedDataResponse.data);
 
     return {
       mesMetrics: metricsResponse.data as MESMetric[],
-      tokenizedAssets: assetsResponse.data as TokenizedAsset[]
+      tokenizedAssets: assetsResponse.data as TokenizedAsset[],
+      refinedData: refinedDataResponse.data
     };
   };
 
@@ -51,6 +65,7 @@ export const useMESData = (deviceId: string) => {
   return {
     mesMetrics: data?.mesMetrics || [],
     tokenizedAssets: data?.tokenizedAssets || [],
+    refinedData: data?.refinedData || [],
     isLoading
   };
 };

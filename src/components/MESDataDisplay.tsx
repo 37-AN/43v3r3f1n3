@@ -2,13 +2,15 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useMESData } from "@/hooks/useMESData";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatXAxis, getRegisterColor } from "@/utils/chart/formatters";
 
 interface MESDataDisplayProps {
   deviceId: string;
 }
 
 export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
-  const { mesMetrics, tokenizedAssets, isLoading } = useMESData(deviceId);
+  const { mesMetrics, tokenizedAssets, refinedData, isLoading } = useMESData(deviceId);
 
   const getMetricDisplayName = (metricType: string) => {
     const metricMap: Record<string, string> = {
@@ -32,6 +34,32 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
 
   return (
     <div className="space-y-6">
+      <Card className="p-4">
+        <h3 className="text-lg font-semibold mb-4">Refined MES Metrics</h3>
+        <div className="h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={refinedData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="timestamp" 
+                tickFormatter={formatXAxis}
+                height={40}
+                angle={-45}
+                textAnchor="end"
+              />
+              <YAxis />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke={getRegisterColor('input')}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">MES Metrics</h3>
         <ScrollArea className="h-[200px]">
