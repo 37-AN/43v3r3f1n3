@@ -22,31 +22,26 @@ serve(async (req) => {
   }
 
   try {
-    const { rawData } = await req.json();
-    console.log('Received raw data:', rawData);
+    const requestData = await req.json();
+    console.log('Received request data:', requestData);
 
-    // Enhanced validation
-    if (!rawData) {
+    if (!requestData || !requestData.rawData) {
+      console.error('No raw data provided in request');
       throw new Error('No raw data provided');
     }
 
+    const { rawData } = requestData;
+
+    // Enhanced validation
     if (!rawData.deviceId) {
+      console.error('Device ID is missing');
       throw new Error('Device ID is required');
     }
 
     if (!rawData.metrics || !Array.isArray(rawData.metrics) || rawData.metrics.length === 0) {
-      throw new Error('Metrics array is required and must not be empty');
+      console.error('Invalid or empty metrics array');
+      throw new Error('Valid metrics array is required');
     }
-
-    // Validate each metric
-    rawData.metrics.forEach((metric: any, index: number) => {
-      if (!metric.metric_type) {
-        throw new Error(`Metric at index ${index} is missing metric_type`);
-      }
-      if (typeof metric.value !== 'number') {
-        throw new Error(`Metric at index ${index} has invalid value type`);
-      }
-    });
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -56,6 +51,11 @@ serve(async (req) => {
 
     // Process and refine each metric
     const refinedMetrics: RefinedMetric[] = rawData.metrics.map((metric: any) => {
+      if (!metric.metric_type || typeof metric.value === 'undefined') {
+        console.error('Invalid metric structure:', metric);
+        throw new Error(`Invalid metric structure for type: ${metric.metric_type}`);
+      }
+
       const refinedValue = normalizeValue(metric.value, metric.metric_type);
       const qualityScore = calculateQualityScore(refinedValue, metric.metric_type);
 
@@ -90,28 +90,28 @@ serve(async (req) => {
     console.log('Successfully refined and stored data');
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         refinedMetrics,
         message: 'Data successfully refined and stored'
       }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
     );
 
   } catch (error) {
     console.error('Error in data refinement:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error.message,
         details: 'Error occurred during data refinement process'
       }),
-      { 
-        status: 500,
+      {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );

@@ -27,7 +27,7 @@ export const useSimulationData = (
           const values = simulationEngine.generateNextValues();
           console.log('Generated simulation values:', values);
 
-          // Format metrics array
+          // Format metrics array with proper structure
           const metricsArray = Object.entries(values).map(([key, value]) => ({
             metric_type: key,
             value: typeof value === 'number' ? value : 0,
@@ -42,33 +42,41 @@ export const useSimulationData = (
                   key === 'machine_efficiency' ? '%' : 'unit',
             metadata: {
               quality_score: 0.95,
-              source: 'simulation_engine'
+              source: 'simulation_engine',
+              simulation: true
             }
           }));
 
-          // Send to data refinery
-          console.log('Sending data to refinery:', { deviceId, metricsArray });
+          // Send to data refinery with proper request body structure
+          const refineryRequestBody = {
+            rawData: {
+              deviceId,
+              metrics: metricsArray,
+              timestamp: new Date().toISOString(),
+              metadata: {
+                simulation: true,
+                source: 'simulation_engine',
+                quality_score: 0.95,
+                owner_id: session.user.id
+              }
+            }
+          };
+
+          console.log('Sending data to refinery:', refineryRequestBody);
+
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
-              body: { 
-                rawData: {
-                  deviceId,
-                  dataType: 'simulation',
-                  metrics: metricsArray,
-                  timestamp: new Date().toISOString(),
-                  metadata: {
-                    simulation: true,
-                    source: 'simulation_engine',
-                    quality_score: 0.95,
-                    owner_id: session.user.id
-                  }
-                }
-              }
+              body: refineryRequestBody
             }
           );
 
-          if (refineryError) throw refineryError;
+          if (refineryError) {
+            console.error('Error in data refinement:', refineryError);
+            toast.error('Failed to process simulation data');
+            return;
+          }
+
           console.log('Received refined data:', refinedData);
 
           // Update history with new entries
@@ -81,14 +89,14 @@ export const useSimulationData = (
 
           setWriteHistory(prev => [...newEntries, ...prev].slice(0, 50));
 
-          // Send refined data to MES engine with proper structure
+          // Send to MES engine with proper structure
           const { error: mesError } = await supabase.functions.invoke(
             'mes-tokenization-engine',
             {
               body: {
                 refinedData: {
                   deviceId,
-                  metrics: metricsArray, // Ensure we're sending an array of metrics
+                  metrics: refinedData.refinedMetrics,
                   timestamp: new Date().toISOString(),
                   metadata: {
                     simulation: true,
