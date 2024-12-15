@@ -23,12 +23,12 @@ serve(async (req) => {
       );
     }
 
-    // Validate request body
+    // Validate request body structure
     if (!body.refinedData) {
-      console.error('No refined data provided');
+      console.error('Missing refinedData in request body');
       return new Response(
         JSON.stringify({ 
-          error: 'No refined data provided',
+          error: 'Invalid request',
           details: 'Request must include refinedData field'
         }),
         { 
@@ -39,15 +39,15 @@ serve(async (req) => {
     }
 
     const { refinedData } = body;
-    console.log('Processing refined data:', refinedData);
+    console.log('Validating refined data structure:', refinedData);
 
-    // Validate metrics array
-    if (!Array.isArray(refinedData.metrics)) {
-      console.error('Invalid metrics format:', refinedData.metrics);
+    // Validate metrics field exists and is an array
+    if (!refinedData.metrics || !Array.isArray(refinedData.metrics)) {
+      console.error('Invalid or missing metrics array:', refinedData.metrics);
       return new Response(
         JSON.stringify({
-          error: 'Invalid metrics format',
-          details: 'Metrics must be an array'
+          error: 'Invalid data structure',
+          details: 'refinedData.metrics must be an array'
         }),
         {
           status: 400,
@@ -56,18 +56,34 @@ serve(async (req) => {
       );
     }
 
-    // Process metrics and generate MES tokens
-    const processedMetrics = refinedData.metrics.map(metric => ({
-      ...metric,
-      metadata: {
-        ...metric.metadata,
-        tokenized: true,
-        tokenization_timestamp: new Date().toISOString(),
-        process_type: 'mes_tokenization'
-      }
-    }));
+    // Ensure metrics array is not empty
+    if (refinedData.metrics.length === 0) {
+      console.warn('Empty metrics array received');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          processedMetrics: [],
+          message: 'No metrics to process'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log('Processed metrics:', processedMetrics);
+    // Process metrics and generate MES tokens
+    const processedMetrics = refinedData.metrics.map(metric => {
+      console.log('Processing metric:', metric);
+      return {
+        ...metric,
+        metadata: {
+          ...(metric.metadata || {}), // Handle case where metadata might be undefined
+          tokenized: true,
+          tokenization_timestamp: new Date().toISOString(),
+          process_type: 'mes_tokenization'
+        }
+      };
+    });
+
+    console.log('Successfully processed metrics:', processedMetrics);
 
     return new Response(
       JSON.stringify({
@@ -83,7 +99,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
-        details: error.message
+        details: error.message,
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 500,
