@@ -25,10 +25,28 @@ serve(async (req) => {
     const { rawData } = await req.json();
     console.log('Received raw data:', rawData);
 
-    // Validate required fields
-    if (!rawData || !rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
-      throw new Error('Missing required fields in raw data');
+    // Enhanced validation
+    if (!rawData) {
+      throw new Error('No raw data provided');
     }
+
+    if (!rawData.deviceId) {
+      throw new Error('Device ID is required');
+    }
+
+    if (!rawData.metrics || !Array.isArray(rawData.metrics) || rawData.metrics.length === 0) {
+      throw new Error('Metrics array is required and must not be empty');
+    }
+
+    // Validate each metric
+    rawData.metrics.forEach((metric: any, index: number) => {
+      if (!metric.metric_type) {
+        throw new Error(`Metric at index ${index} is missing metric_type`);
+      }
+      if (typeof metric.value !== 'number') {
+        throw new Error(`Metric at index ${index} has invalid value type`);
+      }
+    });
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -38,12 +56,6 @@ serve(async (req) => {
 
     // Process and refine each metric
     const refinedMetrics: RefinedMetric[] = rawData.metrics.map((metric: any) => {
-      if (!metric.metric_type || typeof metric.value !== 'number') {
-        console.error('Invalid metric format:', metric);
-        throw new Error('Invalid metric format');
-      }
-
-      // Apply data refinement logic
       const refinedValue = normalizeValue(metric.value, metric.metric_type);
       const qualityScore = calculateQualityScore(refinedValue, metric.metric_type);
 
