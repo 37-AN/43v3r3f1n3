@@ -75,15 +75,15 @@ serve(async (req) => {
           device_id: rawData.deviceId,
           data_type: metric.metric_type,
           value: refinedValue,
-          quality_score: 0.95,
+          quality_score: metric.metadata?.quality_score || 0.95,
+          timestamp: new Date().toISOString(),
           metadata: {
             ...metric.metadata,
             refined: true,
             original_value: metric.value,
             refinement_timestamp: new Date().toISOString(),
             unit: metric.unit || getDefaultUnit(metric.metric_type)
-          },
-          timestamp: new Date().toISOString()
+          }
         };
       }).filter(Boolean);
 
