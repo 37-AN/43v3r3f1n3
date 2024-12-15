@@ -71,13 +71,26 @@ export const useSimulationData = (
           if (refineryError) throw refineryError;
           console.log('Received refined data:', refinedData);
 
+          // Update history with new entries
+          const timestamp = new Date().toISOString();
+          const newEntries: RegisterWriteHistoryEntry[] = Object.entries(values).map(([key, value], index) => ({
+            timestamp,
+            address: index,
+            value: typeof value === 'number' ? value : 0
+          }));
+
+          setWriteHistory(prev => [...newEntries, ...prev].slice(0, 50));
+
           // Send refined data to MES engine
           const { error: mesError } = await supabase.functions.invoke(
             'mes-tokenization-engine',
             {
               body: {
-                refinedData,
-                timestamp: new Date().toISOString()
+                refinedData: {
+                  ...refinedData,
+                  deviceId,
+                  timestamp: new Date().toISOString()
+                }
               }
             }
           );
@@ -87,17 +100,6 @@ export const useSimulationData = (
             toast.error('Failed to process in MES engine');
             return;
           }
-
-          // Update history with refined values
-          const timestamp = new Date().toISOString();
-          setWriteHistory(prev => [
-            {
-              timestamp,
-              address: 0,
-              value: refinedData.metrics[0].value
-            },
-            ...prev
-          ].slice(0, 50));
 
           console.log('Successfully processed simulation data');
         } catch (error) {
