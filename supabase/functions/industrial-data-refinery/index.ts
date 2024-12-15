@@ -25,7 +25,7 @@ serve(async (req) => {
     const requestData = await req.json();
     console.log('Received request data:', requestData);
 
-    if (!requestData || !requestData.rawData) {
+    if (!requestData?.rawData) {
       console.error('No raw data provided in request');
       throw new Error('No raw data provided');
     }
