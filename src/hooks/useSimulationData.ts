@@ -47,27 +47,25 @@ export const useSimulationData = (
             }
           }));
 
+          console.log('Formatted metrics array:', metricsArray);
+
           // Send to data refinery with proper request body structure
-          const refineryRequestBody = {
-            rawData: {
-              deviceId,
-              metrics: metricsArray,
-              timestamp: new Date().toISOString(),
-              metadata: {
-                simulation: true,
-                source: 'simulation_engine',
-                quality_score: 0.95,
-                owner_id: session.user.id
-              }
-            }
-          };
-
-          console.log('Sending data to refinery:', refineryRequestBody);
-
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
-              body: refineryRequestBody
+              body: {
+                rawData: {
+                  deviceId,
+                  metrics: metricsArray,
+                  timestamp: new Date().toISOString(),
+                  metadata: {
+                    simulation: true,
+                    source: 'simulation_engine',
+                    quality_score: 0.95,
+                    owner_id: session.user.id
+                  }
+                }
+              }
             }
           );
 
