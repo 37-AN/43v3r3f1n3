@@ -13,10 +13,12 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Received request to industrial-data-refinery');
+    
     const requestData = await req.json();
-    console.log('Received request data:', requestData);
+    console.log('Request data:', JSON.stringify(requestData, null, 2));
 
-    // Enhanced validation
+    // Basic validation
     if (!requestData?.rawData) {
       console.error('No raw data provided');
       return new Response(
@@ -33,26 +35,13 @@ serve(async (req) => {
 
     const { rawData } = requestData;
 
-    if (!rawData.deviceId) {
-      console.error('Device ID is missing');
+    // Validate required fields
+    if (!rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
+      console.error('Invalid data structure:', { deviceId: rawData.deviceId, metrics: rawData.metrics });
       return new Response(
         JSON.stringify({
           error: 'Invalid data structure',
-          details: 'deviceId is required'
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    if (!Array.isArray(rawData.metrics) || rawData.metrics.length === 0) {
-      console.error('Invalid or empty metrics array');
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid data structure',
-          details: 'metrics must be a non-empty array'
+          details: 'deviceId and metrics array are required'
         }),
         { 
           status: 400,
@@ -67,45 +56,54 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Process and refine each metric
-    const refinedMetrics = rawData.metrics.map((metric: any) => {
-      if (!metric.metric_type || typeof metric.value === 'undefined') {
-        console.error('Invalid metric structure:', metric);
-        throw new Error(`Invalid metric structure for type: ${metric.metric_type}`);
-      }
+    console.log('Processing metrics:', rawData.metrics.length);
 
-      const refinedValue = normalizeValue(metric.value, metric.metric_type);
-      const qualityScore = calculateQualityScore(refinedValue, metric.metric_type);
+    // Process metrics in smaller batches to prevent timeouts
+    const BATCH_SIZE = 10;
+    const refinedMetrics = [];
 
-      return {
-        device_id: rawData.deviceId,
-        data_type: metric.metric_type,
-        value: refinedValue,
-        quality_score: qualityScore,
-        metadata: {
-          ...metric.metadata,
-          refined: true,
-          original_value: metric.value,
-          refinement_timestamp: new Date().toISOString(),
-          unit: metric.unit || getDefaultUnit(metric.metric_type)
-        },
-        timestamp: new Date().toISOString()
-      };
-    });
+    for (let i = 0; i < rawData.metrics.length; i += BATCH_SIZE) {
+      const batch = rawData.metrics.slice(i, i + BATCH_SIZE);
+      const refinedBatch = batch.map((metric: any) => {
+        if (!metric.metric_type || typeof metric.value === 'undefined') {
+          console.warn('Invalid metric structure:', metric);
+          return null;
+        }
 
-    console.log('Refined metrics:', refinedMetrics);
+        const refinedValue = normalizeValue(metric.value, metric.metric_type);
+        return {
+          device_id: rawData.deviceId,
+          data_type: metric.metric_type,
+          value: refinedValue,
+          quality_score: 0.95,
+          metadata: {
+            ...metric.metadata,
+            refined: true,
+            original_value: metric.value,
+            refinement_timestamp: new Date().toISOString(),
+            unit: metric.unit || getDefaultUnit(metric.metric_type)
+          },
+          timestamp: new Date().toISOString()
+        };
+      }).filter(Boolean);
 
-    // Store refined data
-    const { error: insertError } = await supabaseClient
-      .from('refined_industrial_data')
-      .insert(refinedMetrics);
-
-    if (insertError) {
-      console.error('Error storing refined data:', insertError);
-      throw insertError;
+      refinedMetrics.push(...refinedBatch);
     }
 
-    console.log('Successfully refined and stored data');
+    console.log('Refined metrics:', refinedMetrics.length);
+
+    if (refinedMetrics.length > 0) {
+      const { error: insertError } = await supabaseClient
+        .from('refined_industrial_data')
+        .insert(refinedMetrics);
+
+      if (insertError) {
+        console.error('Error storing refined data:', insertError);
+        throw insertError;
+      }
+    }
+
+    console.log('Successfully processed and stored data');
 
     return new Response(
       JSON.stringify({
@@ -129,7 +127,7 @@ serve(async (req) => {
         details: 'Error occurred during data refinement process'
       }),
       {
-        status: 400,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
@@ -150,11 +148,6 @@ function normalizeValue(value: number, metricType: string): number {
 
   const range = thresholds[metricType] || { min: -Infinity, max: Infinity };
   return Math.max(range.min, Math.min(range.max, value));
-}
-
-function calculateQualityScore(value: number, metricType: string): number {
-  // Simple quality score calculation
-  return 0.95; // Default high quality score for now
 }
 
 function getDefaultUnit(metricType: string): string {

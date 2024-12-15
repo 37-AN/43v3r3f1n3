@@ -87,34 +87,6 @@ export const useSimulationData = (
 
           setWriteHistory(prev => [...newEntries, ...prev].slice(0, 50));
 
-          // Send to MES engine with proper structure
-          if (refinedData?.refinedMetrics) {
-            const { error: mesError } = await supabase.functions.invoke(
-              'mes-tokenization-engine',
-              {
-                body: {
-                  refinedData: {
-                    deviceId,
-                    metrics: refinedData.refinedMetrics,
-                    timestamp: new Date().toISOString(),
-                    metadata: {
-                      simulation: true,
-                      source: 'simulation_engine',
-                      quality_score: 0.95,
-                      owner_id: session.user.id
-                    }
-                  }
-                }
-              }
-            );
-
-            if (mesError) {
-              console.error('Error sending data to MES engine:', mesError);
-              toast.error('Failed to process in MES engine');
-              return;
-            }
-          }
-
           console.log('Successfully processed simulation data');
         } catch (error) {
           console.error('Error in simulation pipeline:', error);
