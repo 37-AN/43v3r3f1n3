@@ -81,15 +81,21 @@ export const useSimulationData = (
 
           setWriteHistory(prev => [...newEntries, ...prev].slice(0, 50));
 
-          // Send refined data to MES engine
+          // Send refined data to MES engine with proper structure
           const { error: mesError } = await supabase.functions.invoke(
             'mes-tokenization-engine',
             {
               body: {
                 refinedData: {
-                  ...refinedData,
                   deviceId,
-                  timestamp: new Date().toISOString()
+                  metrics: metricsArray, // Ensure we're sending an array of metrics
+                  timestamp: new Date().toISOString(),
+                  metadata: {
+                    simulation: true,
+                    source: 'simulation_engine',
+                    quality_score: 0.95,
+                    owner_id: session.user.id
+                  }
                 }
               }
             }
