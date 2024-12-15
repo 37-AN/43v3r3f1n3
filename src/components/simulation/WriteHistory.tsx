@@ -1,9 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RegisterWriteHistoryEntry } from "@/types/simulation";
 
 interface WriteHistoryProps {
-  history: RegisterWriteHistoryEntry[];
+  history: Array<{
+    timestamp: string;
+    metric: string;
+    value: number;
+  }>;
 }
 
 export function WriteHistory({ history }: WriteHistoryProps) {
@@ -22,7 +25,7 @@ export function WriteHistory({ history }: WriteHistoryProps) {
               >
                 <div className="flex justify-between items-center">
                   <span className="font-medium">
-                    Address: {entry.address} → Value: {entry.value}
+                    {entry.metric}: {entry.value}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {new Date(entry.timestamp).toLocaleTimeString()}

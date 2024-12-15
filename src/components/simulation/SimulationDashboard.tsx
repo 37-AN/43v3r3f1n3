@@ -6,7 +6,9 @@ import { Settings2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { SimulationConfig } from "./SimulationConfig";
 import { WriteHistory } from "./WriteHistory";
-import { RegisterWriteHistoryEntry } from "@/types/simulation";
+import { defaultSimulationConfig } from "@/types/industrialSimulation";
+import { IndustrialSimulationEngine } from "@/utils/industrial/simulationEngine";
+import { useState } from "react";
 
 interface SimulationDashboardProps {
   deviceId: string;
@@ -14,7 +16,8 @@ interface SimulationDashboardProps {
 
 export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
   const isSimulationRunning = useSimulationState();
-  const { writeHistory } = useSimulationData(isSimulationRunning, deviceId);
+  const [simulationEngine] = useState(() => new IndustrialSimulationEngine(defaultSimulationConfig));
+  const { writeHistory } = useSimulationData(isSimulationRunning, deviceId, simulationEngine);
 
   if (!deviceId) {
     return (

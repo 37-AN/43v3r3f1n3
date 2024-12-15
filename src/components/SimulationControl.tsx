@@ -49,35 +49,12 @@ export function SimulationControl() {
     );
   }
 
-  // Convert register writes to simulation metrics
-  const formattedHistory: WriteHistoryEntry[] = writeHistory.map(entry => {
-    // Map register addresses to meaningful metrics
-    const metricMap: Record<number, string> = {
-      0: 'temperature',
-      1: 'pressure',
-      2: 'vibration',
-      3: 'efficiency',
-      4: 'energy_consumption'
-    };
-
-    const metric = metricMap[entry.address] || `register_${entry.address}`;
-    let value = entry.value;
-    
-    // Add appropriate units based on metric type
-    if (metric === 'temperature') {
-      value = (value / 10); // Assuming temperature is stored with 1 decimal place
-    } else if (metric === 'pressure') {
-      value = (value / 100); // Assuming pressure is stored with 2 decimal places
-    } else if (metric === 'efficiency') {
-      value = Math.min(100, Math.max(0, value));
-    }
-
-    return {
-      timestamp: entry.timestamp,
-      metric: metric.charAt(0).toUpperCase() + metric.slice(1).replace(/_/g, ' '),
-      value
-    };
-  });
+  // Convert metrics to history entries
+  const formattedHistory: WriteHistoryEntry[] = writeHistory.map(entry => ({
+    timestamp: entry.timestamp,
+    metric: entry.metric,
+    value: entry.value
+  }));
 
   return (
     <div className="space-y-4">
