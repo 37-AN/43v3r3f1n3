@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from './utils.ts';
+import { corsHeaders, generateAnalysis } from './utils.ts';
+import { RequestBody } from './types.ts';
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -29,7 +30,7 @@ serve(async (req) => {
       );
     }
 
-    const { rawData } = requestData;
+    const { rawData }: RequestBody = requestData;
 
     // Validate required fields
     if (!rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
@@ -84,11 +85,8 @@ serve(async (req) => {
     }
 
     // Generate analysis based on metrics
-    const analysis = {
-      message: `Processed ${refinedMetrics.length} metrics successfully`,
-      severity: 'info',
-      confidence: 0.95
-    };
+    const analysis = generateAnalysis(rawData.metrics);
+    console.log('Generated analysis:', analysis);
 
     return new Response(
       JSON.stringify({

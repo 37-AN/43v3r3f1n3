@@ -1,9 +1,25 @@
+import { Metric, Analysis } from './types.ts';
+
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-export function generateAnalysis(metrics: any[]) {
+export function getDefaultUnit(metricType: string): string {
+  const unitMap: Record<string, string> = {
+    temperature: '°C',
+    pressure: 'bar',
+    vibration: 'mm/s',
+    production_rate: 'units/hr',
+    downtime_minutes: 'min',
+    defect_rate: '%',
+    energy_consumption: 'kWh',
+    machine_efficiency: '%'
+  };
+  return unitMap[metricType] || 'unit';
+}
+
+export function generateAnalysis(metrics: Metric[]): Analysis {
   if (!metrics || metrics.length === 0) {
     return {
       message: "No data available for analysis",
