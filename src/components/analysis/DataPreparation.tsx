@@ -12,36 +12,44 @@ export const DataPreparation = ({ simulatedData, onPreparedData }: DataPreparati
       return;
     }
 
-    const numericalData = Object.entries(simulatedData)
-      .map(([key, value]) => {
-        if (!value) return null;
-        
-        let finalValue: number | null = null;
-        
-        if (typeof value === 'object' && value !== null) {
-          if ('value' in value && 
-              typeof value.value === 'object' && 
-              value.value !== null && 
-              'value' in value.value) {
-            const numValue = Number(value.value.value);
-            if (!isNaN(numValue)) {
-              finalValue = numValue;
+    try {
+      const numericalData = Object.entries(simulatedData)
+        .map(([key, value]) => {
+          if (!value) return null;
+          
+          let finalValue: number | null = null;
+          
+          if (typeof value === 'object' && value !== null) {
+            if ('value' in value && 
+                typeof value.value === 'object' && 
+                value.value !== null && 
+                'value' in value.value) {
+              const numValue = Number(value.value.value);
+              if (!isNaN(numValue)) {
+                finalValue = numValue;
+              }
             }
+          } else if (typeof value === 'number' && !isNaN(value)) {
+            finalValue = value;
           }
-        } else if (typeof value === 'number' && !isNaN(value)) {
-          finalValue = value;
-        }
-        
-        return finalValue !== null ? `${finalValue}` : null;
-      })
-      .filter((item): item is string => item !== null);
+          
+          return finalValue !== null ? { key, value: finalValue } : null;
+        })
+        .filter((item): item is { key: string; value: number } => item !== null);
 
-    if (numericalData.length > 0) {
-      const inputText = numericalData.join(' ');
-      console.log('Prepared data for analysis:', inputText);
-      onPreparedData(inputText);
-    } else {
-      console.log('No valid numerical data to analyze');
+      if (numericalData.length > 0) {
+        const rawData = {
+          timestamp: new Date().toISOString(),
+          values: numericalData
+        };
+        
+        console.log('Prepared data for analysis:', rawData);
+        onPreparedData(JSON.stringify(rawData));
+      } else {
+        console.log('No valid numerical data to analyze');
+      }
+    } catch (error) {
+      console.error('Error preparing data:', error);
     }
   };
 
