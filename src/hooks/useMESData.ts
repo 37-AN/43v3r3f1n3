@@ -29,20 +29,17 @@ export const useMESData = (deviceId: string) => {
 
     if (metricsResponse.error) {
       console.error('Error fetching MES metrics:', metricsResponse.error);
-      toast.error('Failed to load MES metrics');
-      throw metricsResponse.error;
+      throw new Error('Failed to load MES metrics');
     }
 
     if (assetsResponse.error) {
       console.error('Error fetching tokenized assets:', assetsResponse.error);
-      toast.error('Failed to load tokenized assets');
-      throw assetsResponse.error;
+      throw new Error('Failed to load tokenized assets');
     }
 
     if (refinedDataResponse.error) {
       console.error('Error fetching refined data:', refinedDataResponse.error);
-      toast.error('Failed to load refined data');
-      throw refinedDataResponse.error;
+      throw new Error('Failed to load refined data');
     }
 
     console.log('Fetched MES metrics:', metricsResponse.data);
@@ -56,7 +53,7 @@ export const useMESData = (deviceId: string) => {
     };
   };
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['mes-data', deviceId],
     queryFn: fetchMESData,
     enabled: !!deviceId,
@@ -66,6 +63,7 @@ export const useMESData = (deviceId: string) => {
     mesMetrics: data?.mesMetrics || [],
     tokenizedAssets: data?.tokenizedAssets || [],
     refinedData: data?.refinedData || [],
-    isLoading
+    isLoading,
+    error
   };
 };

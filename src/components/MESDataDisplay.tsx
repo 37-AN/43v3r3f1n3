@@ -26,8 +26,8 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
     return metricMap[metricType] || metricType;
   };
 
-  if (error) {
-    toast.error("Failed to load MES data");
+  if (error instanceof Error) {
+    toast.error(error.message);
     return (
       <Card className="p-4">
         <div className="text-red-500">Error loading MES data: {error.message}</div>
