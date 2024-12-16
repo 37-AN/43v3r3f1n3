@@ -35,33 +35,33 @@ export const useSimulationData = (
             {
               metric_type: 'temperature',
               value: dataPoint.temperature_C,
-              timestamp: new Date().toISOString(),
+              timestamp: dataPoint.timestamp,
               unit: '°C',
               metadata: {
-                quality_score: 0.95,
-                source: 'simulation_engine',
+                quality_score: dataPoint.metadata.quality_score,
+                source: dataPoint.source,
                 error_state: null
               }
             },
             {
               metric_type: 'pressure',
               value: dataPoint.pressure_bar,
-              timestamp: new Date().toISOString(),
+              timestamp: dataPoint.timestamp,
               unit: 'bar',
               metadata: {
-                quality_score: 0.95,
-                source: 'simulation_engine',
+                quality_score: dataPoint.metadata.quality_score,
+                source: dataPoint.source,
                 error_state: null
               }
             },
             {
               metric_type: 'flow_rate',
               value: dataPoint.flow_rate_m3_s,
-              timestamp: new Date().toISOString(),
+              timestamp: dataPoint.timestamp,
               unit: 'm³/s',
               metadata: {
-                quality_score: 0.95,
-                source: 'simulation_engine',
+                quality_score: dataPoint.metadata.quality_score,
+                source: dataPoint.source,
                 error_state: null
               }
             }
