@@ -1,1 +1,9 @@
-project_id = "ipglcejtzonamkpsbwgz"
+[build]
+command = ""
+
+[deploy]
+allowed_http_hosts = ["*"]
+
+[env]
+SUPABASE_URL = "env(SUPABASE_URL)"
+SUPABASE_ANON_KEY = "env(SUPABASE_ANON_KEY)"

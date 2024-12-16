@@ -1,96 +1,45 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from '@supabase/supabase-js';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface S7Request {
-  operation: 'read' | 'write';
-  area: 'DB' | 'M' | 'I' | 'Q';
-  dbNumber?: number;
-  start: number;
-  amount: number;
-  wordLen: number;
-  values?: number[];
-}
+};
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    console.log('Received request to s7-server');
+    const { action } = await req.json();
     
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
-
-    // Get request body
-    const { operation, area, dbNumber, start, amount, wordLen, values } = await req.json() as S7Request
-
-    // Validate request structure
-    if (!operation || !area || typeof start !== 'number' || typeof amount !== 'number' || typeof wordLen !== 'number') {
-      console.error('Invalid request structure:', { operation, area, start, amount, wordLen });
+    if (action === 'health-check') {
       return new Response(
-        JSON.stringify({
-          error: 'Invalid request structure',
-          details: 'Required fields missing or invalid'
-        }),
+        JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }),
         { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
         }
       );
     }
 
-    if (operation === 'read') {
-      // Simulate reading values
-      const simulatedValues = Array(amount).fill(0).map(() => Math.floor(Math.random() * 65535))
-      console.log('Generated simulated values:', simulatedValues);
-      
-      return new Response(
-        JSON.stringify({ values: simulatedValues }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    } else if (operation === 'write') {
-      if (!values) {
-        throw new Error('Values are required for write operation')
-      }
-
-      // Update the simulation state in the database
-      const { error } = await supabase
-        .from('device_simulations')
-        .update({
-          parameters: {
-            s7: { area, dbNumber, start, values }
-          }
-        })
-        .eq('is_running', true)
-
-      if (error) throw error
-
-      console.log('Successfully updated simulation state');
-
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    throw new Error(`Unsupported operation: ${operation}`)
-  } catch (error) {
-    console.error('Error:', error.message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Invalid action' }),
       { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400 
       }
-    )
+    );
+  } catch (error) {
+    console.error('Error in S7 server:', error);
+    
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
   }
-})
+});
