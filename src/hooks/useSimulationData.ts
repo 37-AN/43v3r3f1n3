@@ -35,74 +35,61 @@ export const useSimulationData = (
             {
               metric_type: 'temperature',
               value: dataPoint.temperature_C,
-              timestamp: dataPoint.timestamp,
+              timestamp: new Date().toISOString(),
               unit: '°C',
               metadata: {
-                quality_score: dataPoint.metadata.quality_score,
-                source: dataPoint.source,
-                error_state: dataPoint.metadata.error_state
+                quality_score: 0.95,
+                source: 'simulation_engine',
+                error_state: null
               }
             },
             {
               metric_type: 'pressure',
               value: dataPoint.pressure_bar,
-              timestamp: dataPoint.timestamp,
+              timestamp: new Date().toISOString(),
               unit: 'bar',
               metadata: {
-                quality_score: dataPoint.metadata.quality_score,
-                source: dataPoint.source,
-                error_state: dataPoint.metadata.error_state
+                quality_score: 0.95,
+                source: 'simulation_engine',
+                error_state: null
               }
             },
             {
               metric_type: 'flow_rate',
               value: dataPoint.flow_rate_m3_s,
-              timestamp: dataPoint.timestamp,
+              timestamp: new Date().toISOString(),
               unit: 'm³/s',
               metadata: {
-                quality_score: dataPoint.metadata.quality_score,
-                source: dataPoint.source,
-                error_state: dataPoint.metadata.error_state
-              }
-            },
-            {
-              metric_type: 'energy_consumption',
-              value: dataPoint.energy_consumption_kWh,
-              timestamp: dataPoint.timestamp,
-              unit: 'kWh',
-              metadata: {
-                quality_score: dataPoint.metadata.quality_score,
-                source: dataPoint.source,
-                error_state: dataPoint.metadata.error_state
+                quality_score: 0.95,
+                source: 'simulation_engine',
+                error_state: null
               }
             }
           ];
 
-          // Send to data refinery with proper request structure
+          // Structure request body according to the Edge Function's requirements
           const refineryRequestBody = {
             rawData: {
-              deviceId,
+              deviceId: deviceId,
               metrics: metricsArray,
-              timestamp: dataPoint.timestamp,
+              timestamp: new Date().toISOString(),
               metadata: {
                 simulation: true,
-                source: dataPoint.source,
-                machine_state: dataPoint.machine_state,
-                quality_score: dataPoint.metadata.quality_score,
+                source: 'simulation_engine',
+                quality_score: 0.95,
                 owner_id: session.user.id
               }
             }
           };
 
-          console.log('Sending data to refinery:', refineryRequestBody);
+          console.log('Sending data to refinery:', JSON.stringify(refineryRequestBody, null, 2));
 
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
               body: refineryRequestBody,
               headers: {
-                Authorization: `Bearer ${session.access_token}`,
-                'apikey': process.env.SUPABASE_ANON_KEY || ''
+                Authorization: `Bearer ${session.access_token}`
               }
             }
           );
@@ -114,7 +101,7 @@ export const useSimulationData = (
 
           console.log('Received refined data:', refinedData);
 
-          // Update history
+          // Update history with new data points
           setWriteHistory(prev => [
             ...metricsArray.map(metric => ({
               timestamp: metric.timestamp,
@@ -122,7 +109,7 @@ export const useSimulationData = (
               value: metric.value
             })),
             ...prev
-          ].slice(0, 50));
+          ].slice(0, 50)); // Keep last 50 entries
 
           console.log('Successfully processed simulation data');
         } catch (error) {

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders, generateAnalysis } from './utils.ts';
+import { corsHeaders } from './utils.ts';
 import { RequestBody } from './types.ts';
 
 serve(async (req) => {
@@ -84,17 +84,10 @@ serve(async (req) => {
       }
     }
 
-    // Generate analysis based on metrics
-    const analysis = generateAnalysis(rawData.metrics);
-    console.log('Generated analysis:', analysis);
-
     return new Response(
       JSON.stringify({
         success: true,
         refinedMetrics,
-        analysis: analysis.message,
-        severity: analysis.severity,
-        confidence: analysis.confidence,
         message: 'Data successfully refined and stored'
       }),
       {
