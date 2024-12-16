@@ -113,10 +113,12 @@ export function DataVisualization({ deviceId }: { deviceId: string }) {
             <Tooltip
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
+                  const value = payload[0].value;
+                  const formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
                   return (
                     <div className="bg-white p-3 border rounded-lg shadow-lg">
                       <p className="text-gray-600">{new Date(label).toLocaleString()}</p>
-                      <p className="font-medium">Value: {payload[0].value.toFixed(2)}</p>
+                      <p className="font-medium">Value: {formattedValue}</p>
                       <p className="text-sm text-gray-500">
                         Quality Score: {(payload[0].payload.quality_score * 100).toFixed(1)}%
                       </p>
