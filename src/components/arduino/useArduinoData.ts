@@ -12,7 +12,7 @@ export function useArduinoData() {
     queryFn: async () => {
       console.log("Fetching Arduino PLC data...");
       try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const { data: { session }, error: authError } = await supabase.auth.getSession();
         
         if (authError) {
           console.error("Authentication error:", authError);
@@ -21,14 +21,14 @@ export function useArduinoData() {
           throw authError;
         }
 
-        if (!user) {
-          console.log("No user found - authentication required");
+        if (!session) {
+          console.log("No active session found");
           addMessage('error', 'Please log in to view PLC data');
           toast.error("Please log in to view PLC data");
           throw new Error("Authentication required");
         }
 
-        console.log("Authenticated user:", user.email);
+        console.log("Authenticated user:", session.user.email);
 
         const endDate = new Date();
         const startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
@@ -61,7 +61,6 @@ export function useArduinoData() {
         if (!data || data.length === 0) {
           console.log("No PLC data found in the selected time range");
           addMessage('info', 'No PLC data found in the selected time range');
-          toast.info("No data available for the selected time range");
         }
         
         return data as ArduinoPLCData[];

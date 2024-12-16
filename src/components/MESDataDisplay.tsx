@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useMESData } from "@/hooks/useMESData";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatXAxis, getRegisterColor } from "@/utils/chart/formatters";
+import { Loader2 } from "lucide-react";
 
 interface MESDataDisplayProps {
   deviceId: string;
@@ -27,7 +28,10 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
   if (isLoading) {
     return (
       <Card className="p-4">
-        <p className="text-sm text-gray-500">Loading MES data...</p>
+        <div className="flex items-center justify-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <p className="text-sm text-gray-500">Loading MES data...</p>
+        </div>
       </Card>
     );
   }
@@ -92,42 +96,46 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
         <h3 className="text-lg font-semibold mb-4">MES Metrics</h3>
         <ScrollArea className="h-[200px]">
           <div className="space-y-2">
-            {mesMetrics?.map((metric) => (
-              <div
-                key={metric.id}
-                className="p-2 bg-gray-50 rounded-lg flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-medium">{getMetricDisplayName(metric.metric_type)}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(metric.timestamp).toLocaleString()}
-                  </p>
+            {mesMetrics && mesMetrics.length > 0 ? (
+              mesMetrics.map((metric) => (
+                <div
+                  key={metric.id}
+                  className="p-2 bg-gray-50 rounded-lg flex items-center justify-between"
+                >
+                  <div>
+                    <p className="font-medium">{getMetricDisplayName(metric.metric_type)}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(metric.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono">
+                      {metric.value.toFixed(2)} {metric.unit}
+                    </p>
+                    <Badge 
+                      variant={
+                        metric.metadata && 
+                        typeof metric.metadata === 'object' && 
+                        'quality_score' in metric.metadata && 
+                        (metric.metadata.quality_score as number) >= 0.8 
+                          ? "success" 
+                          : "warning"
+                      }
+                    >
+                      Quality: {
+                        metric.metadata && 
+                        typeof metric.metadata === 'object' && 
+                        'quality_score' in metric.metadata 
+                          ? ((metric.metadata.quality_score as number) * 100).toFixed(0) 
+                          : 0
+                      }%
+                    </Badge>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-mono">
-                    {metric.value.toFixed(2)} {metric.unit}
-                  </p>
-                  <Badge 
-                    variant={
-                      metric.metadata && 
-                      typeof metric.metadata === 'object' && 
-                      'quality_score' in metric.metadata && 
-                      (metric.metadata.quality_score as number) >= 0.8 
-                        ? "success" 
-                        : "warning"
-                    }
-                  >
-                    Quality: {
-                      metric.metadata && 
-                      typeof metric.metadata === 'object' && 
-                      'quality_score' in metric.metadata 
-                        ? ((metric.metadata.quality_score as number) * 100).toFixed(0) 
-                        : 0
-                    }%
-                  </Badge>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-4">No MES metrics available</p>
+            )}
           </div>
         </ScrollArea>
       </Card>
