@@ -87,10 +87,7 @@ export const useSimulationData = (
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
-              body: refineryRequestBody,
-              headers: {
-                Authorization: `Bearer ${session.access_token}`
-              }
+              body: refineryRequestBody
             }
           );
 
