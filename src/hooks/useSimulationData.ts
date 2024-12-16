@@ -78,7 +78,7 @@ export const useSimulationData = (
             }
           ];
 
-          // Send to data refinery
+          // Send to data refinery with proper request structure
           const refineryRequestBody = {
             rawData: {
               deviceId,
@@ -99,7 +99,11 @@ export const useSimulationData = (
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
-              body: refineryRequestBody
+              body: refineryRequestBody,
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                'apikey': process.env.SUPABASE_ANON_KEY || ''
+              }
             }
           );
 
