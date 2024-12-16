@@ -38,14 +38,14 @@ export const DataAnalysisProcessor = ({
         }
 
         // Format metrics data with proper structure
-        const metrics = preparedData.split(' ').map(value => {
+        const metrics = preparedData.split(' ').map((value, index) => {
           const numValue = Number(value);
           if (isNaN(numValue)) {
             console.error('Invalid numeric value:', value);
             return null;
           }
           return {
-            metric_type: 'measurement',
+            metric_type: `metric_${index + 1}`,
             value: numValue,
             timestamp: new Date().toISOString(),
             unit: 'unit',
