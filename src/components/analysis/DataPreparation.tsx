@@ -13,7 +13,8 @@ export const DataPreparation = ({ simulatedData, onPreparedData }: DataPreparati
     }
 
     try {
-      const numericalData = Object.entries(simulatedData)
+      // Format metrics with proper structure
+      const metrics = Object.entries(simulatedData)
         .map(([key, value]) => {
           if (!value) return null;
           
@@ -33,14 +34,37 @@ export const DataPreparation = ({ simulatedData, onPreparedData }: DataPreparati
             finalValue = value;
           }
           
-          return finalValue !== null ? { key, value: finalValue } : null;
+          return finalValue !== null ? {
+            metric_type: key,
+            value: finalValue,
+            timestamp: new Date().toISOString(),
+            unit: key === 'temperature' ? '°C' :
+                  key === 'pressure' ? 'bar' :
+                  key === 'vibration' ? 'mm/s' :
+                  key === 'production_rate' ? 'units/hr' :
+                  key === 'downtime_minutes' ? 'min' :
+                  key === 'defect_rate' ? '%' :
+                  key === 'energy_consumption' ? 'kWh' :
+                  key === 'machine_efficiency' ? '%' : 'unit',
+            metadata: {
+              quality_score: 0.95,
+              source: 'simulation_engine'
+            }
+          } : null;
         })
-        .filter((item): item is { key: string; value: number } => item !== null);
+        .filter((item): item is NonNullable<typeof item> => item !== null);
 
-      if (numericalData.length > 0) {
+      if (metrics.length > 0) {
         const rawData = {
-          timestamp: new Date().toISOString(),
-          values: numericalData
+          rawData: {
+            metrics,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              simulation: true,
+              source: 'simulation_engine',
+              quality_score: 0.95
+            }
+          }
         };
         
         console.log('Prepared data for analysis:', rawData);
