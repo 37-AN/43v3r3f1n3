@@ -23,9 +23,15 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
       'bearing_temperature': 'Bearing Temperature (°F)',
       'vibration': 'Vibration (mm/s)',
       'current_draw': 'Current Draw (A)',
-      'power_factor': 'Power Factor (PF)'
+      'power_factor': 'Power Factor (PF)',
+      'production.throughput': 'Production Throughput',
+      'production.efficiency': 'Production Efficiency',
+      'machine.vibration': 'Machine Vibration',
+      'quality.defect_rate': 'Quality Defect Rate'
     };
-    return metricMap[metricType] || metricType;
+    return metricMap[metricType] || metricType.split('.').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
   };
 
   if (error instanceof Error) {
@@ -60,58 +66,69 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
 
   // Format refined data for the chart
   const formattedRefinedData = refinedData?.map(item => ({
-    timestamp: item.timestamp,
+    timestamp: new Date(item.timestamp).getTime(),
     value: typeof item.value === 'number' ? item.value : parseFloat(item.value),
-    quality_score: item.quality_score
+    quality_score: item.quality_score || 0,
+    metric_type: item.data_type
   })) || [];
 
   console.log('Formatted refined data:', formattedRefinedData);
+
+  // Group data by metric type
+  const groupedData = formattedRefinedData.reduce((acc, item) => {
+    if (!acc[item.metric_type]) {
+      acc[item.metric_type] = [];
+    }
+    acc[item.metric_type].push(item);
+    return acc;
+  }, {} as Record<string, typeof formattedRefinedData>);
 
   return (
     <div className="space-y-6">
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">Refined MES Metrics</h3>
-        {formattedRefinedData.length > 0 ? (
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={formattedRefinedData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="timestamp" 
-                  tickFormatter={formatXAxis}
-                  height={40}
-                  angle={-45}
-                  textAnchor="end"
-                />
-                <YAxis />
-                <Tooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const value = payload[0].value;
-                      const formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
-                      return (
-                        <div className="bg-white/95 border-none rounded-lg shadow-lg p-3">
-                          <p className="text-gray-500 mb-1">{formatXAxis(payload[0].payload.timestamp)}</p>
-                          <p className="font-medium">Value: {formattedValue}</p>
-                          <p className="text-sm">Quality: {(payload[0].payload.quality_score * 100).toFixed(0)}%</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke={getRegisterColor('input')}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        {Object.entries(groupedData).map(([metricType, data]) => (
+          <div key={metricType} className="mb-6">
+            <h4 className="text-md font-medium mb-2">{getMetricDisplayName(metricType)}</h4>
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="timestamp" 
+                    tickFormatter={formatXAxis}
+                    height={40}
+                    angle={-45}
+                    textAnchor="end"
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const value = payload[0].value;
+                        const formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
+                        return (
+                          <div className="bg-white/95 border-none rounded-lg shadow-lg p-3">
+                            <p className="text-gray-500 mb-1">{formatXAxis(payload[0].payload.timestamp)}</p>
+                            <p className="font-medium">Value: {formattedValue}</p>
+                            <p className="text-sm">Quality: {(payload[0].payload.quality_score * 100).toFixed(0)}%</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={getRegisterColor('input')}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        ) : (
-          <p className="text-sm text-gray-500 text-center py-4">No refined data available</p>
-        )}
+        ))}
       </Card>
 
       <Card className="p-4">
