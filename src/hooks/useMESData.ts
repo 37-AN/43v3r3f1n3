@@ -1,12 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MESMetric, TokenizedAsset } from "@/types/tokenize";
-import { toast } from "sonner";
 
 export const useMESData = (deviceId: string) => {
   const fetchMESData = async () => {
     console.log('Fetching MES data for device:', deviceId);
     
+    if (!deviceId) {
+      throw new Error('Device ID is required');
+    }
+
     const [metricsResponse, assetsResponse, refinedDataResponse] = await Promise.all([
       supabase
         .from('mes_metrics')
@@ -23,7 +26,7 @@ export const useMESData = (deviceId: string) => {
         .from('refined_mes_data')
         .select('*')
         .eq('device_id', deviceId)
-        .order('timestamp', { ascending: false })
+        .order('timestamp', { ascending: true })
         .limit(100)
     ]);
 
@@ -57,6 +60,7 @@ export const useMESData = (deviceId: string) => {
     queryKey: ['mes-data', deviceId],
     queryFn: fetchMESData,
     enabled: !!deviceId,
+    retry: 1
   });
 
   return {

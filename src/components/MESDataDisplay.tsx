@@ -14,6 +14,8 @@ interface MESDataDisplayProps {
 export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
   const { mesMetrics, tokenizedAssets, refinedData, isLoading, error } = useMESData(deviceId);
 
+  console.log('MES Data:', { mesMetrics, tokenizedAssets, refinedData, isLoading, error });
+
   const getMetricDisplayName = (metricType: string) => {
     const metricMap: Record<string, string> = {
       'motor_speed': 'Motor Speed (RPM)',
@@ -41,6 +43,16 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
         <div className="flex items-center justify-center space-x-2">
           <Loader2 className="h-6 w-6 animate-spin" />
           <p className="text-sm text-gray-500">Loading MES data...</p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (!mesMetrics?.length && !tokenizedAssets?.length && !refinedData?.length) {
+    return (
+      <Card className="p-4">
+        <div className="text-center text-gray-500">
+          No MES data available for this device
         </div>
       </Card>
     );
@@ -120,7 +132,7 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
                   </div>
                   <div className="text-right">
                     <p className="font-mono">
-                      {metric.value.toFixed(2)} {metric.unit}
+                      {typeof metric.value === 'number' ? metric.value.toFixed(2) : metric.value} {metric.unit}
                     </p>
                     <Badge 
                       variant={
