@@ -70,12 +70,17 @@ serve(async (req) => {
           return null;
         }
 
+        // Normalize and validate the value
         const refinedValue = normalizeValue(metric.value, metric.metric_type);
+        
+        // Calculate quality score based on data characteristics
+        const qualityScore = calculateQualityScore(metric);
+
         return {
           device_id: rawData.deviceId,
           data_type: metric.metric_type,
           value: refinedValue,
-          quality_score: metric.metadata?.quality_score || 0.95,
+          quality_score: qualityScore,
           timestamp: new Date().toISOString(),
           metadata: {
             ...metric.metadata,
@@ -92,6 +97,7 @@ serve(async (req) => {
 
     console.log('Refined metrics:', refinedMetrics.length);
 
+    // Store refined data efficiently using a single batch insert
     if (refinedMetrics.length > 0) {
       const { error: insertError } = await supabaseClient
         .from('refined_industrial_data')
@@ -134,6 +140,7 @@ serve(async (req) => {
   }
 });
 
+// Utility function to normalize values based on metric type
 function normalizeValue(value: number, metricType: string): number {
   const thresholds: Record<string, { min: number; max: number }> = {
     temperature: { min: -20, max: 120 },
@@ -150,6 +157,29 @@ function normalizeValue(value: number, metricType: string): number {
   return Math.max(range.min, Math.min(range.max, value));
 }
 
+// Utility function to calculate data quality score
+function calculateQualityScore(metric: any): number {
+  let score = 1.0;
+
+  // Check for missing metadata
+  if (!metric.metadata) score -= 0.1;
+
+  // Check for value within expected ranges
+  const normalizedValue = normalizeValue(metric.value, metric.metric_type);
+  if (normalizedValue !== metric.value) score -= 0.2;
+
+  // Check for timestamp freshness
+  if (metric.timestamp) {
+    const age = Date.now() - new Date(metric.timestamp).getTime();
+    if (age > 60000) score -= 0.1; // Penalize data older than 1 minute
+  } else {
+    score -= 0.1;
+  }
+
+  return Math.max(0, Math.min(1, score));
+}
+
+// Utility function to get default unit based on metric type
 function getDefaultUnit(metricType: string): string {
   const unitMap: Record<string, string> = {
     temperature: '°C',
