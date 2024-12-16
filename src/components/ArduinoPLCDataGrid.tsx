@@ -2,9 +2,21 @@ import { useArduinoData } from "./arduino/useArduinoData";
 import { DataGridContent } from "./arduino/DataGridContent";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function ArduinoPLCDataGrid() {
   const { data: arduinoData, isLoading, error } = useArduinoData();
+
+  if (error) {
+    toast.error("Failed to load PLC data");
+    return (
+      <Card className="p-6">
+        <div className="text-red-500">
+          Failed to load PLC data: {error.message}
+        </div>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -17,11 +29,12 @@ export function ArduinoPLCDataGrid() {
     );
   }
 
-  if (error) {
+  if (!arduinoData || arduinoData.length === 0) {
     return (
       <Card className="p-6">
-        <div className="text-red-500">
-          Failed to load PLC data. Please check your connection and try again.
+        <div className="text-center text-gray-500">
+          <p>No PLC data available.</p>
+          <p className="text-sm mt-2">Please check your device connections or wait for new data to be recorded.</p>
         </div>
       </Card>
     );

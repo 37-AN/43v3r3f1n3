@@ -13,7 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { data, error } = await req.json();
+    console.log('Received MES data integration request');
+    const { data } = await req.json();
     
     if (!data) {
       console.error('No data provided');
@@ -28,17 +29,62 @@ serve(async (req) => {
 
     console.log('Processing MES data:', data);
 
-    // Process the MES data
-    const processedData = {
-      status: 'success',
-      timestamp: new Date().toISOString(),
-      data: data
-    };
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    console.log('Successfully processed MES data:', processedData);
+    // Process and store MES metrics
+    const { error: metricsError } = await supabaseClient
+      .from('mes_metrics')
+      .insert({
+        device_id: data.deviceId,
+        metric_type: data.metricType,
+        value: data.value,
+        unit: data.unit,
+        metadata: {
+          quality_score: data.qualityScore || 0.95,
+          source: 'mes_integration',
+          category: data.category || 'default'
+        }
+      });
+
+    if (metricsError) {
+      console.error('Error storing MES metrics:', metricsError);
+      throw metricsError;
+    }
+
+    // Process and store refined MES data
+    const { error: refinedError } = await supabaseClient
+      .from('refined_mes_data')
+      .insert({
+        device_id: data.deviceId,
+        data_type: data.metricType,
+        value: data.value,
+        quality_score: data.qualityScore || 0.95,
+        process_parameters: data.processParameters || {},
+        batch_id: data.batchId,
+        production_line: data.productionLine,
+        metadata: {
+          source: 'mes_integration',
+          refined: true
+        }
+      });
+
+    if (refinedError) {
+      console.error('Error storing refined MES data:', refinedError);
+      throw refinedError;
+    }
+
+    console.log('Successfully processed and stored MES data');
 
     return new Response(
-      JSON.stringify(processedData),
+      JSON.stringify({ 
+        success: true, 
+        message: 'Data processed successfully',
+        timestamp: new Date().toISOString()
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
@@ -48,7 +94,10 @@ serve(async (req) => {
     console.error('Error processing MES data:', error);
     
     return new Response(
-      JSON.stringify({ error: 'Failed to process MES data' }),
+      JSON.stringify({ 
+        error: 'Failed to process MES data',
+        details: error.message
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 

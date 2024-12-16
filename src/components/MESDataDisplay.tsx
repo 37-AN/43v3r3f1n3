@@ -5,13 +5,14 @@ import { useMESData } from "@/hooks/useMESData";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatXAxis, getRegisterColor } from "@/utils/chart/formatters";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface MESDataDisplayProps {
   deviceId: string;
 }
 
 export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
-  const { mesMetrics, tokenizedAssets, refinedData, isLoading } = useMESData(deviceId);
+  const { mesMetrics, tokenizedAssets, refinedData, isLoading, error } = useMESData(deviceId);
 
   const getMetricDisplayName = (metricType: string) => {
     const metricMap: Record<string, string> = {
@@ -24,6 +25,15 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
     };
     return metricMap[metricType] || metricType;
   };
+
+  if (error) {
+    toast.error("Failed to load MES data");
+    return (
+      <Card className="p-4">
+        <div className="text-red-500">Error loading MES data: {error.message}</div>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -114,21 +124,12 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
                     </p>
                     <Badge 
                       variant={
-                        metric.metadata && 
-                        typeof metric.metadata === 'object' && 
-                        'quality_score' in metric.metadata && 
-                        (metric.metadata.quality_score as number) >= 0.8 
+                        metric.metadata?.quality_score >= 0.8 
                           ? "success" 
                           : "warning"
                       }
                     >
-                      Quality: {
-                        metric.metadata && 
-                        typeof metric.metadata === 'object' && 
-                        'quality_score' in metric.metadata 
-                          ? ((metric.metadata.quality_score as number) * 100).toFixed(0) 
-                          : 0
-                      }%
+                      Quality: {((metric.metadata?.quality_score || 0) * 100).toFixed(0)}%
                     </Badge>
                   </div>
                 </div>
