@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -23,6 +23,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Received request to s7-server');
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -31,12 +33,25 @@ serve(async (req) => {
     // Get request body
     const { operation, area, dbNumber, start, amount, wordLen, values } = await req.json() as S7Request
 
-    // Simulate S7 communication (replace with actual S7 implementation)
-    console.log(`S7 ${operation} request:`, { area, dbNumber, start, amount, wordLen, values })
+    // Validate request structure
+    if (!operation || !area || typeof start !== 'number' || typeof amount !== 'number' || typeof wordLen !== 'number') {
+      console.error('Invalid request structure:', { operation, area, start, amount, wordLen });
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid request structure',
+          details: 'Required fields missing or invalid'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
     if (operation === 'read') {
       // Simulate reading values
       const simulatedValues = Array(amount).fill(0).map(() => Math.floor(Math.random() * 65535))
+      console.log('Generated simulated values:', simulatedValues);
       
       return new Response(
         JSON.stringify({ values: simulatedValues }),
@@ -59,6 +74,8 @@ serve(async (req) => {
 
       if (error) throw error
 
+      console.log('Successfully updated simulation state');
+
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -67,7 +84,7 @@ serve(async (req) => {
 
     throw new Error(`Unsupported operation: ${operation}`)
   } catch (error) {
-    console.error('Error:', error.message)
+    console.error('Error:', error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
