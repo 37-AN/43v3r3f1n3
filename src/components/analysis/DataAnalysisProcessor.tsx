@@ -37,7 +37,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Format metrics data
+        // Format metrics data with proper structure
         const metrics = preparedData.split(' ').map(value => {
           const numValue = Number(value);
           if (isNaN(numValue)) {
@@ -63,17 +63,18 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
+        // Properly structure the request body
         const requestBody = {
           rawData: {
             deviceId: selectedDeviceId,
-            dataType: 'measurement',
             metrics: metrics,
             timestamp: new Date().toISOString(),
             metadata: {
               source: 'plc_analysis',
               device_id: selectedDeviceId,
               quality_score: 0.95,
-              owner_id: session.user.id
+              owner_id: session.user.id,
+              simulation: true
             }
           }
         };
