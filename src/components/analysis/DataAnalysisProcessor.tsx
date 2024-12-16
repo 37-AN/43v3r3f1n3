@@ -71,7 +71,6 @@ export const DataAnalysisProcessor = ({
             timestamp: new Date().toISOString(),
             metadata: {
               source: 'plc_analysis',
-              device_id: selectedDeviceId,
               quality_score: 0.95,
               owner_id: session.user.id,
               simulation: true
