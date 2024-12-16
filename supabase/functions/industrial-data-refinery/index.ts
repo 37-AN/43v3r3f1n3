@@ -50,48 +50,39 @@ serve(async (req) => {
       );
     }
 
-    // Process metrics in batches
-    const BATCH_SIZE = 10;
-    const refinedMetrics = [];
-
-    for (let i = 0; i < rawData.metrics.length; i += BATCH_SIZE) {
-      const batch = rawData.metrics.slice(i, i + BATCH_SIZE);
-      
-      const processedBatch = batch.map(metric => {
-        if (!metric.metric_type || typeof metric.value === 'undefined') {
-          console.warn('Invalid metric structure:', metric);
-          return null;
-        }
-
-        // Calculate quality score based on data characteristics
-        const qualityScore = calculateQualityScore(metric);
-
-        return {
-          device_id: rawData.deviceId,
-          data_type: metric.metric_type,
-          value: metric.value,
-          quality_score: qualityScore,
-          timestamp: metric.timestamp || new Date().toISOString(),
-          metadata: {
-            ...metric.metadata,
-            refined: true,
-            original_value: metric.value,
-            refinement_timestamp: new Date().toISOString(),
-            unit: metric.unit || getDefaultUnit(metric.metric_type)
-          }
-        };
-      }).filter(Boolean);
-
-      refinedMetrics.push(...processedBatch);
-    }
-
-    console.log('Processed metrics:', refinedMetrics.length);
-
     // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Process metrics and calculate quality scores
+    const refinedMetrics = rawData.metrics.map(metric => {
+      if (!metric.metric_type || typeof metric.value === 'undefined') {
+        console.warn('Invalid metric structure:', metric);
+        return null;
+      }
+
+      // Calculate quality score based on data characteristics
+      const qualityScore = calculateQualityScore(metric);
+
+      return {
+        device_id: rawData.deviceId,
+        data_type: metric.metric_type,
+        value: metric.value,
+        quality_score: qualityScore,
+        timestamp: metric.timestamp || new Date().toISOString(),
+        metadata: {
+          ...metric.metadata,
+          refined: true,
+          original_value: metric.value,
+          refinement_timestamp: new Date().toISOString(),
+          unit: metric.unit || getDefaultUnit(metric.metric_type)
+        }
+      };
+    }).filter(Boolean);
+
+    console.log('Processed metrics:', refinedMetrics.length);
 
     // Store refined data efficiently using a single batch insert
     if (refinedMetrics.length > 0) {
