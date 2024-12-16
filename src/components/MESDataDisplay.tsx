@@ -61,10 +61,12 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
                 <Tooltip 
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
+                      const value = payload[0].value;
+                      const formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
                       return (
                         <div className="bg-white/95 border-none rounded-lg shadow-lg p-3">
                           <p className="text-gray-500 mb-1">{formatXAxis(payload[0].payload.timestamp)}</p>
-                          <p className="font-medium">Value: {payload[0].value.toFixed(2)}</p>
+                          <p className="font-medium">Value: {formattedValue}</p>
                           <p className="text-sm">Quality: {(payload[0].payload.quality_score * 100).toFixed(0)}%</p>
                         </div>
                       );
