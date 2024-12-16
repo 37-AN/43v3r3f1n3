@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -15,6 +16,7 @@ serve(async (req) => {
     const { data, error } = await req.json();
     
     if (!data) {
+      console.error('No data provided');
       return new Response(
         JSON.stringify({ error: 'No data provided' }),
         { 
@@ -24,12 +26,16 @@ serve(async (req) => {
       );
     }
 
+    console.log('Processing MES data:', data);
+
     // Process the MES data
     const processedData = {
       status: 'success',
       timestamp: new Date().toISOString(),
       data: data
     };
+
+    console.log('Successfully processed MES data:', processedData);
 
     return new Response(
       JSON.stringify(processedData),
