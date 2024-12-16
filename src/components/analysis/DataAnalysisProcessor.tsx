@@ -67,7 +67,7 @@ export const DataAnalysisProcessor = ({
         const requestBody = {
           rawData: {
             deviceId: selectedDeviceId,
-            metrics: metrics,
+            metrics,
             timestamp: new Date().toISOString(),
             metadata: {
               source: 'plc_analysis',
@@ -79,7 +79,7 @@ export const DataAnalysisProcessor = ({
           }
         };
 
-        console.log('Sending data to industrial-data-refinery:', requestBody);
+        console.log('Sending data to industrial-data-refinery:', JSON.stringify(requestBody, null, 2));
 
         const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
           'industrial-data-refinery',
