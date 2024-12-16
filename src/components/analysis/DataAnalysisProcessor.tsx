@@ -85,10 +85,7 @@ export const DataAnalysisProcessor = ({
         const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
           'industrial-data-refinery',
           {
-            body: requestBody,
-            headers: {
-              'Content-Type': 'application/json'
-            }
+            body: requestBody
           }
         );
 
