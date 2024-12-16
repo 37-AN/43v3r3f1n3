@@ -27,36 +27,68 @@ export const useSimulationData = (
             return;
           }
 
-          const values = simulationEngine.generateNextValues();
-          console.log('Generated simulation values:', values);
+          const dataPoint = simulationEngine.generateDataPoint(`PLC_${deviceId}`);
+          console.log('Generated simulation data:', dataPoint);
 
-          // Format metrics array
-          const metricsArray = Object.entries(values).map(([key, value]) => ({
-            metric_type: key,
-            value: typeof value === 'number' ? value : 0,
-            timestamp: new Date().toISOString(),
-            unit: key === 'temperature' ? '°C' :
-                  key === 'pressure' ? 'bar' :
-                  key === 'vibration' ? 'mm/s' :
-                  key === 'efficiency' ? '%' :
-                  key === 'energy_consumption' ? 'kWh' : 'unit',
-            metadata: {
-              quality_score: 0.95,
-              source: 'simulation_engine',
-              simulation: true
+          // Format metrics array for the data refinery
+          const metricsArray = [
+            {
+              metric_type: 'temperature',
+              value: dataPoint.temperature_C,
+              timestamp: dataPoint.timestamp,
+              unit: '°C',
+              metadata: {
+                quality_score: dataPoint.metadata.quality_score,
+                source: dataPoint.source,
+                error_state: dataPoint.metadata.error_state
+              }
+            },
+            {
+              metric_type: 'pressure',
+              value: dataPoint.pressure_bar,
+              timestamp: dataPoint.timestamp,
+              unit: 'bar',
+              metadata: {
+                quality_score: dataPoint.metadata.quality_score,
+                source: dataPoint.source,
+                error_state: dataPoint.metadata.error_state
+              }
+            },
+            {
+              metric_type: 'flow_rate',
+              value: dataPoint.flow_rate_m3_s,
+              timestamp: dataPoint.timestamp,
+              unit: 'm³/s',
+              metadata: {
+                quality_score: dataPoint.metadata.quality_score,
+                source: dataPoint.source,
+                error_state: dataPoint.metadata.error_state
+              }
+            },
+            {
+              metric_type: 'energy_consumption',
+              value: dataPoint.energy_consumption_kWh,
+              timestamp: dataPoint.timestamp,
+              unit: 'kWh',
+              metadata: {
+                quality_score: dataPoint.metadata.quality_score,
+                source: dataPoint.source,
+                error_state: dataPoint.metadata.error_state
+              }
             }
-          }));
+          ];
 
-          // Send to data refinery with proper request body structure
+          // Send to data refinery
           const refineryRequestBody = {
             rawData: {
               deviceId,
               metrics: metricsArray,
-              timestamp: new Date().toISOString(),
+              timestamp: dataPoint.timestamp,
               metadata: {
                 simulation: true,
-                source: 'simulation_engine',
-                quality_score: 0.95,
+                source: dataPoint.source,
+                machine_state: dataPoint.machine_state,
+                quality_score: dataPoint.metadata.quality_score,
                 owner_id: session.user.id
               }
             }
@@ -93,7 +125,7 @@ export const useSimulationData = (
           console.error('Error in simulation pipeline:', error);
           toast.error('Failed to process simulation data');
         }
-      }, 2000);
+      }, 2000); // Generate data every 2 seconds
     }
 
     return () => {
