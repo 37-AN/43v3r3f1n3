@@ -18,9 +18,9 @@ serve(async (req) => {
     const requestData = await req.json();
     console.log('Request data:', JSON.stringify(requestData, null, 2));
 
-    // Basic validation
+    // Validate request structure
     if (!requestData?.rawData) {
-      console.error('No raw data provided');
+      console.error('No raw data provided in request');
       return new Response(
         JSON.stringify({
           error: 'No raw data provided',
