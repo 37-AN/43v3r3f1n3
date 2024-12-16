@@ -55,7 +55,7 @@ export const DataPreparation = ({ simulatedData, onPreparedData }: DataPreparati
         .filter((item): item is NonNullable<typeof item> => item !== null);
 
       if (metrics.length > 0) {
-        const rawData = {
+        const preparedData = {
           rawData: {
             metrics,
             timestamp: new Date().toISOString(),
@@ -67,8 +67,8 @@ export const DataPreparation = ({ simulatedData, onPreparedData }: DataPreparati
           }
         };
         
-        console.log('Prepared data for analysis:', rawData);
-        onPreparedData(JSON.stringify(rawData));
+        console.log('Prepared data for analysis:', preparedData);
+        onPreparedData(JSON.stringify(preparedData));
       } else {
         console.log('No valid numerical data to analyze');
       }
