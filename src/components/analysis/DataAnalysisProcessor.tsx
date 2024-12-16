@@ -52,7 +52,9 @@ export const DataAnalysisProcessor = ({
             metadata: {
               quality_score: 0.95,
               source: 'plc_analysis',
-              device_id: selectedDeviceId
+              device_id: selectedDeviceId,
+              simulation: true,
+              owner_id: session.user.id
             }
           };
         }).filter(Boolean);
@@ -83,7 +85,10 @@ export const DataAnalysisProcessor = ({
         const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
           'industrial-data-refinery',
           {
-            body: requestBody
+            body: requestBody,
+            headers: {
+              'Content-Type': 'application/json'
+            }
           }
         );
 
@@ -119,7 +124,12 @@ export const DataAnalysisProcessor = ({
       }
     };
 
-    const analysisInterval = setInterval(() => {
+    const analysisInterval = setInterval(async () => {
+      if (!simulatedData || Object.keys(simulatedData).length === 0) {
+        console.log('No simulated data available');
+        return;
+      }
+
       const handlePreparedData = async (preparedData: string) => {
         const result = await analyzeData(preparedData);
         if (result) {
