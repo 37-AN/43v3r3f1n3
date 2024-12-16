@@ -11,7 +11,7 @@ export function useTokenizeForm(onSuccess: () => void) {
     tokenSymbol: '',
     totalSupply: '1000000',
     pricePerToken: '0.001',
-    assetType: 'machine' // Added default value for assetType
+    assetType: 'machine'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +26,20 @@ export function useTokenizeForm(onSuccess: () => void) {
         return;
       }
 
-      console.log('Creating asset with user ID:', session.session.user.id);
+      console.log('Creating asset with data:', {
+        asset_type: formData.assetType,
+        name: formData.name,
+        description: formData.description,
+        token_symbol: formData.tokenSymbol,
+        total_supply: Number(formData.totalSupply),
+        price_per_token: Number(formData.pricePerToken),
+        owner_id: session.session.user.id,
+        metadata: {
+          created_at: new Date().toISOString(),
+          status: 'active',
+          blockchain_network: 'testnet'
+        }
+      });
 
       const { data, error } = await supabase
         .from('tokenized_assets')
@@ -37,7 +50,12 @@ export function useTokenizeForm(onSuccess: () => void) {
           token_symbol: formData.tokenSymbol,
           total_supply: Number(formData.totalSupply),
           price_per_token: Number(formData.pricePerToken),
-          owner_id: session.session.user.id
+          owner_id: session.session.user.id,
+          metadata: {
+            created_at: new Date().toISOString(),
+            status: 'active',
+            blockchain_network: 'testnet'
+          }
         })
         .select()
         .single();
