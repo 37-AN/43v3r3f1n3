@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -15,8 +16,12 @@ serve(async (req) => {
     const { action } = await req.json();
     
     if (action === 'health-check') {
+      console.log('Processing health check request');
       return new Response(
-        JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }),
+        JSON.stringify({ 
+          status: 'healthy', 
+          timestamp: new Date().toISOString() 
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
@@ -24,6 +29,7 @@ serve(async (req) => {
       );
     }
 
+    console.error('Invalid action requested:', action);
     return new Response(
       JSON.stringify({ error: 'Invalid action' }),
       { 
