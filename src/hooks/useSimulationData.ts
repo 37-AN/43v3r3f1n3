@@ -30,7 +30,7 @@ export const useSimulationData = (
           const dataPoint = simulationEngine.generateDataPoint(`PLC_${deviceId}`);
           console.log('Generated simulation data:', dataPoint);
 
-          // Format metrics array for the data refinery
+          // Format metrics array with proper structure
           const metricsArray = [
             {
               metric_type: 'temperature',
@@ -78,7 +78,6 @@ export const useSimulationData = (
             }
           ];
 
-          // Send to data refinery with proper authorization
           const refineryRequestBody = {
             rawData: {
               deviceId,
@@ -110,7 +109,6 @@ export const useSimulationData = (
 
           console.log('Received refined data:', refinedData);
 
-          // Update history
           setWriteHistory(prev => [
             ...metricsArray.map(metric => ({
               timestamp: metric.timestamp,
@@ -125,7 +123,7 @@ export const useSimulationData = (
           console.error('Error in simulation pipeline:', error);
           toast.error('Failed to process simulation data');
         }
-      }, 2000); // Generate data every 2 seconds
+      }, 2000);
     }
 
     return () => {

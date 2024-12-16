@@ -6,6 +6,7 @@ export interface Metric {
   metadata: {
     quality_score: number;
     source: string;
+    error_state?: string | null;
     [key: string]: any;
   };
 }
@@ -15,20 +16,15 @@ export interface RawData {
   metrics: Metric[];
   timestamp: string;
   metadata: {
+    simulation?: boolean;
     source: string;
     quality_score: number;
     owner_id: string;
-    simulation?: boolean;
+    machine_state?: string;
     [key: string]: any;
   };
 }
 
 export interface RequestBody {
   rawData: RawData;
-}
-
-export interface Analysis {
-  message: string;
-  severity: string;
-  confidence: number;
 }

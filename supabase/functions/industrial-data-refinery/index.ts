@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { RequestBody, Metric } from './types.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,7 @@ serve(async (req) => {
       );
     }
 
-    const { rawData } = requestData;
+    const { rawData }: RequestBody = requestData;
 
     // Validate required fields
     if (!rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
@@ -58,8 +59,8 @@ serve(async (req) => {
 
     // Process metrics and calculate quality scores
     const refinedMetrics = rawData.metrics
-      .filter(metric => metric.metric_type && typeof metric.value !== 'undefined')
-      .map(metric => ({
+      .filter((metric: Metric) => metric.metric_type && typeof metric.value !== 'undefined')
+      .map((metric: Metric) => ({
         device_id: rawData.deviceId,
         data_type: metric.metric_type,
         value: metric.value,
@@ -70,7 +71,8 @@ serve(async (req) => {
           refined: true,
           original_value: metric.value,
           refinement_timestamp: new Date().toISOString(),
-          unit: metric.unit || 'unit'
+          unit: metric.unit || 'unit',
+          source: metric.metadata?.source || rawData.metadata?.source || 'unknown'
         }
       }));
 
@@ -84,6 +86,27 @@ serve(async (req) => {
       if (insertError) {
         console.error('Error storing refined data:', insertError);
         throw insertError;
+      }
+
+      // Also store in MES metrics for integration
+      const { error: mesError } = await supabaseClient
+        .from('mes_metrics')
+        .insert(refinedMetrics.map(metric => ({
+          device_id: metric.device_id,
+          metric_type: metric.data_type,
+          value: metric.value,
+          unit: metric.metadata.unit,
+          timestamp: metric.timestamp,
+          metadata: {
+            ...metric.metadata,
+            quality_score: metric.quality_score,
+            source: metric.metadata.source
+          }
+        })));
+
+      if (mesError) {
+        console.error('Error storing MES metrics:', mesError);
+        // Don't throw here, just log the error as this is secondary storage
       }
     }
 
