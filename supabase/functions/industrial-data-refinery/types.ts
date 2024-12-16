@@ -1,9 +1,9 @@
 export interface Metric {
   metric_type: string;
   value: number;
-  timestamp: string;
-  unit: string;
-  metadata: {
+  timestamp?: string;
+  unit?: string;
+  metadata?: {
     quality_score: number;
     source: string;
     error_state?: string | null;

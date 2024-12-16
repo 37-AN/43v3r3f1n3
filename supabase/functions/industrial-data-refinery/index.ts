@@ -117,10 +117,7 @@ serve(async (req) => {
         message: 'Data successfully refined and stored'
       }),
       {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
