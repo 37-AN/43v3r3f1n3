@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders, generateAnalysis, getDefaultUnit } from './utils.ts';
-import { RequestBody, RawData } from './types.ts';
+import { corsHeaders, generateAnalysis } from './utils.ts';
+import { RequestBody } from './types.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -66,7 +66,7 @@ serve(async (req) => {
           refined: true,
           original_value: metric.value,
           refinement_timestamp: new Date().toISOString(),
-          unit: metric.unit || getDefaultUnit(metric.metric_type)
+          unit: metric.unit || 'unit'
         }
       }));
 
