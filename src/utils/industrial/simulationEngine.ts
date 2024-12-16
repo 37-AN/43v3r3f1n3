@@ -31,6 +31,7 @@ export class IndustrialSimulationEngine {
   private lastUpdate: Date = new Date();
   private errorFrequency: number = 0.05; // 5% chance of error
   private seed: number;
+  private anomalyState: Record<string, { active: boolean; severity: string }> = {};
 
   constructor(
     config: IndustrialSimulationConfig,
@@ -61,31 +62,42 @@ export class IndustrialSimulationEngine {
     console.log('Initial values generated:', this.currentValues);
   }
 
-  private simulateError(): { hasError: boolean; errorType?: string } {
-    if (this.seededRandom() < this.errorFrequency) {
-      const errorTypes = [
-        'sensor_disconnected',
-        'value_out_of_range',
-        'communication_error',
-        'calibration_error'
-      ];
-      return {
-        hasError: true,
-        errorType: errorTypes[Math.floor(this.seededRandom() * errorTypes.length)]
-      };
-    }
-    return { hasError: false };
+  public injectAnomaly(metric: string, severity: 'low' | 'medium' | 'high' = 'medium'): void {
+    console.log(`Injecting ${severity} anomaly for metric: ${metric}`);
+    this.anomalyState[metric] = { active: true, severity };
+  }
+
+  public generateNextValues(): Record<string, number> {
+    const diurnalFactor = this.getDiurnalFactor();
+    const values: Record<string, number> = {};
+
+    Object.keys(this.currentValues).forEach(key => {
+      let baseValue = this.currentValues[key];
+      
+      // Apply anomaly if active
+      if (this.anomalyState[key]?.active) {
+        const severityMultiplier = {
+          low: 1.5,
+          medium: 2,
+          high: 3
+        }[this.anomalyState[key].severity] || 1;
+        
+        baseValue *= severityMultiplier;
+      }
+
+      // Add random variation
+      values[key] = baseValue + (this.seededRandom() - 0.5) * 2 * diurnalFactor;
+    });
+
+    // Update current values for next iteration
+    this.currentValues = values;
+    return values;
   }
 
   private getDiurnalFactor(): number {
     const hour = new Date().getHours();
     // Simulate higher values during working hours (8am-6pm)
     return hour >= 8 && hour <= 18 ? 1.2 : 0.8;
-  }
-
-  public setErrorFrequency(frequency: number) {
-    this.errorFrequency = Math.max(0, Math.min(1, frequency));
-    console.log(`Error frequency set to ${this.errorFrequency * 100}%`);
   }
 
   public generateDataPoint(sourceId: string = 'PLCIoT_01'): SimulatedDataPoint {
@@ -132,6 +144,27 @@ export class IndustrialSimulationEngine {
 
     console.log('Generated data point:', dataPoint);
     return dataPoint;
+  }
+
+  private simulateError(): { hasError: boolean; errorType?: string } {
+    if (this.seededRandom() < this.errorFrequency) {
+      const errorTypes = [
+        'sensor_disconnected',
+        'value_out_of_range',
+        'communication_error',
+        'calibration_error'
+      ];
+      return {
+        hasError: true,
+        errorType: errorTypes[Math.floor(this.seededRandom() * errorTypes.length)]
+      };
+    }
+    return { hasError: false };
+  }
+
+  public setErrorFrequency(frequency: number) {
+    this.errorFrequency = Math.max(0, Math.min(1, frequency));
+    console.log(`Error frequency set to ${this.errorFrequency * 100}%`);
   }
 
   public getMachines(): Machine[] {
