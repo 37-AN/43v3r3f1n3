@@ -50,38 +50,28 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    console.log('Processing metrics:', rawData.metrics.length);
-
-    // Process metrics in smaller batches to prevent timeouts
+    // Process metrics in batches
     const BATCH_SIZE = 10;
     const refinedMetrics = [];
 
     for (let i = 0; i < rawData.metrics.length; i += BATCH_SIZE) {
       const batch = rawData.metrics.slice(i, i + BATCH_SIZE);
-      const refinedBatch = batch.map((metric: any) => {
+      
+      const processedBatch = batch.map(metric => {
         if (!metric.metric_type || typeof metric.value === 'undefined') {
           console.warn('Invalid metric structure:', metric);
           return null;
         }
 
-        // Normalize and validate the value
-        const refinedValue = normalizeValue(metric.value, metric.metric_type);
-        
         // Calculate quality score based on data characteristics
         const qualityScore = calculateQualityScore(metric);
 
         return {
           device_id: rawData.deviceId,
           data_type: metric.metric_type,
-          value: refinedValue,
+          value: metric.value,
           quality_score: qualityScore,
-          timestamp: new Date().toISOString(),
+          timestamp: metric.timestamp || new Date().toISOString(),
           metadata: {
             ...metric.metadata,
             refined: true,
@@ -92,10 +82,16 @@ serve(async (req) => {
         };
       }).filter(Boolean);
 
-      refinedMetrics.push(...refinedBatch);
+      refinedMetrics.push(...processedBatch);
     }
 
-    console.log('Refined metrics:', refinedMetrics.length);
+    console.log('Processed metrics:', refinedMetrics.length);
+
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     // Store refined data efficiently using a single batch insert
     if (refinedMetrics.length > 0) {
@@ -140,33 +136,12 @@ serve(async (req) => {
   }
 });
 
-// Utility function to normalize values based on metric type
-function normalizeValue(value: number, metricType: string): number {
-  const thresholds: Record<string, { min: number; max: number }> = {
-    temperature: { min: -20, max: 120 },
-    pressure: { min: 0, max: 1000 },
-    vibration: { min: 0, max: 100 },
-    production_rate: { min: 0, max: 1000 },
-    downtime_minutes: { min: 0, max: 1440 },
-    defect_rate: { min: 0, max: 100 },
-    energy_consumption: { min: 0, max: 10000 },
-    machine_efficiency: { min: 0, max: 100 }
-  };
-
-  const range = thresholds[metricType] || { min: -Infinity, max: Infinity };
-  return Math.max(range.min, Math.min(range.max, value));
-}
-
 // Utility function to calculate data quality score
 function calculateQualityScore(metric: any): number {
   let score = 1.0;
 
   // Check for missing metadata
   if (!metric.metadata) score -= 0.1;
-
-  // Check for value within expected ranges
-  const normalizedValue = normalizeValue(metric.value, metric.metric_type);
-  if (normalizedValue !== metric.value) score -= 0.2;
 
   // Check for timestamp freshness
   if (metric.timestamp) {
