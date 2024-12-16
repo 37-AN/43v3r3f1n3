@@ -1,4 +1,4 @@
-import { Metric, Analysis } from './types';
+import { Metric, Analysis } from './types.ts';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
