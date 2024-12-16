@@ -7,6 +7,7 @@ import { MESDataDisplay } from "@/components/MESDataDisplay";
 import { DataRefinementTab } from "./DataRefinementTab";
 import { generatePerformanceData, generateResourceData } from "@/utils/sampleDataGenerator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataVisualization } from "@/components/industrial/DataVisualization";
 
 interface SimulationDashboardProps {
   deviceId: string;
@@ -17,6 +18,8 @@ export function SimulationDashboard({ deviceId, simulatedData }: SimulationDashb
   return (
     <div className="grid grid-cols-1 gap-8">
       <SimulationControl />
+      
+      <DataVisualization deviceId={deviceId} />
       
       <Tabs defaultValue="insights" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
