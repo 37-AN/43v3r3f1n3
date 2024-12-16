@@ -40,7 +40,7 @@ export const useSimulationData = (
               metadata: {
                 quality_score: dataPoint.metadata.quality_score,
                 source: dataPoint.source,
-                error_state: null
+                error_state: dataPoint.metadata.error_state
               }
             },
             {
@@ -51,7 +51,7 @@ export const useSimulationData = (
               metadata: {
                 quality_score: dataPoint.metadata.quality_score,
                 source: dataPoint.source,
-                error_state: null
+                error_state: dataPoint.metadata.error_state
               }
             },
             {
@@ -62,21 +62,33 @@ export const useSimulationData = (
               metadata: {
                 quality_score: dataPoint.metadata.quality_score,
                 source: dataPoint.source,
-                error_state: null
+                error_state: dataPoint.metadata.error_state
+              }
+            },
+            {
+              metric_type: 'energy_consumption',
+              value: dataPoint.energy_consumption_kWh,
+              timestamp: dataPoint.timestamp,
+              unit: 'kWh',
+              metadata: {
+                quality_score: dataPoint.metadata.quality_score,
+                source: dataPoint.source,
+                error_state: dataPoint.metadata.error_state
               }
             }
           ];
 
-          // Structure request body according to the Edge Function's requirements
+          // Send to data refinery with proper authorization
           const refineryRequestBody = {
             rawData: {
-              deviceId: deviceId,
+              deviceId,
               metrics: metricsArray,
-              timestamp: new Date().toISOString(),
+              timestamp: dataPoint.timestamp,
               metadata: {
                 simulation: true,
-                source: 'simulation_engine',
-                quality_score: 0.95,
+                source: dataPoint.source,
+                machine_state: dataPoint.machine_state,
+                quality_score: dataPoint.metadata.quality_score,
                 owner_id: session.user.id
               }
             }
@@ -98,7 +110,7 @@ export const useSimulationData = (
 
           console.log('Received refined data:', refinedData);
 
-          // Update history with new data points
+          // Update history
           setWriteHistory(prev => [
             ...metricsArray.map(metric => ({
               timestamp: metric.timestamp,
@@ -106,7 +118,7 @@ export const useSimulationData = (
               value: metric.value
             })),
             ...prev
-          ].slice(0, 50)); // Keep last 50 entries
+          ].slice(0, 50));
 
           console.log('Successfully processed simulation data');
         } catch (error) {
