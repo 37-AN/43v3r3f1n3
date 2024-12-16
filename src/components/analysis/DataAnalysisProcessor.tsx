@@ -63,7 +63,7 @@ export const DataAnalysisProcessor = ({
           return null;
         }
 
-        // Properly structure the request body
+        // Structure the request body according to the Edge Function's requirements
         const requestBody = {
           rawData: {
             deviceId: selectedDeviceId,
