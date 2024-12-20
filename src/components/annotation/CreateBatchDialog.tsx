@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CreateBatchDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface CreateBatchDialogProps {
 export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -27,17 +29,31 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
+    
+    if (!formData.name.trim() || !formData.dataType) {
+      setError("Please fill in all required fields");
+      setIsSubmitting(false);
+      return;
+    }
+
     console.log("Creating new annotation batch:", formData);
 
     try {
-      const { error } = await supabase.from("annotation_batches").insert({
-        name: formData.name,
-        description: formData.description,
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.user) {
+        throw new Error("No authenticated user");
+      }
+
+      const { error: insertError } = await supabase.from("annotation_batches").insert({
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         data_type: formData.dataType,
-        status: "pending"
+        status: "pending",
+        created_by: session.session.user.id
       });
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       console.log("Successfully created annotation batch");
       toast.success("Annotation batch created successfully");
@@ -46,6 +62,7 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
       setFormData({ name: "", description: "", dataType: "" });
     } catch (error) {
       console.error("Error creating annotation batch:", error);
+      setError("Failed to create annotation batch. Please try again.");
       toast.error("Failed to create annotation batch");
     } finally {
       setIsSubmitting(false);
@@ -61,9 +78,15 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
             Create a new batch of data items for annotation.
           </DialogDescription>
         </DialogHeader>
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Batch Name</Label>
+            <Label htmlFor="name">Batch Name <span className="text-red-500">*</span></Label>
             <Input
               id="name"
               value={formData.name}
@@ -84,7 +107,7 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="dataType">Data Type</Label>
+            <Label htmlFor="dataType">Data Type <span className="text-red-500">*</span></Label>
             <Select
               value={formData.dataType}
               onValueChange={(value) => setFormData({ ...formData, dataType: value })}
