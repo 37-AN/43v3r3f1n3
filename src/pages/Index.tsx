@@ -8,7 +8,9 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, ClipboardList, Database, Shield } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AnnotationDashboard } from "@/components/annotation/AnnotationDashboard";
 
 export default function Index() {
   const { session, loading: sessionLoading } = useSession();
@@ -96,31 +98,67 @@ export default function Index() {
   return (
     <div className="container mx-auto p-4">
       <ConnectionStatusBanner />
-      {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading device data...</span>
-        </div>
-      ) : selectedDeviceId ? (
-        <SimulationDashboard 
-          deviceId={selectedDeviceId}
-          simulatedData={simulatedData}
-        />
-      ) : (
-        <div className="text-center py-8">
-          <h2 className="text-xl font-semibold mb-2">No Device Selected</h2>
-          <p className="text-gray-600 mb-4">Please add a PLC device to get started.</p>
-          <Button 
-            onClick={() => {
-              setRetryCount(0);
-              fetchFirstDevice();
-            }}
-            className="mt-2"
-          >
-            Retry Loading Device
-          </Button>
-        </div>
-      )}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Industrial Data Platform</h1>
+        <p className="text-gray-600">Manage your industrial data processing and annotation tasks</p>
+      </div>
+
+      <Tabs defaultValue="simulation" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsTrigger value="simulation" className="flex items-center gap-2">
+            <Database className="w-4 h-4" />
+            Simulation
+          </TabsTrigger>
+          <TabsTrigger value="annotation" className="flex items-center gap-2">
+            <ClipboardList className="w-4 h-4" />
+            Annotation
+          </TabsTrigger>
+          <TabsTrigger value="quality" className="flex items-center gap-2">
+            <Shield className="w-4 h-4" />
+            Quality
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="simulation" className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading device data...</span>
+            </div>
+          ) : selectedDeviceId ? (
+            <SimulationDashboard 
+              deviceId={selectedDeviceId}
+              simulatedData={simulatedData}
+            />
+          ) : (
+            <div className="text-center py-8">
+              <h2 className="text-xl font-semibold mb-2">No Device Selected</h2>
+              <p className="text-gray-600 mb-4">Please add a PLC device to get started.</p>
+              <Button 
+                onClick={() => {
+                  setRetryCount(0);
+                  fetchFirstDevice();
+                }}
+                className="mt-2"
+              >
+                Retry Loading Device
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="annotation">
+          <AnnotationDashboard />
+        </TabsContent>
+
+        <TabsContent value="quality">
+          <div className="text-center py-12">
+            <Shield className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Quality Control Dashboard</h3>
+            <p className="text-gray-600">Coming soon! Monitor and manage data quality reviews.</p>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
