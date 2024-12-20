@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Filter, SortAsc } from "lucide-react";
+import { Plus, Loader2, SortAsc } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CreateBatchDialog } from "./CreateBatchDialog";
+import { BatchDetailsDialog } from "./BatchDetailsDialog";
 import { toast } from "sonner";
 
 interface AnnotationBatch {
@@ -21,6 +22,7 @@ interface AnnotationBatch {
 
 export function AnnotationDashboard() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { data: batches, isLoading, error, refetch } = useQuery({
@@ -139,7 +141,11 @@ export function AnnotationDashboard() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {batches?.map((batch) => (
-            <Card key={batch.id} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={batch.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => setSelectedBatchId(batch.id)}
+            >
               <CardHeader>
                 <CardTitle>{batch.name}</CardTitle>
                 <CardDescription>{batch.description}</CardDescription>
@@ -165,9 +171,6 @@ export function AnnotationDashboard() {
                       {batch.completed_items || 0} of {batch.total_items || 0} items completed
                     </p>
                   </div>
-                  <Button className="w-full" variant="outline">
-                    View Details
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -178,6 +181,11 @@ export function AnnotationDashboard() {
       <CreateBatchDialog 
         open={isCreateDialogOpen} 
         onOpenChange={setIsCreateDialogOpen}
+      />
+
+      <BatchDetailsDialog
+        batchId={selectedBatchId}
+        onOpenChange={(open) => !open && setSelectedBatchId(null)}
       />
     </div>
   );
