@@ -15,9 +15,9 @@ interface SimulationDashboardProps {
 }
 
 export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
-  const isSimulationRunning = useSimulationState();
+  const { simulationState } = useSimulationState();
   const [simulationEngine] = useState(() => new IndustrialSimulationEngine(defaultSimulationConfig));
-  const { writeHistory } = useSimulationData(isSimulationRunning, deviceId, simulationEngine);
+  const { writeHistory } = useSimulationData(simulationState.isRunning, deviceId, simulationEngine);
 
   if (!deviceId) {
     return (
@@ -33,9 +33,9 @@ export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
     <Card className="p-3 glass-panel">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className={`status-indicator ${isSimulationRunning ? 'active' : 'error'}`} />
+          <div className={`status-indicator ${simulationState.isRunning ? 'active' : 'error'}`} />
           <h2 className="text-sm font-medium">
-            Simulation {isSimulationRunning ? 'Running' : 'Stopped'}
+            Simulation {simulationState.isRunning ? 'Running' : 'Stopped'}
           </h2>
         </div>
         
@@ -52,7 +52,7 @@ export function SimulationDashboard({ deviceId }: SimulationDashboardProps) {
         </Dialog>
       </div>
 
-      {isSimulationRunning && (
+      {simulationState.isRunning && (
         <WriteHistory history={writeHistory} />
       )}
     </Card>
