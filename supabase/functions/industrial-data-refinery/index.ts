@@ -79,6 +79,7 @@ serve(async (req) => {
     console.log('Processed metrics:', refinedMetrics.length);
 
     if (refinedMetrics.length > 0) {
+      // Store in refined_industrial_data
       const { error: insertError } = await supabaseClient
         .from('refined_industrial_data')
         .insert(refinedMetrics);
@@ -88,7 +89,7 @@ serve(async (req) => {
         throw insertError;
       }
 
-      // Also store in MES metrics for integration
+      // Store in MES metrics for integration
       const { error: mesError } = await supabaseClient
         .from('mes_metrics')
         .insert(refinedMetrics.map(metric => ({

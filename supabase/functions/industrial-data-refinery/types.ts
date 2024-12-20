@@ -28,3 +28,9 @@ export interface RawData {
 export interface RequestBody {
   rawData: RawData;
 }
+
+export interface Analysis {
+  message: string;
+  severity: "info" | "warning" | "critical";
+  confidence: number;
+}
