@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { BatchHeader } from "./BatchHeader";
+import { BatchItemsList } from "./BatchItemsList";
 
 interface BatchDetailsDialogProps {
   batchId: string | null;
@@ -39,19 +39,6 @@ export function BatchDetailsDialog({ batchId, onOpenChange }: BatchDetailsDialog
     enabled: !!batchId,
   });
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle2 className="w-4 h-4 text-system-mint" />;
-      case "pending":
-        return <Clock className="w-4 h-4 text-system-amber" />;
-      case "failed":
-        return <AlertCircle className="w-4 h-4 text-system-red" />;
-      default:
-        return null;
-    }
-  };
-
   const handleStartAnnotation = async () => {
     if (!batchId) return;
     setIsSubmitting(true);
@@ -77,6 +64,15 @@ export function BatchDetailsDialog({ batchId, onOpenChange }: BatchDetailsDialog
     toast.error("Failed to load batch details");
   }
 
+  const calculateProgress = () => {
+    if (!batchDetails?.annotation_items?.length) return 0;
+    return (
+      (batchDetails.annotation_items.filter((item) => item.status === "completed").length /
+        batchDetails.annotation_items.length) *
+      100
+    );
+  };
+
   return (
     <Dialog open={!!batchId} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -95,59 +91,16 @@ export function BatchDetailsDialog({ batchId, onOpenChange }: BatchDetailsDialog
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">{batchDetails.name}</h3>
-                <p className="text-sm text-muted-foreground">{batchDetails.description}</p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(batchDetails.status)}
-                  <span className="capitalize">{batchDetails.status}</span>
-                </div>
-              </div>
-
-              <Progress 
-                value={
-                  batchDetails.annotation_items?.length
-                    ? (batchDetails.annotation_items.filter(item => item.status === "completed").length /
-                        batchDetails.annotation_items.length) *
-                      100
-                    : 0
-                }
-                className="h-2"
-              />
-            </div>
+            <BatchHeader
+              name={batchDetails.name}
+              description={batchDetails.description}
+              status={batchDetails.status}
+              progress={calculateProgress()}
+            />
 
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Annotation Items</h4>
-              {batchDetails.annotation_items?.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-sm text-muted-foreground">No items to annotate</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-2">
-                  {batchDetails.annotation_items?.map((item) => (
-                    <Card key={item.id}>
-                      <CardContent className="py-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(item.status)}
-                            <span className="text-sm capitalize">{item.status}</span>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              <BatchItemsList items={batchDetails.annotation_items || []} />
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
