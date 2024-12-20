@@ -50,6 +50,118 @@ export type Database = {
           },
         ]
       }
+      annotation_batches: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          data_type: string
+          description: string | null
+          id: string
+          name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          data_type: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          data_type?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      annotation_items: {
+        Row: {
+          assigned_to: string | null
+          batch_id: string | null
+          created_at: string | null
+          id: string
+          raw_data: Json
+          refined_data: Json | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          batch_id?: string | null
+          created_at?: string | null
+          id?: string
+          raw_data: Json
+          refined_data?: Json | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          batch_id?: string | null
+          created_at?: string | null
+          id?: string
+          raw_data?: Json
+          refined_data?: Json | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annotation_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "annotation_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      annotation_reviews: {
+        Row: {
+          created_at: string | null
+          feedback: string | null
+          id: string
+          item_id: string | null
+          reviewer_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          item_id?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          item_id?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annotation_reviews_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "annotation_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       annotation_tasks: {
         Row: {
           assigned_to: string | null
