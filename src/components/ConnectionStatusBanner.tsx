@@ -11,7 +11,7 @@ export function ConnectionStatusBanner() {
     lastUpdate: null as Date | null
   });
 
-  const { refineryStatus, mesStatus } = useSystemStatus();
+  const { mesStatus } = useSystemStatus();
 
   useEffect(() => {
     const checkRefinedData = async () => {
@@ -65,10 +65,6 @@ export function ConnectionStatusBanner() {
   return (
     <Card className="p-4 mb-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <StatusItem 
-          title="AI Industry Refinery"
-          isConnected={refineryStatus.isConnected}
-        />
         <StatusItem 
           title="Tokenized MES Engine"
           isConnected={mesStatus.isConnected}
