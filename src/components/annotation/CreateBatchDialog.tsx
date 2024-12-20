@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface CreateBatchDialogProps {
   open: boolean;
@@ -26,16 +27,19 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    console.log("Creating new annotation batch:", formData);
 
     try {
       const { error } = await supabase.from("annotation_batches").insert({
         name: formData.name,
         description: formData.description,
         data_type: formData.dataType,
+        status: "pending"
       });
 
       if (error) throw error;
 
+      console.log("Successfully created annotation batch");
       toast.success("Annotation batch created successfully");
       queryClient.invalidateQueries({ queryKey: ["annotation-batches"] });
       onOpenChange(false);
@@ -75,6 +79,8 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Enter batch description"
+              className="resize-none"
+              rows={3}
             />
           </div>
           <div className="space-y-2">
@@ -91,15 +97,28 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
                 <SelectItem value="sensor">Sensor Data</SelectItem>
                 <SelectItem value="process">Process Data</SelectItem>
                 <SelectItem value="quality">Quality Metrics</SelectItem>
+                <SelectItem value="maintenance">Maintenance Records</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Batch"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Batch'
+              )}
             </Button>
           </div>
         </form>
