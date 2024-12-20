@@ -1,10 +1,9 @@
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle } from "lucide-react";
 import { useSystemStatus } from "@/hooks/useSystemStatus";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { StatusItem } from "./status/StatusItem";
 
 export function ConnectionStatusBanner() {
   const [refinedDataStatus, setRefinedDataStatus] = useState({
@@ -66,52 +65,19 @@ export function ConnectionStatusBanner() {
   return (
     <Card className="p-4 mb-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {refineryStatus.isConnected ? (
-            <CheckCircle2 className="w-5 h-5 text-green-500" />
-          ) : (
-            <XCircle className="w-5 h-5 text-red-500" />
-          )}
-          <div>
-            <p className="font-medium">AI Industry Refinery</p>
-            <Badge variant={refineryStatus.isConnected ? "success" : "destructive"}>
-              {refineryStatus.isConnected ? "Connected" : "Disconnected"}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {mesStatus.isConnected ? (
-            <CheckCircle2 className="w-5 h-5 text-green-500" />
-          ) : (
-            <XCircle className="w-5 h-5 text-red-500" />
-          )}
-          <div>
-            <p className="font-medium">Tokenized MES Engine</p>
-            <Badge variant={mesStatus.isConnected ? "success" : "destructive"}>
-              {mesStatus.isConnected ? "Connected" : "Disconnected"}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {refinedDataStatus.isConnected ? (
-            <CheckCircle2 className="w-5 h-5 text-green-500" />
-          ) : (
-            <XCircle className="w-5 h-5 text-red-500" />
-          )}
-          <div>
-            <p className="font-medium">Refined Data</p>
-            <Badge variant={refinedDataStatus.isConnected ? "success" : "destructive"}>
-              {refinedDataStatus.isConnected ? "Connected" : "Disconnected"}
-            </Badge>
-            {refinedDataStatus.lastUpdate && (
-              <p className="text-xs text-gray-500 mt-1">
-                Last update: {refinedDataStatus.lastUpdate.toLocaleTimeString()}
-              </p>
-            )}
-          </div>
-        </div>
+        <StatusItem 
+          title="AI Industry Refinery"
+          isConnected={refineryStatus.isConnected}
+        />
+        <StatusItem 
+          title="Tokenized MES Engine"
+          isConnected={mesStatus.isConnected}
+        />
+        <StatusItem 
+          title="Refined Data"
+          isConnected={refinedDataStatus.isConnected}
+          lastUpdate={refinedDataStatus.lastUpdate}
+        />
       </div>
     </Card>
   );
