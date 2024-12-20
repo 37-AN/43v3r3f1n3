@@ -44,12 +44,12 @@ export function AnnotationDashboard() {
         batchesData.map(async (batch) => {
           const { count: totalItems } = await supabase
             .from("annotation_items")
-            .select("*", { count: true })
+            .select("*", { count: "exact", head: true })
             .eq("batch_id", batch.id);
 
           const { count: completedItems } = await supabase
             .from("annotation_items")
-            .select("*", { count: true })
+            .select("*", { count: "exact", head: true })
             .eq("batch_id", batch.id)
             .eq("status", "completed");
 
