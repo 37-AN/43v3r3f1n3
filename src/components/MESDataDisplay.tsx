@@ -1,11 +1,10 @@
 import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { useMESData } from "@/hooks/useMESData";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { formatXAxis, getRegisterColor } from "@/utils/chart/formatters";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { MESMetricsDisplay } from "./mes/MESMetricsDisplay";
+import { MESMetricsList } from "./mes/MESMetricsList";
+import { TokenizedAssetsList } from "./mes/TokenizedAssetsList";
 
 interface MESDataDisplayProps {
   deviceId: string;
@@ -72,8 +71,6 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
     metric_type: item.data_type
   })) || [];
 
-  console.log('Formatted refined data:', formattedRefinedData);
-
   // Group data by metric type
   const groupedData = formattedRefinedData.reduce((acc, item) => {
     if (!acc[item.metric_type]) {
@@ -88,118 +85,26 @@ export const MESDataDisplay = ({ deviceId }: MESDataDisplayProps) => {
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">Refined MES Metrics</h3>
         {Object.entries(groupedData).map(([metricType, data]) => (
-          <div key={metricType} className="mb-6">
-            <h4 className="text-md font-medium mb-2">{getMetricDisplayName(metricType)}</h4>
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="timestamp" 
-                    tickFormatter={formatXAxis}
-                    height={40}
-                    angle={-45}
-                    textAnchor="end"
-                  />
-                  <YAxis />
-                  <Tooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const value = payload[0].value;
-                        const formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
-                        return (
-                          <div className="bg-white/95 border-none rounded-lg shadow-lg p-3">
-                            <p className="text-gray-500 mb-1">{formatXAxis(payload[0].payload.timestamp)}</p>
-                            <p className="font-medium">Value: {formattedValue}</p>
-                            <p className="text-sm">Quality: {(payload[0].payload.quality_score * 100).toFixed(0)}%</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke={getRegisterColor('input')}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <MESMetricsDisplay
+            key={metricType}
+            metricType={metricType}
+            data={data}
+            getMetricDisplayName={getMetricDisplayName}
+          />
         ))}
       </Card>
 
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">MES Metrics</h3>
-        <ScrollArea className="h-[200px]">
-          <div className="space-y-2">
-            {mesMetrics && mesMetrics.length > 0 ? (
-              mesMetrics.map((metric) => (
-                <div
-                  key={metric.id}
-                  className="p-2 bg-gray-50 rounded-lg flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium">{getMetricDisplayName(metric.metric_type)}</p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(metric.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-mono">
-                      {typeof metric.value === 'number' ? metric.value.toFixed(2) : metric.value} {metric.unit}
-                    </p>
-                    <Badge 
-                      variant={
-                        metric.metadata?.quality_score >= 0.8 
-                          ? "success" 
-                          : "warning"
-                      }
-                    >
-                      Quality: {((metric.metadata?.quality_score || 0) * 100).toFixed(0)}%
-                    </Badge>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-4">No MES metrics available</p>
-            )}
-          </div>
-        </ScrollArea>
+        <MESMetricsList 
+          metrics={mesMetrics || []}
+          getMetricDisplayName={getMetricDisplayName}
+        />
       </Card>
 
       <Card className="p-4">
         <h3 className="text-lg font-semibold mb-4">Tokenized Assets</h3>
-        <ScrollArea className="h-[200px]">
-          <div className="space-y-2">
-            {tokenizedAssets && tokenizedAssets.length > 0 ? (
-              tokenizedAssets.map((asset) => (
-                <div
-                  key={asset.id}
-                  className="p-2 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium">{asset.name}</p>
-                    <Badge>{asset.token_symbol}</Badge>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    <p>Supply: {asset.total_supply.toLocaleString()}</p>
-                    <p>Price: ${asset.price_per_token}</p>
-                    <p className="mt-1 text-xs">
-                      Created: {new Date(asset.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-4">
-                No tokenized assets found
-              </p>
-            )}
-          </div>
-        </ScrollArea>
+        <TokenizedAssetsList assets={tokenizedAssets || []} />
       </Card>
     </div>
   );
