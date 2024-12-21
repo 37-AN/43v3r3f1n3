@@ -37,8 +37,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     }, 500);
 
     try {
-      console.log('Starting data refinement for device:', deviceId);
-      console.log('Input simulated data:', simulatedData);
+      console.log('Starting data refinement with simulated data:', simulatedData);
       
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();
@@ -49,7 +48,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
       // Format metrics array with proper structure
       const metrics = Object.entries(simulatedData).map(([key, value]) => ({
         metric_type: key,
-        value: Number(value), // Ensure value is a number
+        value: Number(value),
         timestamp: new Date().toISOString(),
         unit: key.includes('temperature') ? '°C' : 
               key.includes('pressure') ? 'bar' : 
@@ -62,29 +61,41 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
-      // Prepare request body with proper structure
-      const refineryRequestBody = {
-        rawData: {
-          deviceId,
-          metrics,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            simulation: true,
-            source: 'simulation_engine',
-            quality_score: 0.95,
-            owner_id: session.user.id
+      // Send data for AI annotation
+      const { data: annotationResult, error: annotationError } = await supabase.functions.invoke(
+        'annotation-ai-analysis',
+        {
+          body: {
+            rawData: metrics,
+            dataType: 'industrial_metrics',
+            deviceId
           }
         }
-      };
+      );
 
-      console.log('Sending data to refinery:', JSON.stringify(refineryRequestBody, null, 2));
+      if (annotationError) {
+        console.error('Error in AI annotation:', annotationError);
+        throw annotationError;
+      }
 
+      console.log('Received AI annotation result:', annotationResult);
+
+      // Process refined data
       const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
         'industrial-data-refinery',
         {
-          body: refineryRequestBody,
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
+          body: {
+            rawData: {
+              deviceId,
+              metrics,
+              timestamp: new Date().toISOString(),
+              metadata: {
+                simulation: true,
+                source: 'simulation_engine',
+                quality_score: 0.95,
+                owner_id: session.user.id
+              }
+            }
           }
         }
       );
@@ -110,7 +121,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
       });
 
       setProgress(100);
-      toast.success("Data refined and stored successfully");
+      toast.success("Data refined and annotated successfully");
 
       // Reset after completion
       setTimeout(() => {
@@ -121,7 +132,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     } catch (error) {
       clearInterval(progressInterval);
       console.error('Error in data refinement:', error);
-      toast.error("Failed to refine data");
+      toast.error("Failed to refine and annotate data");
       setIsRefining(false);
       setProgress(0);
     }
@@ -132,16 +143,16 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold">Data Refinement</h3>
+            <h3 className="text-lg font-semibold">Data Refinement & AI Annotation</h3>
             <p className="text-sm text-muted-foreground">
-              Process and refine industrial data for quality assessment
+              Process and annotate industrial data with AI assistance
             </p>
           </div>
           <Button 
             onClick={handleRefineData}
             disabled={isRefining || !deviceId || Object.keys(simulatedData).length === 0}
           >
-            {isRefining ? "Refining..." : "Refine Data"}
+            {isRefining ? "Processing..." : "Refine & Annotate"}
           </Button>
         </div>
 
@@ -149,7 +160,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
             <p className="text-sm text-muted-foreground text-center">
-              {progress === 100 ? "Refinement complete!" : "Processing data..."}
+              {progress === 100 ? "Processing complete!" : "Processing data..."}
             </p>
           </div>
         )}
@@ -158,7 +169,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
           <div className="bg-muted rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
-              <h4 className="font-medium">Refinement Analysis</h4>
+              <h4 className="font-medium">Analysis Results</h4>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
@@ -181,15 +192,15 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
           {Object.keys(simulatedData).length > 0 ? (
             <div className="space-y-1">
               <p>
-                {Object.keys(simulatedData).length} metrics available for refinement
+                {Object.keys(simulatedData).length} metrics available for processing
               </p>
               <p className="text-xs text-muted-foreground">
-                Using advanced data analysis for quality assessment
+                Using AI-powered analysis for data annotation and quality assessment
               </p>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No data available for refinement. Start the simulation to generate data.
+              No data available for processing. Start the simulation to generate data.
             </p>
           )}
         </div>

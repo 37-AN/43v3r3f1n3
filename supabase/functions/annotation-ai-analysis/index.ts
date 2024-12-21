@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
@@ -14,8 +13,15 @@ serve(async (req) => {
   }
 
   try {
-    const { rawData, dataType } = await req.json();
-    console.log('Processing annotation analysis for data type:', dataType);
+    const { rawData, dataType, deviceId } = await req.json();
+    
+    if (!rawData || !dataType || !deviceId) {
+      throw new Error('Missing required parameters');
+    }
+
+    console.log('Processing annotation analysis for device:', deviceId);
+    console.log('Data type:', dataType);
+    console.log('Raw data sample:', rawData.slice(0, 2));
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -25,10 +31,15 @@ serve(async (req) => {
     // Initialize Hugging Face inference
     const hf = new HfInference(Deno.env.get('HUGGING_FACE_ACCESS_TOKEN'));
 
-    // Prepare prompt for Falcon model
+    // Prepare prompt for analysis
     const prompt = `Analyze this industrial data and provide annotation suggestions:
 Data Type: ${dataType}
-Raw Data: ${JSON.stringify(rawData, null, 2)}
+Device ID: ${deviceId}
+Metrics: ${JSON.stringify(rawData.map(m => ({
+  type: m.metric_type,
+  value: m.value,
+  unit: m.unit
+})), null, 2)}
 
 Please provide analysis focusing on:
 1. Data patterns and anomalies
@@ -39,9 +50,9 @@ Please provide analysis focusing on:
 
 Format your response in a structured way.`;
 
-    console.log('Sending request to Hugging Face Falcon model...');
+    console.log('Sending request to Hugging Face model...');
     
-    // Use Falcon model for text generation
+    // Use model for text generation
     const result = await hf.textGeneration({
       model: 'tiiuae/falcon-7b-instruct',
       inputs: prompt,
@@ -54,14 +65,14 @@ Format your response in a structured way.`;
     });
 
     const analysis = result.generated_text;
-    console.log('Received Falcon analysis:', analysis);
+    console.log('Received AI analysis:', analysis);
 
-    // Create a new annotation batch with AI suggestions
+    // Create annotation batch
     const { data: batch, error: batchError } = await supabase
       .from('annotation_batches')
       .insert({
-        name: `AI-Assisted Batch (Falcon) - ${new Date().toISOString()}`,
-        description: 'Automatically generated batch using Falcon AI model',
+        name: `AI-Assisted Batch - Device ${deviceId}`,
+        description: 'Automatically generated batch using AI model',
         data_type: dataType,
         status: 'pending'
       })
@@ -70,14 +81,15 @@ Format your response in a structured way.`;
 
     if (batchError) throw batchError;
 
-    // Create annotation items with AI suggestions
-    const items = Object.entries(rawData).map(([key, value]) => ({
+    // Create annotation items
+    const items = rawData.map(metric => ({
       batch_id: batch.id,
-      raw_data: { key, value },
+      raw_data: metric,
       refined_data: {
         ai_suggestions: analysis,
         model: 'falcon-7b-instruct',
-        confidence_score: 0.85
+        confidence_score: 0.85,
+        timestamp: new Date().toISOString()
       },
       status: 'pending'
     }));
