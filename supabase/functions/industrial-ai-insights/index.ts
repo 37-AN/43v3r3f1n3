@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,35 +50,22 @@ Provide analysis focusing on:
 4. Resource optimization suggestions
 5. Quality control insights`;
 
-    console.log('Sending request to OpenAI...');
+    console.log('Sending request to HuggingFace...');
     
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an industrial AI expert specializing in manufacturing analytics and optimization.'
-          },
-          { role: 'user', content: prompt }
-        ],
+    const hf = new HfInference();
+    const result = await hf.textGeneration({
+      model: 'tiiuae/falcon-7b-instruct',
+      inputs: prompt,
+      parameters: {
+        max_new_tokens: 500,
         temperature: 0.7,
-        max_tokens: 1000,
-      }),
+        top_p: 0.95,
+        return_full_text: false,
+      },
     });
 
-    if (!aiResponse.ok) {
-      console.error('OpenAI API error:', await aiResponse.text());
-      throw new Error('OpenAI API error');
-    }
-
-    const aiData = await aiResponse.json();
-    const analysis = aiData.choices[0].message.content;
+    console.log('Received HuggingFace response:', result);
+    const analysis = result.generated_text;
 
     // Store the AI-generated insight
     const { error: insertError } = await supabase
@@ -86,13 +74,13 @@ Provide analysis focusing on:
         device_id: deviceId,
         insight_type: 'advanced_analysis',
         message: analysis,
-        confidence: 0.95,
+        confidence: 0.85,
         severity: analysis.toLowerCase().includes('critical') ? 'critical' : 
                  analysis.toLowerCase().includes('warning') ? 'warning' : 'info',
         metadata: {
           analyzed_metrics: metrics,
           time_range: timeRange,
-          model: 'gpt-3.5-turbo'
+          model: 'falcon-7b-instruct'
         }
       });
 
