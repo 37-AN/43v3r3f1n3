@@ -38,6 +38,11 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     try {
       console.log('Starting data refinement with:', { deviceId, simulatedData });
       
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        throw new Error('No active session');
+      }
+
       // Format metrics with proper structure for the refinery
       const metrics = Object.entries(simulatedData).map(([metric_type, value]) => ({
         metric_type,
@@ -54,22 +59,27 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
-      // Send to data refinery with proper structure
+      // Send data to refinery with proper structure
+      const refineryRequestBody = {
+        rawData: {
+          deviceId,
+          metrics,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            simulation: true,
+            source: 'simulation_engine',
+            quality_score: 0.95,
+            owner_id: session.user.id
+          }
+        }
+      };
+
+      console.log('Sending data to refinery:', JSON.stringify(refineryRequestBody, null, 2));
+
       const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
         'industrial-data-refinery',
         {
-          body: {
-            rawData: {
-              deviceId,
-              metrics,
-              timestamp: new Date().toISOString(),
-              metadata: {
-                simulation: true,
-                source: 'simulation_engine',
-                quality_score: 0.95
-              }
-            }
-          }
+          body: refineryRequestBody
         }
       );
 
