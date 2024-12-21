@@ -38,11 +38,6 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     try {
       console.log('Starting data refinement with:', { deviceId, simulatedData });
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
-        throw new Error('No active session');
-      }
-
       // Format metrics with proper structure for the refinery
       const metrics = Object.entries(simulatedData).map(([metric_type, value]) => ({
         metric_type,
@@ -59,27 +54,22 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
-      // Send data to refinery with proper structure
-      const refineryRequestBody = {
-        rawData: {
-          deviceId,
-          metrics,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            simulation: true,
-            source: 'simulation_engine',
-            quality_score: 0.95,
-            owner_id: session.user.id
-          }
-        }
-      };
-
-      console.log('Sending data to refinery:', JSON.stringify(refineryRequestBody, null, 2));
-
+      // Send to data refinery with proper structure
       const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
         'industrial-data-refinery',
         {
-          body: refineryRequestBody
+          body: {
+            rawData: {
+              deviceId,
+              metrics,
+              timestamp: new Date().toISOString(),
+              metadata: {
+                simulation: true,
+                source: 'simulation_engine',
+                quality_score: 0.95
+              }
+            }
+          }
         }
       );
 
@@ -89,25 +79,6 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
       }
 
       console.log('Received refined data:', refinedData);
-
-      // Send to AI analysis for annotation
-      const { data: annotationResult, error: annotationError } = await supabase.functions.invoke(
-        'annotation-ai-analysis',
-        {
-          body: {
-            rawData: metrics,
-            dataType: 'simulation',
-            deviceId
-          }
-        }
-      );
-
-      if (annotationError) {
-        console.error('Error in annotation analysis:', annotationError);
-        throw annotationError;
-      }
-
-      console.log('Received annotation result:', annotationResult);
 
       clearInterval(progressInterval);
       
@@ -122,7 +93,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
       });
 
       setProgress(100);
-      toast.success("Data refined and annotated successfully");
+      toast.success("Data refined successfully");
 
       setTimeout(() => {
         setIsRefining(false);
@@ -132,7 +103,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     } catch (error) {
       clearInterval(progressInterval);
       console.error('Error in data refinement:', error);
-      toast.error("Failed to refine and annotate data");
+      toast.error("Failed to refine data");
       setIsRefining(false);
       setProgress(0);
     }
