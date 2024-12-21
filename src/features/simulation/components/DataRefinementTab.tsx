@@ -74,15 +74,12 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       };
 
-      console.log('Sending data to refinery:', refineryRequestBody);
+      console.log('Sending data to refinery:', JSON.stringify(refineryRequestBody, null, 2));
 
       const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
         'industrial-data-refinery',
         {
-          body: refineryRequestBody,
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
-          }
+          body: refineryRequestBody
         }
       );
 
@@ -101,9 +98,6 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
             rawData: metrics,
             dataType: 'simulation',
             deviceId
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
           }
         }
       );

@@ -18,11 +18,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Parse request body
+    // Parse and validate request body
     let requestData;
     try {
       requestData = await req.json();
-      console.log('Received request data:', requestData);
+      console.log('Received request data:', JSON.stringify(requestData, null, 2));
     } catch (error) {
       console.error('Error parsing request body:', error);
       return new Response(
@@ -37,9 +37,26 @@ serve(async (req) => {
       );
     }
 
-    // Validate rawData exists and has required properties
-    if (!requestData.rawData || !requestData.rawData.deviceId || !requestData.rawData.metrics) {
-      console.error('Invalid or missing rawData:', requestData);
+    // Validate request structure
+    if (!requestData.rawData) {
+      console.error('Missing rawData object');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request format', 
+          details: 'rawData object is required' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const { rawData } = requestData;
+
+    // Validate required fields
+    if (!rawData.deviceId || !Array.isArray(rawData.metrics)) {
+      console.error('Invalid rawData structure:', rawData);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid rawData format', 
@@ -52,7 +69,6 @@ serve(async (req) => {
       );
     }
 
-    const { rawData } = requestData;
     console.log('Processing metrics for device:', rawData.deviceId);
 
     // Process metrics and calculate quality scores
