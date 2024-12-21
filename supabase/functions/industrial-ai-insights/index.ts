@@ -58,7 +58,7 @@ Provide analysis focusing on:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
@@ -72,6 +72,7 @@ Provide analysis focusing on:
     });
 
     if (!aiResponse.ok) {
+      console.error('OpenAI API error:', await aiResponse.text());
       throw new Error('OpenAI API error');
     }
 
@@ -91,7 +92,7 @@ Provide analysis focusing on:
         metadata: {
           analyzed_metrics: metrics,
           time_range: timeRange,
-          model: 'gpt-4o-mini'
+          model: 'gpt-3.5-turbo'
         }
       });
 
