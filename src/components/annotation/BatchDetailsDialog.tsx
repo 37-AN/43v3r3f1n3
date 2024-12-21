@@ -53,8 +53,10 @@ export function BatchDetailsDialog({ batchId, onOpenChange }: BatchDetailsDialog
     setIsSubmitting(true);
     
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.user) {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      
+      if (!session?.user?.id) {
         throw new Error("No authenticated user");
       }
 
@@ -76,7 +78,9 @@ export function BatchDetailsDialog({ batchId, onOpenChange }: BatchDetailsDialog
           .map(item => ({
             id: item.id,
             assigned_to: session.user.id,
-            status: "pending"
+            status: "pending",
+            raw_data: item.raw_data, // Preserve existing raw_data
+            refined_data: item.refined_data // Preserve existing refined_data
           }));
 
         if (unassignedItems.length > 0) {
