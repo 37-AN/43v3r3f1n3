@@ -24,7 +24,16 @@ export function BatchDetailsDialog({ batchId, onOpenChange }: BatchDetailsDialog
 
       const { data: batch, error: batchError } = await supabase
         .from("annotation_batches")
-        .select("*, annotation_items(*)")
+        .select(`
+          *,
+          annotation_items (
+            id,
+            status,
+            raw_data,
+            refined_data,
+            assigned_to
+          )
+        `)
         .eq("id", batchId)
         .single();
 
@@ -44,12 +53,41 @@ export function BatchDetailsDialog({ batchId, onOpenChange }: BatchDetailsDialog
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error("No authenticated user");
+      }
+
+      // First update batch status
+      const { error: batchError } = await supabase
         .from("annotation_batches")
-        .update({ status: "in_progress" })
+        .update({ 
+          status: "in_progress",
+          updated_at: new Date().toISOString()
+        })
         .eq("id", batchId);
 
-      if (error) throw error;
+      if (batchError) throw batchError;
+
+      // Then assign items to current user if not already assigned
+      if (batchDetails?.annotation_items) {
+        const unassignedItems = batchDetails.annotation_items
+          .filter(item => !item.assigned_to)
+          .map(item => ({
+            id: item.id,
+            assigned_to: session.user.id,
+            status: "pending"
+          }));
+
+        if (unassignedItems.length > 0) {
+          const { error: itemsError } = await supabase
+            .from("annotation_items")
+            .upsert(unassignedItems);
+
+          if (itemsError) throw itemsError;
+        }
+      }
+
       toast.success("Started annotation process");
     } catch (error) {
       console.error("Error starting annotation:", error);

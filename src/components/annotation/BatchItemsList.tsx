@@ -5,6 +5,9 @@ import { Clock, CheckCircle2, AlertCircle } from "lucide-react";
 interface BatchItem {
   id: string;
   status: string;
+  raw_data: any;
+  refined_data?: any;
+  assigned_to?: string;
 }
 
 interface BatchItemsListProps {
@@ -22,6 +25,21 @@ export function BatchItemsList({ items }: BatchItemsListProps) {
         return <AlertCircle className="w-4 h-4 text-system-red" />;
       default:
         return null;
+    }
+  };
+
+  const formatItemData = (item: BatchItem) => {
+    const data = item.refined_data || item.raw_data;
+    if (!data) return "No data available";
+    
+    try {
+      if (typeof data === 'string') {
+        return JSON.parse(data);
+      }
+      return JSON.stringify(data, null, 2);
+    } catch (e) {
+      console.error("Error formatting item data:", e);
+      return "Invalid data format";
     }
   };
 
@@ -48,6 +66,11 @@ export function BatchItemsList({ items }: BatchItemsListProps) {
               <Button variant="outline" size="sm">
                 View Details
               </Button>
+            </div>
+            <div className="mt-2">
+              <pre className="text-xs overflow-x-auto p-2 bg-muted rounded-md">
+                {formatItemData(item)}
+              </pre>
             </div>
           </CardContent>
         </Card>
