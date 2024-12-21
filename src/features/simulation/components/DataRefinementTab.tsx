@@ -59,8 +59,8 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
-      // First, process data through the refinery
-      console.log('Sending data to refinery:', {
+      // Send data to refinery with proper structure
+      const refineryRequestBody = {
         rawData: {
           deviceId,
           metrics,
@@ -72,24 +72,14 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
             owner_id: session.user.id
           }
         }
-      });
+      };
+
+      console.log('Sending data to refinery:', refineryRequestBody);
 
       const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
         'industrial-data-refinery',
         {
-          body: {
-            rawData: {
-              deviceId,
-              metrics,
-              timestamp: new Date().toISOString(),
-              metadata: {
-                simulation: true,
-                source: 'simulation_engine',
-                quality_score: 0.95,
-                owner_id: session.user.id
-              }
-            }
-          },
+          body: refineryRequestBody,
           headers: {
             Authorization: `Bearer ${session.access_token}`
           }
@@ -103,7 +93,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
 
       console.log('Received refined data:', refinedData);
 
-      // Then, send to AI analysis for annotation
+      // Send to AI analysis for annotation
       const { data: annotationResult, error: annotationError } = await supabase.functions.invoke(
         'annotation-ai-analysis',
         {

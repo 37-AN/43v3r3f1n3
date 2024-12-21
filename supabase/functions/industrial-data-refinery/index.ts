@@ -37,13 +37,13 @@ serve(async (req) => {
       );
     }
 
-    // Validate rawData exists
-    if (!requestData.rawData) {
-      console.error('No raw data provided in request');
+    // Validate rawData exists and has required properties
+    if (!requestData.rawData || !requestData.rawData.deviceId || !requestData.rawData.metrics) {
+      console.error('Invalid or missing rawData:', requestData);
       return new Response(
         JSON.stringify({ 
-          error: 'No raw data provided', 
-          details: 'rawData object is required' 
+          error: 'Invalid rawData format', 
+          details: 'rawData must contain deviceId and metrics array' 
         }),
         { 
           status: 400, 
@@ -53,22 +53,6 @@ serve(async (req) => {
     }
 
     const { rawData } = requestData;
-
-    // Validate required fields
-    if (!rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
-      console.error('Invalid raw data structure:', rawData);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid data structure', 
-          details: 'deviceId and metrics array are required' 
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
     console.log('Processing metrics for device:', rawData.deviceId);
 
     // Process metrics and calculate quality scores
@@ -107,7 +91,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'Data refined and stored successfully',
-        metrics_processed: refinedMetrics.length 
+        metrics_processed: refinedMetrics.length,
+        refined_metrics: refinedMetrics
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
