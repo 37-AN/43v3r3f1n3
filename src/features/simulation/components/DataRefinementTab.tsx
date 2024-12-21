@@ -51,58 +51,31 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
-      // Format request body according to the expected structure
-      const requestBody = {
-        rawData: {
-          deviceId,
-          metrics,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            simulation: true,
-            source: 'simulation_engine',
-            quality_score: 0.95
-          }
-        }
-      };
-
-      console.log('Sending data to AI refinery:', requestBody);
-
-      // Call the AI-powered data refinery
-      const { data, error } = await supabase.functions.invoke('industrial-data-refinery-ai', {
-        body: requestBody
-      });
-
-      clearInterval(progressInterval);
-
-      if (error) {
-        console.error('Error from AI refinery:', error);
-        throw error;
-      }
-
-      console.log('Received AI-refined data:', data);
-      
-      // Store the refined data
-      const { error: storageError } = await supabase
+      // Store directly in refined_industrial_data
+      const { error: insertError } = await supabase
         .from('refined_industrial_data')
         .insert(metrics.map(metric => ({
           device_id: deviceId,
           data_type: metric.metric_type,
           value: metric.value,
           quality_score: 0.95,
+          timestamp: new Date().toISOString(),
           metadata: {
-            ...metric.metadata,
-            ai_refined: true,
+            unit: metric.unit,
+            source: 'simulation_engine',
             refinement_timestamp: new Date().toISOString()
           }
         })));
 
-      if (storageError) {
-        console.error('Error storing refined data:', storageError);
-        throw storageError;
+      clearInterval(progressInterval);
+
+      if (insertError) {
+        console.error('Error storing refined data:', insertError);
+        throw insertError;
       }
 
       setProgress(100);
-      toast.success("Data refined with AI analysis and stored successfully");
+      toast.success("Data refined and stored successfully");
 
       // Reset after completion
       setTimeout(() => {
@@ -151,7 +124,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
             <p className="text-sm text-muted-foreground text-center">
-              {progress === 100 ? "AI refinement complete!" : "Processing data with AI..."}
+              {progress === 100 ? "Refinement complete!" : "Processing data..."}
             </p>
           </div>
         )}
@@ -160,10 +133,10 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
           {Object.keys(simulatedData).length > 0 ? (
             <div className="space-y-1">
               <p>
-                {Object.keys(simulatedData).length} metrics available for AI refinement
+                {Object.keys(simulatedData).length} metrics available for refinement
               </p>
               <p className="text-xs text-muted-foreground">
-                Using HuggingFace Falcon-7B for intelligent data analysis
+                Using advanced data analysis for quality assessment
               </p>
             </div>
           ) : (
