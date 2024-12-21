@@ -59,7 +59,21 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
-      // Ensure proper request structure with rawData object
+      // First, process data through the refinery
+      console.log('Sending data to refinery:', {
+        rawData: {
+          deviceId,
+          metrics,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            simulation: true,
+            source: 'simulation_engine',
+            quality_score: 0.95,
+            owner_id: session.user.id
+          }
+        }
+      });
+
       const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
         'industrial-data-refinery',
         {
@@ -82,24 +96,45 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       );
 
-      clearInterval(progressInterval);
-
       if (refineryError) {
         console.error('Error in data refinement:', refineryError);
         throw refineryError;
       }
 
       console.log('Received refined data:', refinedData);
+
+      // Then, send to AI analysis for annotation
+      const { data: annotationResult, error: annotationError } = await supabase.functions.invoke(
+        'annotation-ai-analysis',
+        {
+          body: {
+            rawData: metrics,
+            dataType: 'simulation',
+            deviceId
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      );
+
+      if (annotationError) {
+        console.error('Error in annotation analysis:', annotationError);
+        throw annotationError;
+      }
+
+      console.log('Received annotation result:', annotationResult);
+
+      clearInterval(progressInterval);
       
       // Calculate analysis metrics
       const qualityScores = metrics.map(m => m.metadata.quality_score);
       const avgQualityScore = qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length;
-      const anomalies = metrics.filter(m => m.metadata.error_state !== null).length;
       
       setAnalysis({
         metricsProcessed: metrics.length,
         qualityScore: avgQualityScore,
-        anomalies
+        anomalies: metrics.filter(m => m.metadata.error_state !== null).length
       });
 
       setProgress(100);

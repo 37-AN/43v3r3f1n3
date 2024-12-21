@@ -21,7 +21,7 @@ serve(async (req) => {
 
     console.log('Processing annotation analysis for device:', deviceId);
     console.log('Data type:', dataType);
-    console.log('Raw data sample:', rawData.slice(0, 2));
+    console.log('Raw data:', rawData);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -35,7 +35,7 @@ serve(async (req) => {
     const prompt = `Analyze this industrial data and provide annotation suggestions:
 Data Type: ${dataType}
 Device ID: ${deviceId}
-Metrics: ${JSON.stringify(rawData.map(m => ({
+Metrics: ${JSON.stringify(rawData.map((m: any) => ({
   type: m.metric_type,
   value: m.value,
   unit: m.unit
@@ -82,7 +82,7 @@ Format your response in a structured way.`;
     if (batchError) throw batchError;
 
     // Create annotation items
-    const items = rawData.map(metric => ({
+    const items = rawData.map((metric: any) => ({
       batch_id: batch.id,
       raw_data: metric,
       refined_data: {
