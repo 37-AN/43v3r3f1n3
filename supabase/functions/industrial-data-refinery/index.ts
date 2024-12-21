@@ -13,22 +13,41 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Received request to industrial-data-refinery');
-    
-    const requestData = await req.json();
-    console.log('Request data:', JSON.stringify(requestData, null, 2));
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    // Validate request structure
-    if (!requestData?.rawData) {
-      console.error('No raw data provided in request');
+    // Parse request body
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log('Received request data:', requestData);
+    } catch (error) {
+      console.error('Error parsing request body:', error);
       return new Response(
-        JSON.stringify({
-          error: 'No raw data provided',
-          details: 'rawData object is required'
+        JSON.stringify({ 
+          error: 'Invalid request body', 
+          details: 'Request body must be valid JSON' 
         }),
         { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Validate rawData exists
+    if (!requestData.rawData) {
+      console.error('No raw data provided in request');
+      return new Response(
+        JSON.stringify({ 
+          error: 'No raw data provided', 
+          details: 'rawData object is required' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
@@ -37,24 +56,20 @@ serve(async (req) => {
 
     // Validate required fields
     if (!rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
-      console.error('Invalid data structure:', { deviceId: rawData.deviceId, metrics: rawData.metrics });
+      console.error('Invalid raw data structure:', rawData);
       return new Response(
-        JSON.stringify({
-          error: 'Invalid data structure',
-          details: 'deviceId and metrics array are required'
+        JSON.stringify({ 
+          error: 'Invalid data structure', 
+          details: 'deviceId and metrics array are required' 
         }),
         { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
 
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    console.log('Processing metrics for device:', rawData.deviceId);
 
     // Process metrics and calculate quality scores
     const refinedMetrics = rawData.metrics
@@ -67,18 +82,15 @@ serve(async (req) => {
         timestamp: metric.timestamp || new Date().toISOString(),
         metadata: {
           ...metric.metadata,
-          refined: true,
-          original_value: metric.value,
-          refinement_timestamp: new Date().toISOString(),
-          unit: metric.unit || 'unit',
-          source: metric.metadata?.source || rawData.metadata?.source || 'unknown'
+          source: 'industrial-data-refinery',
+          processed_at: new Date().toISOString()
         }
       }));
 
-    console.log('Processed metrics:', refinedMetrics.length);
+    console.log('Refined metrics:', refinedMetrics);
 
     if (refinedMetrics.length > 0) {
-      // Store in refined_industrial_data
+      // Store refined data
       const { error: insertError } = await supabaseClient
         .from('refined_industrial_data')
         .insert(refinedMetrics);
@@ -87,29 +99,31 @@ serve(async (req) => {
         console.error('Error storing refined data:', insertError);
         throw insertError;
       }
+
+      console.log('Successfully stored refined data');
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        refinedMetrics,
-        message: 'Data successfully refined and stored'
+      JSON.stringify({ 
+        success: true, 
+        message: 'Data refined and stored successfully',
+        metrics_processed: refinedMetrics.length 
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
 
   } catch (error) {
-    console.error('Error in data refinement:', error);
+    console.error('Error in industrial-data-refinery:', error);
     return new Response(
-      JSON.stringify({
-        error: error.message,
-        details: 'Error occurred during data refinement process'
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message 
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
