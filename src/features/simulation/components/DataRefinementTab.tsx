@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Brain } from "lucide-react";
 
 interface DataRefinementTabProps {
   deviceId: string;
@@ -61,22 +61,23 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       };
 
-      console.log('Sending data to refinery:', requestBody);
+      console.log('Sending data to AI refinery:', requestBody);
 
-      const { data, error } = await supabase.functions.invoke('industrial-data-refinery', {
+      // Call the AI-powered data refinery
+      const { data, error } = await supabase.functions.invoke('industrial-data-refinery-ai', {
         body: requestBody
       });
 
       clearInterval(progressInterval);
 
       if (error) {
-        console.error('Error from refinery:', error);
+        console.error('Error from AI refinery:', error);
         throw error;
       }
 
-      console.log('Received refined data:', data);
+      console.log('Received AI-refined data:', data);
       setProgress(100);
-      toast.success("Data refined and stored successfully");
+      toast.success("Data refined with AI analysis and stored successfully");
 
       // Reset after completion
       setTimeout(() => {
@@ -96,7 +97,12 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     <Card className="p-6 animate-fade-up">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Data Refinement</h3>
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">AI-Powered Data Refinement</h3>
+            <p className="text-sm text-muted-foreground">
+              Refine industrial data using advanced AI analysis
+            </p>
+          </div>
           <Button 
             onClick={handleRefineData} 
             disabled={isRefining}
@@ -108,7 +114,10 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
                 Refining...
               </>
             ) : (
-              "Refine Data"
+              <>
+                <Brain className="mr-2 h-4 w-4" />
+                Refine Data
+              </>
             )}
           </Button>
         </div>
@@ -117,16 +126,21 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
             <p className="text-sm text-muted-foreground text-center">
-              {progress === 100 ? "Refinement complete!" : "Processing data..."}
+              {progress === 100 ? "AI refinement complete!" : "Processing data with AI..."}
             </p>
           </div>
         )}
 
         <div className="text-sm text-muted-foreground">
           {Object.keys(simulatedData).length > 0 ? (
-            <p>
-              {Object.keys(simulatedData).length} metrics available for refinement
-            </p>
+            <div className="space-y-1">
+              <p>
+                {Object.keys(simulatedData).length} metrics available for AI refinement
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Using HuggingFace Falcon-7B for intelligent data analysis
+              </p>
+            </div>
           ) : (
             <p>No data available for refinement</p>
           )}
