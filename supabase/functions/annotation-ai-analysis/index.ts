@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,49 +22,46 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Generate AI analysis using OpenAI
+    // Initialize Hugging Face inference
+    const hf = new HfInference(Deno.env.get('HUGGING_FACE_ACCESS_TOKEN'));
+
+    // Prepare prompt for Falcon model
     const prompt = `Analyze this industrial data and provide annotation suggestions:
 Data Type: ${dataType}
 Raw Data: ${JSON.stringify(rawData, null, 2)}
 
-Provide analysis focusing on:
+Please provide analysis focusing on:
 1. Data patterns and anomalies
 2. Quality metrics
 3. Suggested labels and categories
 4. Potential issues or concerns
-5. Confidence scores for suggestions`;
+5. Confidence scores for suggestions
 
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
+Format your response in a structured way.`;
+
+    console.log('Sending request to Hugging Face Falcon model...');
+    
+    // Use Falcon model for text generation
+    const result = await hf.textGeneration({
+      model: 'tiiuae/falcon-7b-instruct',
+      inputs: prompt,
+      parameters: {
+        max_new_tokens: 500,
+        temperature: 0.7,
+        top_p: 0.95,
+        return_full_text: false,
       },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an industrial data analysis expert specializing in data annotation and classification.'
-          },
-          { role: 'user', content: prompt }
-        ],
-      }),
     });
 
-    if (!aiResponse.ok) {
-      throw new Error(`OpenAI API error: ${aiResponse.statusText}`);
-    }
-
-    const aiData = await aiResponse.json();
-    const analysis = aiData.choices[0].message.content;
+    const analysis = result.generated_text;
+    console.log('Received Falcon analysis:', analysis);
 
     // Create a new annotation batch with AI suggestions
     const { data: batch, error: batchError } = await supabase
       .from('annotation_batches')
       .insert({
-        name: `Auto-Generated Batch - ${new Date().toISOString()}`,
-        description: 'AI-assisted annotation batch',
+        name: `AI-Assisted Batch (Falcon) - ${new Date().toISOString()}`,
+        description: 'Automatically generated batch using Falcon AI model',
         data_type: dataType,
         status: 'pending'
       })
@@ -78,6 +76,7 @@ Provide analysis focusing on:
       raw_data: { key, value },
       refined_data: {
         ai_suggestions: analysis,
+        model: 'falcon-7b-instruct',
         confidence_score: 0.85
       },
       status: 'pending'
