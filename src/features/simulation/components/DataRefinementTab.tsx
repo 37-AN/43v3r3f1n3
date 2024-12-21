@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Brain } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 interface DataRefinementTabProps {
   deviceId: string;
@@ -16,40 +15,34 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
   const [progress, setProgress] = useState(0);
 
   const handleRefineData = async () => {
-    if (!deviceId || !simulatedData) {
+    if (!deviceId || Object.keys(simulatedData).length === 0) {
       toast.error("No data available for refinement");
       return;
     }
 
+    setIsRefining(true);
+    setProgress(0);
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setProgress(prev => Math.min(prev + 10, 90));
+    }, 500);
+
     try {
-      setIsRefining(true);
-      setProgress(0);
-      console.log('Starting data refinement process...');
-
-      // Start progress animation
-      const progressInterval = setInterval(() => {
-        setProgress(prev => Math.min(prev + 10, 90));
-      }, 500);
-
-      // Format metrics array with proper structure
+      console.log('Starting data refinement for device:', deviceId);
+      
+      // Format metrics array
       const metrics = Object.entries(simulatedData).map(([key, value]) => ({
         metric_type: key,
-        value: typeof value === 'number' ? value : 0,
-        unit: key === 'temperature' ? '°C' :
-              key === 'pressure' ? 'bar' :
-              key === 'vibration' ? 'mm/s' :
-              key === 'production_rate' ? 'units/hr' :
-              key === 'downtime_minutes' ? 'min' :
-              key === 'defect_rate' ? '%' :
-              key === 'energy_consumption' ? 'kWh' :
-              key === 'machine_efficiency' ? '%' : 'unit',
-        timestamp: new Date().toISOString(),
-        metadata: {
-          quality_score: 0.95,
-          source: 'simulation_engine',
-          refinement_requested: true
-        }
+        value: value,
+        unit: key.includes('temperature') ? '°C' : 
+              key.includes('pressure') ? 'bar' : 
+              key.includes('flow') ? 'm³/s' : 
+              'units',
+        timestamp: new Date().toISOString()
       }));
+
+      console.log('Formatted metrics for refinement:', metrics);
 
       // Store directly in refined_industrial_data
       const { error: insertError } = await supabase
@@ -79,12 +72,13 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
 
       // Reset after completion
       setTimeout(() => {
-        setProgress(0);
         setIsRefining(false);
+        setProgress(0);
       }, 2000);
 
     } catch (error) {
-      console.error('Error refining data:', error);
+      clearInterval(progressInterval);
+      console.error('Error in data refinement:', error);
       toast.error("Failed to refine data");
       setIsRefining(false);
       setProgress(0);
@@ -92,35 +86,24 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
   };
 
   return (
-    <Card className="p-6 animate-fade-up">
+    <Card className="p-6">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">AI-Powered Data Refinement</h3>
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold">Data Refinement</h3>
             <p className="text-sm text-muted-foreground">
-              Refine industrial data using advanced AI analysis
+              Process and refine industrial data for quality assessment
             </p>
           </div>
           <Button 
-            onClick={handleRefineData} 
-            disabled={isRefining}
-            className="min-w-[120px]"
+            onClick={handleRefineData}
+            disabled={isRefining || !deviceId || Object.keys(simulatedData).length === 0}
           >
-            {isRefining ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Refining...
-              </>
-            ) : (
-              <>
-                <Brain className="mr-2 h-4 w-4" />
-                Refine Data
-              </>
-            )}
+            {isRefining ? "Refining..." : "Refine Data"}
           </Button>
         </div>
 
-        {progress > 0 && (
+        {isRefining && (
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
             <p className="text-sm text-muted-foreground text-center">
@@ -129,7 +112,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
           </div>
         )}
 
-        <div className="text-sm text-muted-foreground">
+        <div className="bg-muted p-4 rounded-lg">
           {Object.keys(simulatedData).length > 0 ? (
             <div className="space-y-1">
               <p>
@@ -140,7 +123,9 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
               </p>
             </div>
           ) : (
-            <p>No data available for refinement</p>
+            <p className="text-sm text-muted-foreground">
+              No data available for refinement. Start the simulation to generate data.
+            </p>
           )}
         </div>
       </div>
