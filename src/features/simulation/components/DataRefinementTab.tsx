@@ -31,42 +31,54 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     try {
       console.log('Starting data refinement for device:', deviceId);
       
-      // Format metrics array
+      // Format metrics array with proper structure
       const metrics = Object.entries(simulatedData).map(([key, value]) => ({
         metric_type: key,
         value: value,
+        timestamp: new Date().toISOString(),
         unit: key.includes('temperature') ? '°C' : 
               key.includes('pressure') ? 'bar' : 
               key.includes('flow') ? 'm³/s' : 
               'units',
-        timestamp: new Date().toISOString()
+        metadata: {
+          quality_score: 0.95,
+          source: 'simulation_engine',
+          error_state: null
+        }
       }));
 
-      console.log('Formatted metrics for refinement:', metrics);
-
-      // Store directly in refined_industrial_data
-      const { error: insertError } = await supabase
-        .from('refined_industrial_data')
-        .insert(metrics.map(metric => ({
-          device_id: deviceId,
-          data_type: metric.metric_type,
-          value: metric.value,
-          quality_score: 0.95,
+      // Prepare request body with proper structure
+      const refineryRequestBody = {
+        rawData: {
+          deviceId,
+          metrics,
           timestamp: new Date().toISOString(),
           metadata: {
-            unit: metric.unit,
+            simulation: true,
             source: 'simulation_engine',
-            refinement_timestamp: new Date().toISOString()
+            quality_score: 0.95,
+            owner_id: (await supabase.auth.getSession()).data.session?.user.id
           }
-        })));
+        }
+      };
+
+      console.log('Sending data to refinery:', refineryRequestBody);
+
+      const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
+        'industrial-data-refinery',
+        {
+          body: refineryRequestBody
+        }
+      );
 
       clearInterval(progressInterval);
 
-      if (insertError) {
-        console.error('Error storing refined data:', insertError);
-        throw insertError;
+      if (refineryError) {
+        console.error('Error in data refinement:', refineryError);
+        throw refineryError;
       }
 
+      console.log('Received refined data:', refinedData);
       setProgress(100);
       toast.success("Data refined and stored successfully");
 
