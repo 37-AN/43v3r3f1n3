@@ -52,12 +52,20 @@ export function CreateBatchDialog({ open, onOpenChange, initialData }: CreateBat
         // Use AI to analyze and create batch
         const { data: aiResult, error: aiError } = await supabase.functions.invoke('annotation-ai-analysis', {
           body: {
-            rawData: initialData,
-            dataType: formData.dataType
+            rawData: Object.entries(initialData).map(([metric_type, value]) => ({
+              metric_type,
+              value,
+              timestamp: new Date().toISOString()
+            })),
+            dataType: formData.dataType,
+            deviceId: session.session.user.id
           }
         });
 
-        if (aiError) throw aiError;
+        if (aiError) {
+          console.error('AI analysis error:', aiError);
+          throw aiError;
+        }
 
         console.log("AI analysis completed:", aiResult);
         toast.success("Batch created with AI assistance");

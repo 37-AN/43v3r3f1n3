@@ -21,27 +21,30 @@ serve(async (req) => {
 
     console.log('Processing annotation analysis for device:', deviceId);
     console.log('Data type:', dataType);
-    console.log('Raw data:', rawData);
+    console.log('Raw data sample:', rawData.slice(0, 3));
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Initialize Hugging Face inference
+    // Initialize Hugging Face inference with API token
     const hf = new HfInference(Deno.env.get('HUGGING_FACE_ACCESS_TOKEN'));
 
-    // Prepare prompt for analysis
-    const prompt = `Analyze this industrial data and provide annotation suggestions:
+    // Prepare data for analysis
+    const dataPoints = Array.isArray(rawData) ? rawData : [rawData];
+    const formattedData = dataPoints.map(point => {
+      return `Value: ${point.value}, Type: ${point.metric_type}, Timestamp: ${point.timestamp}`;
+    }).join('\n');
+
+    // Create analysis prompt
+    const prompt = `Analyze this industrial data and provide detailed annotation suggestions:
 Data Type: ${dataType}
 Device ID: ${deviceId}
-Metrics: ${JSON.stringify(rawData.map((m: any) => ({
-  type: m.metric_type,
-  value: m.value,
-  unit: m.unit
-})), null, 2)}
+Data Points:
+${formattedData}
 
-Please provide analysis focusing on:
+Please analyze for:
 1. Data patterns and anomalies
 2. Quality metrics
 3. Suggested labels and categories
@@ -52,7 +55,7 @@ Format your response in a structured way.`;
 
     console.log('Sending request to Hugging Face model...');
     
-    // Use model for text generation
+    // Use Falcon model for analysis
     const result = await hf.textGeneration({
       model: 'tiiuae/falcon-7b-instruct',
       inputs: prompt,
@@ -72,33 +75,60 @@ Format your response in a structured way.`;
       .from('annotation_batches')
       .insert({
         name: `AI-Assisted Batch - Device ${deviceId}`,
-        description: 'Automatically generated batch using AI model',
+        description: 'Automatically generated batch using Falcon-7B model',
         data_type: dataType,
-        status: 'pending'
+        status: 'pending',
+        total_items: dataPoints.length,
+        model_config: {
+          model: 'falcon-7b-instruct',
+          temperature: 0.7,
+          timestamp: new Date().toISOString()
+        }
       })
       .select()
       .single();
 
-    if (batchError) throw batchError;
+    if (batchError) {
+      console.error('Error creating batch:', batchError);
+      throw batchError;
+    }
 
     // Create annotation items
-    const items = rawData.map((metric: any) => ({
+    const items = dataPoints.map(point => ({
       batch_id: batch.id,
-      raw_data: metric,
-      refined_data: {
-        ai_suggestions: analysis,
-        model: 'falcon-7b-instruct',
+      raw_data: point,
+      ai_suggestions: {
+        analysis: analysis,
         confidence_score: 0.85,
+        model: 'falcon-7b-instruct',
         timestamp: new Date().toISOString()
       },
-      status: 'pending'
+      status: 'pending',
+      confidence_score: 0.85
     }));
 
     const { error: itemsError } = await supabase
       .from('annotation_items')
       .insert(items);
 
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error('Error creating items:', itemsError);
+      throw itemsError;
+    }
+
+    // Update batch with initial stats
+    const { error: updateError } = await supabase
+      .from('annotation_batches')
+      .update({ 
+        total_items: items.length,
+        completed_items: 0
+      })
+      .eq('id', batch.id);
+
+    if (updateError) {
+      console.error('Error updating batch stats:', updateError);
+      throw updateError;
+    }
 
     return new Response(
       JSON.stringify({ 
