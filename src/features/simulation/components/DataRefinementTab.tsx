@@ -24,6 +24,7 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     try {
       setIsRefining(true);
       setProgress(0);
+      console.log('Starting data refinement process...');
 
       // Start progress animation
       const progressInterval = setInterval(() => {
@@ -42,22 +43,22 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
               key === 'defect_rate' ? '%' :
               key === 'energy_consumption' ? 'kWh' :
               key === 'machine_efficiency' ? '%' : 'unit',
+        timestamp: new Date().toISOString(),
         metadata: {
           quality_score: 0.95,
-          source: 'simulation_engine'
+          source: 'simulation_engine',
+          refinement_requested: true
         }
       }));
 
       const requestBody = {
-        rawData: {
-          deviceId,
-          metrics,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            simulation: true,
-            source: 'simulation_engine',
-            quality_score: 0.95
-          }
+        deviceId,
+        metrics,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          simulation: true,
+          source: 'simulation_engine',
+          quality_score: 0.95
         }
       };
 
@@ -76,6 +77,27 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
       }
 
       console.log('Received AI-refined data:', data);
+      
+      // Store the refined data
+      const { error: storageError } = await supabase
+        .from('refined_industrial_data')
+        .insert(metrics.map(metric => ({
+          device_id: deviceId,
+          data_type: metric.metric_type,
+          value: metric.value,
+          quality_score: 0.95,
+          metadata: {
+            ...metric.metadata,
+            ai_refined: true,
+            refinement_timestamp: new Date().toISOString()
+          }
+        })));
+
+      if (storageError) {
+        console.error('Error storing refined data:', storageError);
+        throw storageError;
+      }
+
       setProgress(100);
       toast.success("Data refined with AI analysis and stored successfully");
 
