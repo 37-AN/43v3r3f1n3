@@ -51,14 +51,17 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
+      // Format request body according to the expected structure
       const requestBody = {
-        deviceId,
-        metrics,
-        timestamp: new Date().toISOString(),
-        metadata: {
-          simulation: true,
-          source: 'simulation_engine',
-          quality_score: 0.95
+        rawData: {
+          deviceId,
+          metrics,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            simulation: true,
+            source: 'simulation_engine',
+            quality_score: 0.95
+          }
         }
       };
 

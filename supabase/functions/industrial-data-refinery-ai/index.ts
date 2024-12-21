@@ -1,18 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
+import { HfInference } from 'https://esm.sh/@huggingface/transformers@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface RawDataPoint {
-  timestamp: string;
-  value: number;
-  metric_type: string;
-  metadata?: Record<string, any>;
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -20,17 +13,23 @@ serve(async (req) => {
   }
 
   try {
-    const { rawData } = await req.json();
-    console.log('Processing raw industrial data:', rawData);
+    const requestData = await req.json();
+    console.log('Processing raw industrial data:', requestData);
 
+    if (!requestData?.rawData?.metrics) {
+      throw new Error('Invalid request format: metrics array is required');
+    }
+
+    const { rawData } = requestData;
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     // Format data for analysis
-    const dataPoints = rawData.metrics.map((metric: RawDataPoint) => 
-      `${metric.metric_type}: ${metric.value} at ${metric.timestamp}`
+    const dataPoints = rawData.metrics.map((metric: any) => 
+      `${metric.metric_type}: ${metric.value} ${metric.unit} at ${metric.timestamp}`
     ).join('\n');
 
     const prompt = `Analyze and refine this industrial data:
@@ -63,8 +62,7 @@ Format the response as a structured analysis.`;
     const analysis = result.generated_text;
 
     // Process and refine the data based on AI analysis
-    const refinedMetrics = rawData.metrics.map((metric: RawDataPoint) => {
-      // Extract quality score from analysis if mentioned, otherwise use default
+    const refinedMetrics = rawData.metrics.map((metric: any) => {
       const qualityScore = analysis.toLowerCase().includes(metric.metric_type.toLowerCase()) ? 
         (analysis.toLowerCase().includes('high quality') ? 0.95 : 
          analysis.toLowerCase().includes('low quality') ? 0.6 : 0.8) : 
@@ -75,27 +73,17 @@ Format the response as a structured analysis.`;
         data_type: metric.metric_type,
         value: metric.value,
         quality_score: qualityScore,
-        timestamp: metric.timestamp || new Date().toISOString(),
+        timestamp: metric.timestamp,
         metadata: {
           ...metric.metadata,
           refined: true,
           ai_analysis: true,
           refinement_timestamp: new Date().toISOString(),
           original_value: metric.value,
-          analysis_excerpt: analysis.substring(0, 200) // Store first 200 chars of analysis
+          analysis_excerpt: analysis.substring(0, 200)
         }
       };
     });
-
-    // Store refined data
-    const { error: storageError } = await supabase
-      .from('refined_industrial_data')
-      .insert(refinedMetrics);
-
-    if (storageError) {
-      console.error('Error storing refined data:', storageError);
-      throw storageError;
-    }
 
     // Store the analysis as an insight
     const { error: insightError } = await supabase
@@ -109,14 +97,13 @@ Format the response as a structured analysis.`;
                  analysis.toLowerCase().includes('warning') ? 'warning' : 'info',
         metadata: {
           metrics_processed: refinedMetrics.length,
-          average_quality_score: refinedMetrics.reduce((acc, m) => acc + m.quality_score, 0) / refinedMetrics.length,
+          average_quality_score: refinedMetrics.reduce((acc: number, m: any) => acc + m.quality_score, 0) / refinedMetrics.length,
           model: 'falcon-7b-instruct'
         }
       });
 
     if (insightError) {
       console.error('Error storing insight:', insightError);
-      // Don't throw here as the main refinement was successful
     }
 
     return new Response(
