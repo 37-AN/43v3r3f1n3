@@ -8,18 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Sparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
 
 interface CreateBatchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: Record<string, number>;
 }
 
-export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps) {
+export function CreateBatchDialog({ open, onOpenChange, initialData }: CreateBatchDialogProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useAI, setUseAI] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -45,18 +48,33 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
         throw new Error("No authenticated user");
       }
 
-      const { error: insertError } = await supabase.from("annotation_batches").insert({
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        data_type: formData.dataType,
-        status: "pending",
-        created_by: session.session.user.id
-      });
+      if (useAI && initialData) {
+        // Use AI to analyze and create batch
+        const { data: aiResult, error: aiError } = await supabase.functions.invoke('annotation-ai-analysis', {
+          body: {
+            rawData: initialData,
+            dataType: formData.dataType
+          }
+        });
 
-      if (insertError) throw insertError;
+        if (aiError) throw aiError;
 
-      console.log("Successfully created annotation batch");
-      toast.success("Annotation batch created successfully");
+        console.log("AI analysis completed:", aiResult);
+        toast.success("Batch created with AI assistance");
+      } else {
+        // Create batch manually
+        const { error: insertError } = await supabase.from("annotation_batches").insert({
+          name: formData.name.trim(),
+          description: formData.description.trim(),
+          data_type: formData.dataType,
+          status: "pending",
+          created_by: session.session.user.id
+        });
+
+        if (insertError) throw insertError;
+        toast.success("Annotation batch created successfully");
+      }
+
       queryClient.invalidateQueries({ queryKey: ["annotation-batches"] });
       onOpenChange(false);
       setFormData({ name: "", description: "", dataType: "" });
@@ -124,6 +142,19 @@ export function CreateBatchDialog({ open, onOpenChange }: CreateBatchDialogProps
               </SelectContent>
             </Select>
           </div>
+          {initialData && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="useAI"
+                checked={useAI}
+                onCheckedChange={setUseAI}
+              />
+              <Label htmlFor="useAI" className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-500" />
+                Use AI assistance
+              </Label>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-4">
             <Button 
               type="button" 
