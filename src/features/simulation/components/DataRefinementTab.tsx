@@ -38,11 +38,12 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
 
     try {
       console.log('Starting data refinement for device:', deviceId);
+      console.log('Input simulated data:', simulatedData);
       
       // Format metrics array with proper structure
       const metrics = Object.entries(simulatedData).map(([key, value]) => ({
         metric_type: key,
-        value: value,
+        value: Number(value), // Ensure value is a number
         timestamp: new Date().toISOString(),
         unit: key.includes('temperature') ? '°C' : 
               key.includes('pressure') ? 'bar' : 
@@ -55,6 +56,12 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        throw new Error('No active session');
+      }
+
       // Prepare request body with proper structure
       const refineryRequestBody = {
         rawData: {
@@ -65,17 +72,20 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
             simulation: true,
             source: 'simulation_engine',
             quality_score: 0.95,
-            owner_id: (await supabase.auth.getSession()).data.session?.user.id
+            owner_id: session.user.id
           }
         }
       };
 
-      console.log('Sending data to refinery:', refineryRequestBody);
+      console.log('Sending data to refinery:', JSON.stringify(refineryRequestBody, null, 2));
 
       const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
         'industrial-data-refinery',
         {
-          body: refineryRequestBody
+          body: refineryRequestBody,
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
         }
       );
 
