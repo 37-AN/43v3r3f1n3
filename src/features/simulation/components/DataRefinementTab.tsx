@@ -40,6 +40,12 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
       console.log('Starting data refinement for device:', deviceId);
       console.log('Input simulated data:', simulatedData);
       
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        throw new Error('No active session');
+      }
+
       // Format metrics array with proper structure
       const metrics = Object.entries(simulatedData).map(([key, value]) => ({
         metric_type: key,
@@ -55,12 +61,6 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
           error_state: null
         }
       }));
-
-      // Get current user session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
-        throw new Error('No active session');
-      }
 
       // Prepare request body with proper structure
       const refineryRequestBody = {

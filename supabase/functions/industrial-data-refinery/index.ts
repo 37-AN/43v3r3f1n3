@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { RequestBody, Metric } from './types.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,7 +33,7 @@ serve(async (req) => {
       );
     }
 
-    const { rawData }: RequestBody = requestData;
+    const { rawData } = requestData;
 
     // Validate required fields
     if (!rawData.deviceId || !rawData.metrics || !Array.isArray(rawData.metrics)) {
@@ -59,11 +58,11 @@ serve(async (req) => {
 
     // Process metrics and calculate quality scores
     const refinedMetrics = rawData.metrics
-      .filter((metric: Metric) => metric.metric_type && typeof metric.value !== 'undefined')
-      .map((metric: Metric) => ({
+      .filter((metric: any) => metric.metric_type && typeof metric.value !== 'undefined')
+      .map((metric: any) => ({
         device_id: rawData.deviceId,
         data_type: metric.metric_type,
-        value: metric.value,
+        value: Number(metric.value),
         quality_score: metric.metadata?.quality_score || 0.95,
         timestamp: metric.timestamp || new Date().toISOString(),
         metadata: {
@@ -87,27 +86,6 @@ serve(async (req) => {
       if (insertError) {
         console.error('Error storing refined data:', insertError);
         throw insertError;
-      }
-
-      // Store in MES metrics for integration
-      const { error: mesError } = await supabaseClient
-        .from('mes_metrics')
-        .insert(refinedMetrics.map(metric => ({
-          device_id: metric.device_id,
-          metric_type: metric.data_type,
-          value: metric.value,
-          unit: metric.metadata.unit,
-          timestamp: metric.timestamp,
-          metadata: {
-            ...metric.metadata,
-            quality_score: metric.quality_score,
-            source: metric.metadata.source
-          }
-        })));
-
-      if (mesError) {
-        console.error('Error storing MES metrics:', mesError);
-        // Don't throw here, just log the error as this is secondary storage
       }
     }
 
