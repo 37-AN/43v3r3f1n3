@@ -36,21 +36,21 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
     }, 500);
 
     try {
-      console.log('Starting data refinement with simulated data:', simulatedData);
+      console.log('Starting data refinement with:', { deviceId, simulatedData });
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) {
         throw new Error('No active session');
       }
 
-      // Format metrics with proper structure
-      const metrics = Object.entries(simulatedData).map(([key, value]) => ({
-        metric_type: key,
+      // Format metrics with proper structure for the refinery
+      const metrics = Object.entries(simulatedData).map(([metric_type, value]) => ({
+        metric_type,
         value: Number(value),
         timestamp: new Date().toISOString(),
-        unit: key.includes('temperature') ? '°C' : 
-              key.includes('pressure') ? 'bar' : 
-              key.includes('flow') ? 'm³/s' : 
+        unit: metric_type.includes('temperature') ? '°C' : 
+              metric_type.includes('pressure') ? 'bar' : 
+              metric_type.includes('flow') ? 'm³/s' : 
               'units',
         metadata: {
           quality_score: 0.95,

@@ -57,6 +57,7 @@ export type Database = {
           data_type: string
           description: string | null
           id: string
+          model_config: Json | null
           name: string
           status: string | null
           updated_at: string | null
@@ -67,6 +68,7 @@ export type Database = {
           data_type: string
           description?: string | null
           id?: string
+          model_config?: Json | null
           name: string
           status?: string | null
           updated_at?: string | null
@@ -77,6 +79,7 @@ export type Database = {
           data_type?: string
           description?: string | null
           id?: string
+          model_config?: Json | null
           name?: string
           status?: string | null
           updated_at?: string | null
