@@ -59,26 +59,23 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
         }
       }));
 
-      const requestBody = {
-        rawData: {
-          deviceId,
-          metrics,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            simulation: true,
-            source: 'simulation_engine',
-            quality_score: 0.95,
-            owner_id: session.user.id
-          }
-        }
-      };
-
-      console.log('Sending data to refinery:', requestBody);
-
+      // Ensure proper request structure with rawData object
       const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
         'industrial-data-refinery',
         {
-          body: requestBody,
+          body: {
+            rawData: {
+              deviceId,
+              metrics,
+              timestamp: new Date().toISOString(),
+              metadata: {
+                simulation: true,
+                source: 'simulation_engine',
+                quality_score: 0.95,
+                owner_id: session.user.id
+              }
+            }
+          },
           headers: {
             Authorization: `Bearer ${session.access_token}`
           }
