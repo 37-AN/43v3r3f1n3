@@ -4,15 +4,23 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface DataRefinementTabProps {
   deviceId: string;
   simulatedData: Record<string, number>;
 }
 
+interface RefinementAnalysis {
+  metricsProcessed: number;
+  qualityScore: number;
+  anomalies: number;
+}
+
 export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTabProps) {
   const [isRefining, setIsRefining] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [analysis, setAnalysis] = useState<RefinementAnalysis | null>(null);
 
   const handleRefineData = async () => {
     if (!deviceId || Object.keys(simulatedData).length === 0) {
@@ -22,8 +30,8 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
 
     setIsRefining(true);
     setProgress(0);
+    setAnalysis(null);
 
-    // Simulate progress
     const progressInterval = setInterval(() => {
       setProgress(prev => Math.min(prev + 10, 90));
     }, 500);
@@ -79,6 +87,18 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
       }
 
       console.log('Received refined data:', refinedData);
+      
+      // Calculate analysis metrics
+      const qualityScores = metrics.map(m => m.metadata.quality_score);
+      const avgQualityScore = qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length;
+      const anomalies = metrics.filter(m => m.metadata.error_state !== null).length;
+      
+      setAnalysis({
+        metricsProcessed: metrics.length,
+        qualityScore: avgQualityScore,
+        anomalies
+      });
+
       setProgress(100);
       toast.success("Data refined and stored successfully");
 
@@ -121,6 +141,29 @@ export function DataRefinementTab({ deviceId, simulatedData }: DataRefinementTab
             <p className="text-sm text-muted-foreground text-center">
               {progress === 100 ? "Refinement complete!" : "Processing data..."}
             </p>
+          </div>
+        )}
+
+        {analysis && (
+          <div className="bg-muted rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-500" />
+              <h4 className="font-medium">Refinement Analysis</h4>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Metrics Processed</p>
+                <p className="text-lg font-medium">{analysis.metricsProcessed}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Quality Score</p>
+                <p className="text-lg font-medium">{(analysis.qualityScore * 100).toFixed(1)}%</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Anomalies</p>
+                <p className="text-lg font-medium">{analysis.anomalies}</p>
+              </div>
+            </div>
           </div>
         )}
 
