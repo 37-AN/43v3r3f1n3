@@ -30,31 +30,67 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
       throw error;
     }
 
-    // Validate and transform the severity field
-    const validatedData = (data || []).map(insight => {
-      // Ensure severity is one of the allowed values, default to 'info' if invalid
-      const severity = ['info', 'warning', 'critical'].includes(insight.severity) 
+    const validatedData = (data || []).map(insight => ({
+      ...insight,
+      severity: ['info', 'warning', 'critical'].includes(insight.severity as string) 
         ? insight.severity as AIInsight['severity']
-        : 'info';
-      
-      return {
-        ...insight,
-        severity
-      } as AIInsight;
-    });
+        : 'info',
+      metadata: insight.metadata || {},
+      confidence: insight.confidence || 0,
+      created_at: insight.created_at || new Date().toISOString()
+    }));
 
     console.log('Received insights:', validatedData);
-    return validatedData;
+    return validatedData as AIInsight[];
   };
 
   const { data: insights = [], isLoading, refetch } = useQuery({
     queryKey: ['ai-insights', deviceId],
     queryFn: fetchInsights,
     enabled: !!deviceId,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   const { calculateEfficiencyMetric, calculateStabilityMetric } = useInsightCalculations(insights);
+
+  const generateNewInsight = async () => {
+    if (!deviceId) {
+      toast.error('No device selected');
+      return;
+    }
+
+    try {
+      console.log('Generating new AI insight');
+      const metrics = {
+        efficiency: calculateEfficiencyMetric(insights),
+        stability: calculateStabilityMetric(insights),
+        anomalyCount: insights.filter(i => i.severity === 'critical').length
+      };
+
+      const { data, error } = await supabase.functions.invoke('industrial-ai-insights', {
+        body: { 
+          deviceId,
+          metrics,
+          timeRange: '24h'
+        }
+      });
+
+      if (error) {
+        console.error('Error generating insight:', error);
+        toast.error('Failed to generate insight');
+        return;
+      }
+
+      console.log('Generated new AI insight:', data);
+      if (data?.analysis) {
+        toast.success('New AI insight generated');
+        refetch();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to generate new insight');
+    }
+  };
 
   useEffect(() => {
     if (!deviceId) return;
@@ -102,10 +138,7 @@ export function AIInsights({ deviceId }: { deviceId: string }) {
         <>
           <InsightsHeader
             isLoading={isLoading}
-            onRefresh={() => {
-              console.log('Manual refresh triggered');
-              refetch();
-            }}
+            onRefresh={generateNewInsight}
             metrics={metrics}
           />
           <InsightsContent 
