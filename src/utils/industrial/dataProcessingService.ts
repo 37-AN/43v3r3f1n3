@@ -13,9 +13,9 @@ export const processAndRefineData = async (rawData: any): Promise<ProcessedData 
   try {
     console.log('Processing raw industrial data:', rawData);
     
-    // Call the AI analysis edge function
+    // Call the AI-powered refinement edge function
     const { data: refinedData, error: analysisError } = await supabase.functions.invoke(
-      'industrial-data-refinery',
+      'industrial-data-refinery-ai',
       {
         body: { rawData }
       }
