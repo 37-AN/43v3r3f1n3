@@ -28,7 +28,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Initialize Hugging Face inference with API token
+    // Initialize Hugging Face inference
     const hf = new HfInference(Deno.env.get('HUGGING_FACE_ACCESS_TOKEN'));
 
     // Prepare data for analysis
@@ -70,15 +70,14 @@ Format your response in a structured way.`;
     const analysis = result.generated_text;
     console.log('Received AI analysis:', analysis);
 
-    // Create annotation batch
+    // Create annotation batch with proper status
     const { data: batch, error: batchError } = await supabase
       .from('annotation_batches')
       .insert({
-        name: `AI-Assisted Batch - Device ${deviceId}`,
+        name: `AI-Assisted Batch - ${new Date().toISOString()}`,
         description: 'Automatically generated batch using Falcon-7B model',
         data_type: dataType,
-        status: 'pending',
-        total_items: dataPoints.length,
+        status: 'in_progress',
         model_config: {
           model: 'falcon-7b-instruct',
           temperature: 0.7,
@@ -93,18 +92,20 @@ Format your response in a structured way.`;
       throw batchError;
     }
 
-    // Create annotation items
+    // Create annotation items with AI suggestions
     const items = dataPoints.map(point => ({
       batch_id: batch.id,
       raw_data: point,
-      ai_suggestions: {
-        analysis: analysis,
+      refined_data: {
+        ai_analysis: analysis,
         confidence_score: 0.85,
-        model: 'falcon-7b-instruct',
-        timestamp: new Date().toISOString()
+        suggestions: {
+          patterns: [],
+          anomalies: [],
+          labels: []
+        }
       },
-      status: 'pending',
-      confidence_score: 0.85
+      status: 'pending'
     }));
 
     const { error: itemsError } = await supabase
@@ -144,7 +145,7 @@ Format your response in a structured way.`;
     console.error('Error in annotation-ai-analysis:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }
 });

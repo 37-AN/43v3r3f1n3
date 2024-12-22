@@ -49,7 +49,7 @@ export function CreateBatchDialog({ open, onOpenChange, initialData }: CreateBat
       }
 
       if (useAI && initialData) {
-        // Use AI to analyze and create batch
+        console.log("Using AI to analyze and create batch");
         const { data: aiResult, error: aiError } = await supabase.functions.invoke('annotation-ai-analysis', {
           body: {
             rawData: Object.entries(initialData).map(([metric_type, value]) => ({
@@ -70,7 +70,6 @@ export function CreateBatchDialog({ open, onOpenChange, initialData }: CreateBat
         console.log("AI analysis completed:", aiResult);
         toast.success("Batch created with AI assistance");
       } else {
-        // Create batch manually
         const { error: insertError } = await supabase.from("annotation_batches").insert({
           name: formData.name.trim(),
           description: formData.description.trim(),
