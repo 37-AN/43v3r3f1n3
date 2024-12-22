@@ -39,7 +39,7 @@ serve(async (req) => {
 
     // Validate request structure
     if (!requestData.rawData) {
-      console.error('Missing rawData object');
+      console.error('Missing rawData object:', requestData);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request format', 
@@ -89,19 +89,30 @@ serve(async (req) => {
 
     console.log('Refined metrics:', refinedMetrics);
 
-    if (refinedMetrics.length > 0) {
-      // Store refined data
-      const { error: insertError } = await supabaseClient
-        .from('refined_industrial_data')
-        .insert(refinedMetrics);
-
-      if (insertError) {
-        console.error('Error storing refined data:', insertError);
-        throw insertError;
-      }
-
-      console.log('Successfully stored refined data');
+    if (refinedMetrics.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'No valid metrics to process', 
+          details: 'No metrics passed validation' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
+
+    // Store refined data
+    const { error: insertError } = await supabaseClient
+      .from('refined_industrial_data')
+      .insert(refinedMetrics);
+
+    if (insertError) {
+      console.error('Error storing refined data:', insertError);
+      throw insertError;
+    }
+
+    console.log('Successfully stored refined data');
 
     return new Response(
       JSON.stringify({ 
