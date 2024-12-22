@@ -55,6 +55,40 @@ export function AnnotationDashboard() {
     },
   });
 
+  const handleDeleteBatch = async (batchId: string) => {
+    try {
+      console.log("Deleting batch:", batchId);
+      
+      // First delete all annotation items associated with this batch
+      const { error: itemsError } = await supabase
+        .from("annotation_items")
+        .delete()
+        .eq("batch_id", batchId);
+
+      if (itemsError) {
+        console.error("Error deleting annotation items:", itemsError);
+        throw itemsError;
+      }
+
+      // Then delete the batch itself
+      const { error: batchError } = await supabase
+        .from("annotation_batches")
+        .delete()
+        .eq("id", batchId);
+
+      if (batchError) {
+        console.error("Error deleting batch:", batchError);
+        throw batchError;
+      }
+
+      toast.success("Batch deleted successfully");
+      refetch(); // Refresh the batches list
+    } catch (error) {
+      console.error("Error in handleDeleteBatch:", error);
+      toast.error("Failed to delete batch");
+    }
+  };
+
   useEffect(() => {
     const channel = supabase
       .channel('schema-db-changes')
@@ -111,6 +145,7 @@ export function AnnotationDashboard() {
         <AnnotationGrid 
           batches={batches}
           onSelectBatch={setSelectedBatchId}
+          onDeleteBatch={handleDeleteBatch}
         />
       )}
 
