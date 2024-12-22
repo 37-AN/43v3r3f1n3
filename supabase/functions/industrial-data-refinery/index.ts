@@ -38,7 +38,7 @@ serve(async (req) => {
     }
 
     // Validate request structure
-    if (!requestData.rawData) {
+    if (!requestData?.rawData) {
       console.error('Missing rawData object:', requestData);
       return new Response(
         JSON.stringify({ 
