@@ -30,7 +30,7 @@ export const useSimulationData = (
           const dataPoint = simulationEngine.generateDataPoint(`PLC_${deviceId}`);
           console.log('Generated simulation data:', dataPoint);
 
-          // Format metrics array with proper structure
+          // Format metrics array for the data refinery
           const metricsArray = [
             {
               metric_type: 'temperature',
@@ -110,6 +110,7 @@ export const useSimulationData = (
 
           console.log('Received refined data:', refinedData);
 
+          // Update history
           setWriteHistory(prev => [
             ...metricsArray.map(metric => ({
               timestamp: metric.timestamp,
