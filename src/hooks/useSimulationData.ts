@@ -78,7 +78,8 @@ export const useSimulationData = (
             }
           ];
 
-          console.log('Sending data to refinery:', {
+          // Ensure proper request format with rawData object
+          const requestBody = {
             rawData: {
               deviceId,
               metrics: metricsArray,
@@ -91,25 +92,14 @@ export const useSimulationData = (
                 owner_id: session.user.id
               }
             }
-          });
+          };
+
+          console.log('Sending data to refinery:', requestBody);
 
           const { data: refinedData, error: refineryError } = await supabase.functions.invoke(
             'industrial-data-refinery',
             {
-              body: {
-                rawData: {
-                  deviceId,
-                  metrics: metricsArray,
-                  timestamp: dataPoint.timestamp,
-                  metadata: {
-                    simulation: true,
-                    source: dataPoint.source,
-                    machine_state: dataPoint.machine_state,
-                    quality_score: dataPoint.metadata.quality_score,
-                    owner_id: session.user.id
-                  }
-                }
-              }
+              body: requestBody
             }
           );
 
