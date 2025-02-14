@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -50,7 +51,9 @@ export const useSimulationState = () => {
         port: simulationState.port,
         slave_id: simulationState.slaveId,
         registers: simulationState.registers.map(({ address, value, type }) => ({
-          address, value, type
+          address: address.toString(),
+          value: value.toString(),
+          type
         }))
       };
 
@@ -60,7 +63,7 @@ export const useSimulationState = () => {
           is_running: true,
           parameters: simulationConfig as unknown as Json
         })
-        .eq('id', 1);
+        .eq('id', '1');
 
       if (error) throw error;
       
@@ -77,7 +80,7 @@ export const useSimulationState = () => {
       const { error } = await supabase
         .from('device_simulations')
         .update({ is_running: false })
-        .eq('id', 1);
+        .eq('id', '1');
 
       if (error) throw error;
       
@@ -101,7 +104,9 @@ export const useSimulationState = () => {
         port: simulationState.port,
         slave_id: simulationState.slaveId,
         registers: updatedRegisters.map(({ address, value, type }) => ({
-          address, value, type
+          address: address.toString(),
+          value: value.toString(),
+          type
         }))
       };
 
@@ -110,7 +115,7 @@ export const useSimulationState = () => {
         .update({
           parameters: simulationConfig as unknown as Json
         })
-        .eq('id', 1);
+        .eq('id', '1');
 
       if (error) throw error;
       
