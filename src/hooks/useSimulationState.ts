@@ -63,7 +63,7 @@ export const useSimulationState = () => {
           is_running: true,
           parameters: simulationConfig as unknown as Json
         })
-        .eq('id', 1);
+        .eq('id', '1'); // Changed to string type
 
       if (error) throw error;
       
@@ -80,7 +80,7 @@ export const useSimulationState = () => {
       const { error } = await supabase
         .from('device_simulations')
         .update({ is_running: false })
-        .eq('id', 1);
+        .eq('id', '1'); // Changed to string type
 
       if (error) throw error;
       
@@ -115,7 +115,7 @@ export const useSimulationState = () => {
         .update({
           parameters: simulationConfig as unknown as Json
         })
-        .eq('id', 1);
+        .eq('id', '1'); // Changed to string type
 
       if (error) throw error;
       
