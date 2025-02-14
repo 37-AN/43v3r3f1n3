@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useConsole } from "@/contexts/ConsoleContext";
@@ -10,25 +11,8 @@ export function useArduinoData() {
   return useQuery({
     queryKey: ["arduino-plc-data"],
     queryFn: async () => {
-      console.log("Starting Arduino PLC data fetch...");
-      
+      console.log("Fetching Arduino PLC data...");
       try {
-        const { data: { session }, error: authError } = await supabase.auth.getSession();
-        
-        if (authError) {
-          console.error("Authentication error:", authError);
-          addMessage('error', 'Authentication error. Please try logging in again.');
-          throw authError;
-        }
-
-        if (!session) {
-          console.log("No active session found");
-          addMessage('error', 'Please log in to view PLC data');
-          throw new Error("Authentication required");
-        }
-
-        console.log("Authenticated user:", session.user.email);
-
         const endDate = new Date();
         const startDate = new Date(endDate.getTime() - (24 * 60 * 60 * 1000));
 
@@ -40,11 +24,13 @@ export function useArduinoData() {
           .order("timestamp", { ascending: true });
 
         if (error) {
-          console.error("Error fetching PLC data:", error);
+          console.error("Error fetching Arduino PLC data:", error);
+          addMessage('error', `Error: ${error.message}`);
+          toast.error("Failed to fetch PLC data. Please try again.");
           throw error;
         }
 
-        console.log("Successfully fetched Arduino PLC data:", data?.length, "records");
+        console.log("Successfully fetched Arduino PLC data:", data);
         
         if (!data || data.length === 0) {
           console.log("No PLC data found in the selected time range");

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -9,30 +10,17 @@ export const useDeviceId = () => {
   useEffect(() => {
     const fetchFirstDevice = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.error('No active session');
-          setIsLoading(false);
-          return;
-        }
-
         console.log('Fetching first available PLC device');
         const { data: devices, error } = await supabase
           .from('plc_devices')
           .select('id')
-          .eq('owner_id', session.user.id)
           .eq('is_active', true)
           .limit(1)
           .single();
 
         if (error) {
-          if (error.message.includes('JWT')) {
-            console.error('Session expired:', error);
-            toast.error('Session expired. Please log in again.');
-          } else {
-            console.error('Error fetching PLC device:', error);
-            toast.error('Error loading device');
-          }
+          console.error('Error fetching PLC device:', error);
+          toast.error('Error loading device');
           setIsLoading(false);
           return;
         }

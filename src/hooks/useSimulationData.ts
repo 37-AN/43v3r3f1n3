@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,13 +21,6 @@ export const useSimulationData = (
     if (isRunning && deviceId) {
       interval = setInterval(async () => {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-            console.error('No active session');
-            toast.error('Please log in to run simulation');
-            return;
-          }
-
           const dataPoint = simulationEngine.generateDataPoint(`PLC_${deviceId}`);
           console.log('Generated simulation data:', dataPoint);
 
@@ -78,7 +72,6 @@ export const useSimulationData = (
             }
           ];
 
-          // Ensure proper request format with rawData object
           const requestBody = {
             rawData: {
               deviceId,
@@ -88,8 +81,7 @@ export const useSimulationData = (
                 simulation: true,
                 source: dataPoint.source,
                 machine_state: dataPoint.machine_state,
-                quality_score: dataPoint.metadata.quality_score,
-                owner_id: session.user.id
+                quality_score: dataPoint.metadata.quality_score
               }
             }
           };
