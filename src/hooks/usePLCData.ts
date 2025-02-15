@@ -52,7 +52,7 @@ export function usePLCData(enabled: boolean) {
     const fetchPLCData = async () => {
       try {
         const { data: rawData, error } = await supabase
-          .from('plc_data')
+          .from('arduino_plc_data')  // Changed from 'plc_data' to 'arduino_plc_data'
           .select('*')
           .order('timestamp', { ascending: false })
           .limit(10);
@@ -78,7 +78,7 @@ export function usePLCData(enabled: boolean) {
     const subscription = supabase
       .channel('plc_data_changes')
       .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'plc_data' },
+        { event: 'INSERT', schema: 'public', table: 'arduino_plc_data' },
         fetchPLCData
       )
       .subscribe();
