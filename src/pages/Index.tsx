@@ -20,6 +20,12 @@ export default function Index() {
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
 
+  const handleRetryLoad = () => {
+    console.log("Retrying device load...");
+    setRetryCount(0);
+    fetchFirstDevice();
+  };
+
   const fetchFirstDevice = async () => {
     try {
       setIsLoading(true);
