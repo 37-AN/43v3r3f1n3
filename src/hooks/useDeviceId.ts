@@ -14,7 +14,6 @@ export const useDeviceId = () => {
         const { data: devices, error } = await supabase
           .from('plc_devices')
           .select('id')
-          .eq('is_active', true)
           .limit(1)
           .single();
 

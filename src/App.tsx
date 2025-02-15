@@ -6,7 +6,6 @@ import AssetManagement from './pages/AssetManagement';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConsoleProvider } from '@/contexts/ConsoleContext';
-import { Web3Provider } from '@/contexts/Web3Context';
 import { SimulationProvider } from '@/contexts/SimulationContext';
 
 const queryClient = new QueryClient({
@@ -23,19 +22,17 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ConsoleProvider>
         <Router>
-          <Web3Provider>
-            <SimulationProvider>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/tokenized-assets" element={<TokenizedAssets />} />
-                <Route path="/asset-management" element={<AssetManagement />} />
-                <Route path="/tasks" element={<div>Tasks Coming Soon</div>} />
-                <Route path="/quality-review" element={<div>Quality Review Coming Soon</div>} />
-                <Route path="/progress" element={<div>Progress Coming Soon</div>} />
-              </Routes>
-              <Toaster />
-            </SimulationProvider>
-          </Web3Provider>
+          <SimulationProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/tokenized-assets" element={<TokenizedAssets />} />
+              <Route path="/asset-management" element={<AssetManagement />} />
+              <Route path="/tasks" element={<div>Tasks Coming Soon</div>} />
+              <Route path="/quality-review" element={<div>Quality Review Coming Soon</div>} />
+              <Route path="/progress" element={<div>Progress Coming Soon</div>} />
+            </Routes>
+            <Toaster />
+          </SimulationProvider>
         </Router>
       </ConsoleProvider>
     </QueryClientProvider>
