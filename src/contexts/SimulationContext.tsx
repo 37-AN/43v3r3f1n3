@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useSimulationState } from '@/hooks/useSimulationState';
+import { toast } from "sonner";
 
 interface SimulationContextType {
   simulationState: ReturnType<typeof useSimulationState>['simulationState'];
@@ -21,22 +23,34 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
   } = useSimulationState();
 
   useEffect(() => {
-    loadSimulationState();
-    const subscription = supabase
-      .channel('device_simulations_changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'device_simulations' 
-      }, () => {
-        console.log('Simulation update received, reloading state');
-        loadSimulationState();
-      })
-      .subscribe();
+    const initializeSimulation = async () => {
+      try {
+        console.log('Initializing simulation state...');
+        await loadSimulationState();
+        
+        const subscription = supabase
+          .channel('device_simulations_changes')
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'device_simulations' 
+          }, () => {
+            console.log('Simulation update received, reloading state');
+            loadSimulationState();
+          })
+          .subscribe();
 
-    return () => {
-      subscription.unsubscribe();
+        return () => {
+          console.log('Cleaning up simulation subscription');
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Error initializing simulation:', error);
+        toast.error('Failed to initialize simulation. Please refresh the page.');
+      }
     };
+
+    initializeSimulation();
   }, []);
 
   return (
