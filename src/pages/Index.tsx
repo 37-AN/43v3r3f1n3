@@ -1,21 +1,20 @@
+
 import { ConnectionStatusBanner } from "@/components/ConnectionStatusBanner";
 import { useOPCUAClients } from "@/hooks/useOPCUAClients";
 import { usePLCData } from "@/hooks/usePLCData";
-import { useSession } from "@/hooks/useSession";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Database, ClipboardList, Shield } from "lucide-react";
+import { Database, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnnotationDashboard } from "@/components/annotation/AnnotationDashboard";
 import { SimulationTab } from "@/features/simulation/components/SimulationTab";
 import { QualityTab } from "@/features/quality/components/QualityTab";
 
 export default function Index() {
-  const { session, loading: sessionLoading } = useSession();
   const { simulatedData } = useOPCUAClients();
-  const { plcData } = usePLCData(!!session);
+  const { plcData } = usePLCData(true);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -26,24 +25,16 @@ export default function Index() {
       setIsLoading(true);
       console.log("Attempting to fetch first PLC device");
 
-      if (!session?.user?.id) {
-        console.log("No authenticated user");
-        return;
-      }
-
       const { data: devices, error } = await supabase
         .from('plc_devices')
-        .select('id, owner_id')
-        .eq('owner_id', session.user.id)
+        .select('id')
         .eq('is_active', true)
         .limit(1)
         .single();
 
       if (error) {
         console.error("Error fetching PLC device:", error);
-        if (error.message.includes('JWT')) {
-          toast.error("Session expired. Please log in again.");
-        } else if (retryCount < MAX_RETRIES) {
+        if (retryCount < MAX_RETRIES) {
           console.log(`Retry attempt ${retryCount + 1} of ${MAX_RETRIES}`);
           setRetryCount(prev => prev + 1);
           setTimeout(fetchFirstDevice, Math.pow(2, retryCount) * 1000);
@@ -70,12 +61,12 @@ export default function Index() {
   };
 
   useEffect(() => {
-    if (session && !selectedDeviceId && !isLoading) {
+    if (!selectedDeviceId && !isLoading) {
       fetchFirstDevice();
     }
-  }, [session, selectedDeviceId]);
+  }, [selectedDeviceId]);
 
-  if (sessionLoading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto p-4 space-y-4">
         <Skeleton className="h-12 w-full" />
@@ -83,22 +74,6 @@ export default function Index() {
       </div>
     );
   }
-
-  if (!session) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="text-center py-8">
-          <h2 className="text-2xl font-semibold mb-4">Please Log In</h2>
-          <p className="text-gray-600">You need to be logged in to view this content.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleRetryLoad = () => {
-    setRetryCount(0);
-    fetchFirstDevice();
-  };
 
   return (
     <div className="container mx-auto p-4">
@@ -115,7 +90,7 @@ export default function Index() {
             Simulation
           </TabsTrigger>
           <TabsTrigger value="annotation" className="flex items-center gap-2">
-            <ClipboardList className="w-4 h-4" />
+            <Shield className="w-4 h-4" />
             Annotation
           </TabsTrigger>
           <TabsTrigger value="quality" className="flex items-center gap-2">
